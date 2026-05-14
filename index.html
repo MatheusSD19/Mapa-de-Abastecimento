@@ -1036,6 +1036,7 @@ function renderMapa(){
     const hoje = dStr===hojeStr?' today':'';
     h+=`<tr class="${wknd}${hoje}"><td>${day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`;
     emps.forEach(e=>{
+      const empCor=getEmpCor(e);
       const vSaida = viagensDoDia(e.id,dStr);
       const vAtiva = viagemAtivaNoDia(e.id, day);
       // coluna horário/viagem/condição/status
@@ -1045,6 +1046,7 @@ function renderMapa(){
         const r=rotaById(v.rotaId);
         horario=v.horaSaida||'';
         viagemCell=`<span class="trip-chip" draggable="true" data-vid="${v.id}"
+          style="background:${empCor};color:${corContraste(empCor)}"
           onclick="openViagemModal('${v.id}')">${r?r.nome:'?'}</span>`;
         cond=v.condicao;
       }else if(vAtiva){

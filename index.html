@@ -20,8 +20,14 @@
   body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:13px;}
   header{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;}
   header h1{font-size:16px;font-weight:600;color:var(--accent);white-space:nowrap;}
-  nav{display:flex;gap:6px;flex-wrap:wrap;}
-  nav button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
+  .hamburger{background:var(--panel2);color:var(--txt);border:1px solid var(--line);width:34px;height:34px;border-radius:6px;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;}
+  .hamburger:hover{border-color:var(--accent);}
+  .layout{display:flex;align-items:stretch;}
+  .sidebar{width:200px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);padding:12px;transition:width .2s ease,padding .2s ease;overflow:hidden;}
+  body.sidebar-collapsed .sidebar{width:0;padding:12px 0;border-right:none;}
+  .sidebar .side-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;white-space:nowrap;}
+  nav{display:flex;flex-direction:column;gap:6px;}
+  nav button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);padding:9px 12px;border-radius:6px;cursor:pointer;font-size:12px;text-align:left;white-space:nowrap;}
   nav button:hover{border-color:var(--accent);}
   nav button.active{background:var(--accent2);border-color:var(--accent);color:#001018;font-weight:600;}
   .spacer{flex:1;}
@@ -29,7 +35,7 @@
   .tool-btn:hover{border-color:var(--accent);}
   .fs-status{font-size:11px;color:var(--muted);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;}
   .fs-status.linked{color:var(--ok);}
-  main{padding:16px;}
+  main{padding:16px;flex:1;min-width:0;}
   .view{display:none;}
   .view.active{display:block;}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:16px;}
@@ -98,13 +104,8 @@
 </head>
 <body>
 <header>
+  <button class="hamburger" id="btnSidebar" title="Recolher / expandir menu">☰</button>
   <h1>⛴ Mapa de Abastecimento</h1>
-  <nav>
-    <button data-view="premissas" class="active">Premissas</button>
-    <button data-view="medias">Médias de Consumo</button>
-    <button data-view="mapa">Mapa de Giros</button>
-    <button data-view="abastecimentos">Abastecimentos</button>
-  </nav>
   <div class="spacer"></div>
   <button class="tool-btn" id="btnTheme">Tema claro</button>
   <span id="fsStatus" class="fs-status">Base: não vinculada</span>
@@ -115,6 +116,16 @@
   <input type="file" id="fileImportData" accept="application/json" style="display:none">
   <button class="tool-btn" id="btnSeed">Dados exemplo</button>
 </header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="side-title">Módulos</div>
+  <nav>
+    <button data-view="premissas" class="active">Premissas</button>
+    <button data-view="medias">Médias de Consumo</button>
+    <button data-view="mapa">Mapa de Giros</button>
+    <button data-view="abastecimentos">Abastecimentos</button>
+  </nav>
+</aside>
 <main>
   <!-- ================= PREMISSAS ================= -->
   <section class="view active" id="view-premissas">
@@ -205,6 +216,7 @@
     </div>
   </section>
 </main>
+</div>
 
 <!-- ===== MODAL VIAGEM ===== -->
 <div class="modal-bg" id="modalViagem">
@@ -583,6 +595,24 @@ function parseCSV(text){
   return text.replace(/\r/g,'').split('\n').filter(l=>l.trim()).map(l=>l.split(delim));
 }
 function norm(s){ return String(s||'').trim().toLowerCase(); }
+// Interpreta números no padrão brasileiro: vírgula = decimal, ponto = separador de milhar.
+function parseNum(v){
+  if(v===null||v===undefined) return NaN;
+  if(typeof v==='number') return v;
+  let s=String(v).trim();
+  if(!s) return NaN;
+  s=s.replace(/\s/g,'').replace(/[^\d.,\-]/g,'');
+  if(!s) return NaN;
+  if(s.includes(',')){
+    // vírgula é o separador decimal — pontos são milhares
+    s=s.replace(/\./g,'').replace(',','.');
+  }else{
+    // sem vírgula: no padrão BR o ponto é separador de milhar
+    s=s.replace(/\./g,'');
+  }
+  const n=parseFloat(s);
+  return isNaN(n)?NaN:n;
+}
 function processMedRows(rows){
   if(!rows.length){ alert('Arquivo vazio.'); return; }
   const header = rows[0].map(norm);
@@ -612,7 +642,7 @@ function processMedRows(rows){
       let upd=false;
       const oriV = idx.origem>=0 ? String(r[idx.origem]||'').trim() : '';
       const dstV = idx.destino>=0 ? String(r[idx.destino]||'').trim() : '';
-      const dstNum = idx.dist>=0 ? parseFloat(String(r[idx.dist]).replace(/\./g,'').replace(',','.')) : NaN;
+      const dstNum = idx.dist>=0 ? parseNum(r[idx.dist]) : NaN;
       if(oriV && oriV!==rota.origem){ rota.origem=oriV; upd=true; }
       if(dstV && dstV!==rota.destino){ rota.destino=dstV; upd=true; }
       if(!isNaN(dstNum) && dstNum>0 && dstNum!==rota.distancia){ rota.distancia=dstNum; upd=true; }
@@ -621,8 +651,8 @@ function processMedRows(rows){
     if(!rota||!emp||!cond){ skip++; continue; }
     const combRaw = idx.comb>=0 ? norm(r[idx.comb]) : '';
     const comb = combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
-    const cons = idx.cons>=0 ? parseFloat(String(r[idx.cons]).replace(/\./g,'').replace(',','.'))||0 : 0;
-    const tempo= idx.tempo>=0 ? parseFloat(String(r[idx.tempo]).replace(',','.'))||0 : 0;
+    const cons = idx.cons>=0 ? (parseNum(r[idx.cons])||0) : 0;
+    const tempo= idx.tempo>=0 ? (parseNum(r[idx.tempo])||0) : 0;
     const patch = {tempo};
     if(comb) patch.consumo = {[comb]:cons};
     setMedia(rota.id, emp.id, cond, patch);
@@ -1190,6 +1220,16 @@ document.getElementById('btnTheme').addEventListener('click', ()=>{
   applyTheme(next);
 });
 applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+
+/* =========================================================
+   SIDEBAR RECOLHÍVEL
+   ========================================================= */
+const SIDEBAR_KEY='mapaAbastecimento_sidebar';
+document.getElementById('btnSidebar').addEventListener('click', ()=>{
+  document.body.classList.toggle('sidebar-collapsed');
+  localStorage.setItem(SIDEBAR_KEY, document.body.classList.contains('sidebar-collapsed')?'1':'0');
+});
+if(localStorage.getItem(SIDEBAR_KEY)==='1') document.body.classList.add('sidebar-collapsed');
 
 /* =========================================================
    INIT

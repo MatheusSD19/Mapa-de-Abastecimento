@@ -112,11 +112,13 @@
   .mapa-wrap::-webkit-scrollbar-thumb:hover{background:var(--accent2);}
   .mapa-wrap{scrollbar-width:auto;scrollbar-color:var(--line) var(--panel2);}
   table.mapa{font-size:11px;}
-  table.mapa th{position:sticky;top:0;z-index:10;}
   table.mapa td,table.mapa th{padding:3px 5px;white-space:nowrap;}
+  table.mapa tr.mapa-h1 th{position:sticky;top:0;z-index:12;}
+  table.mapa tr.mapa-h2 th{position:sticky;top:24px;z-index:11;}
   table.mapa td:first-child{position:sticky;left:0;z-index:5;background:var(--panel);font-weight:600;}
   table.mapa tr.weekend td:first-child{background:var(--panel2);}
-  table.mapa th:first-child{position:sticky;left:0;top:0;z-index:15;background:var(--panel2);}
+  table.mapa tr.mapa-h1 th:first-child{position:sticky;left:0;z-index:22;background:var(--panel2);}
+  table.mapa tr.mapa-h2 th:first-child{position:sticky;left:0;z-index:21;background:var(--panel2);}
   table.mapa .emp-head{background:var(--accent2);color:#001018;text-align:center;font-size:12px;font-weight:700;}
   td.cell-clickable{cursor:pointer;}
   td.cell-clickable:hover{background:rgba(56,189,248,0.12);}
@@ -1012,14 +1014,14 @@ function renderMapa(){
   });
 
   // cabeçalho
-  let h='<table class="mapa"><tr>';
+  let h='<table class="mapa"><tr class="mapa-h1">';
   h+='<th>Data</th>';
   emps.forEach(e=>{
     const span = 4 + e.combustiveis.length*3;
     const cor=getEmpCor(e);
     h+=`<th class="emp-head emp-sep" colspan="${span}" style="background:${cor};color:${corContraste(cor)}">${e.nome}</th>`;
   });
-  h+='</tr><tr><th></th>';
+  h+='</tr><tr class="mapa-h2"><th></th>';
   emps.forEach(e=>{
     h+='<th class="hora-col">Horário</th><th>Viagem</th><th>Condição</th><th>Status</th>';
     e.combustiveis.forEach((c,ci)=>{

@@ -251,7 +251,7 @@
         <div class="spacer"></div>
         <button class="btn" id="btnNovaViagem">+ Nova Viagem</button>
       </div>
-      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia. Arraste o chip de uma viagem para mover o dia de saída.</div>
+      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia. Arraste o chip de uma viagem para mover o dia de saída — segurando <b>Ctrl</b> ao soltar, a viagem é <b>copiada</b> sem alterar a original.</div>
       <div class="mapa-wrap" id="mapaWrap" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -1125,12 +1125,22 @@ function renderMapa(){
       ev.preventDefault(); td.classList.remove('drop-target');
       const vid=ev.dataTransfer.getData('text/vid');
       const v=state.viagens.find(x=>x.id===vid);
-      if(v && td.dataset.emp===v.empId){
-        v.dataSaida=td.dataset.date;
-        save(); renderMapa();
-      }else if(v){
+      if(!v) return;
+      if(td.dataset.emp!==v.empId){
         alert('Mova a viagem dentro do mesmo empurrador.');
+        return;
       }
+      if(ev.ctrlKey || ev.metaKey){
+        // CTRL pressionado: copia a viagem, sem alterar a original
+        state.viagens.push({
+          id:uid(), empId:v.empId, rotaId:v.rotaId, condicao:v.condicao,
+          dataSaida:td.dataset.date, horaSaida:v.horaSaida
+        });
+      }else{
+        // arrasto normal: move a viagem
+        v.dataSaida=td.dataset.date;
+      }
+      save(); renderMapa();
     });
   });
 }

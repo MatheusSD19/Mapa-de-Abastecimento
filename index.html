@@ -11,6 +11,11 @@
     --txt:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --accent2:#0ea5e9;
     --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --info:#a78bfa;
   }
+  body.light{
+    --bg:#f1f5f9; --panel:#ffffff; --panel2:#eef2f7; --line:#cbd5e1;
+    --txt:#1e293b; --muted:#64748b; --accent:#0369a1; --accent2:#0284c7;
+    --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --info:#7c3aed;
+  }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:13px;}
   header{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;}
@@ -22,6 +27,8 @@
   .spacer{flex:1;}
   .tool-btn{background:var(--panel2);color:var(--txt);border:1px solid var(--line);padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;}
   .tool-btn:hover{border-color:var(--accent);}
+  .fs-status{font-size:11px;color:var(--muted);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;}
+  .fs-status.linked{color:var(--ok);}
   main{padding:16px;}
   .view{display:none;}
   .view.active{display:block;}
@@ -99,6 +106,10 @@
     <button data-view="abastecimentos">Abastecimentos</button>
   </nav>
   <div class="spacer"></div>
+  <button class="tool-btn" id="btnTheme">Tema claro</button>
+  <span id="fsStatus" class="fs-status">Base: não vinculada</span>
+  <button class="tool-btn" id="btnPickFolder">Selecionar pasta</button>
+  <button class="tool-btn" id="btnSaveBase">Salvar base</button>
   <button class="tool-btn" id="btnExport">Exportar dados</button>
   <button class="tool-btn" id="btnImportData">Importar dados</button>
   <input type="file" id="fileImportData" accept="application/json" style="display:none">
@@ -120,14 +131,14 @@
             <label><input type="checkbox" value="Diesel"> Diesel Terceiro</label>
           </div>
         </div>
-        <div class="field"><label>Consumo médio no Porto (L/h)</label><input type="number" id="empPorto" placeholder="0"></div>
+        <div class="field"><label>Consumo médio no Porto (L/h) — MGO/Diesel</label><input type="number" id="empPorto" placeholder="0"></div>
       </div>
       <div class="row" id="empTanqueRow" style="margin-top:10px;"></div>
       <div class="row" style="margin-top:10px;">
         <button class="btn" id="btnAddEmp">Adicionar Empurrador</button>
         <button class="btn secondary" id="btnCancelEmp" style="display:none;">Cancelar edição</button>
       </div>
-      <div class="hint">Marque os combustíveis para informar capacidade do tanque e estoque inicial de cada um.</div>
+      <div class="hint">Marque os combustíveis para informar capacidade do tanque e estoque inicial de cada um. O consumo no Porto (embarcação parada) é debitado apenas de MGO ou Diesel Terceiro — o HFO só é consumido em viagem.</div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblEmp"></table></div>
     </div>
 
@@ -154,7 +165,7 @@
         <button class="tool-btn" id="btnImportMed">Importar Excel / CSV</button>
         <input type="file" id="fileMed" accept=".csv,.xlsx,.xls" style="display:none">
       </div>
-      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo</b>. O sistema atualiza automaticamente as bases pelos nomes cadastrados.</div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino</b>. O sistema atualiza automaticamente as bases pelos nomes cadastrados. As colunas <b>Distância, Origem e Destino</b> não afetam esta tela, mas atualizam o cadastro das rotas em Premissas.</div>
       <div id="medContent" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -378,6 +389,13 @@ function editEmp(id){
   document.getElementById('btnCancelEmp').style.display='';
   window.scrollTo(0,0);
 }
+function copyEmp(id){
+  editEmp(id);
+  editEmpId = null;
+  document.getElementById('empNome').value += ' (cópia)';
+  document.getElementById('btnAddEmp').textContent='Adicionar Empurrador';
+  document.getElementById('btnCancelEmp').style.display='';
+}
 function delEmp(id){
   if(!confirm('Excluir este empurrador? Viagens e abastecimentos vinculados também serão removidos.')) return;
   state.empurradores = state.empurradores.filter(e=>e.id!==id);
@@ -402,6 +420,7 @@ function renderEmp(){
       <td>${tanks}</td>
       <td>
         <button class="btn sm secondary" onclick="editEmp('${e.id}')">Editar</button>
+        <button class="btn sm secondary" onclick="copyEmp('${e.id}')">Copiar</button>
         <button class="btn sm danger" onclick="delEmp('${e.id}')">Excluir</button>
       </td></tr>`;
   });
@@ -441,6 +460,13 @@ function editRot(id){
   document.getElementById('btnAddRot').textContent='Salvar alterações';
   document.getElementById('btnCancelRot').style.display='';
 }
+function copyRot(id){
+  editRot(id);
+  editRotId = null;
+  document.getElementById('rotNome').value += ' (cópia)';
+  document.getElementById('btnAddRot').textContent='Adicionar Rota';
+  document.getElementById('btnCancelRot').style.display='';
+}
 function delRot(id){
   if(!confirm('Excluir esta rota? Viagens vinculadas serão removidas.')) return;
   state.rotas = state.rotas.filter(r=>r.id!==id);
@@ -456,6 +482,7 @@ function renderRot(){
     h+=`<tr><td>${r.nome}</td><td>${r.origem||'—'}</td><td>${r.destino||'—'}</td>
       <td class="num">${fmt(r.distancia)}</td>
       <td><button class="btn sm secondary" onclick="editRot('${r.id}')">Editar</button>
+      <button class="btn sm secondary" onclick="copyRot('${r.id}')">Copiar</button>
       <button class="btn sm danger" onclick="delRot('${r.id}')">Excluir</button></td></tr>`;
   });
   t.innerHTML=h;
@@ -566,17 +593,31 @@ function processMedRows(rows){
     comb:   header.findIndex(h=>h.includes('combust')),
     cons:   header.findIndex(h=>h.includes('consumo')),
     tempo:  header.findIndex(h=>h.includes('tempo')),
+    dist:   header.findIndex(h=>h.includes('dist')),
+    origem: header.findIndex(h=>h.includes('origem')),
+    destino:header.findIndex(h=>h.includes('destino')),
   };
   if(idx.trecho<0||idx.emp<0||idx.cond<0){
-    alert('Cabeçalho inválido. Esperado: Trecho, Empurrador, Condição, Combustível, Consumo, Tempo'); return;
+    alert('Cabeçalho inválido. Esperado: Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino'); return;
   }
-  let ok=0, skip=0;
+  let ok=0, skip=0, rotasAtualizadas=0;
   const combMap = {mgo:'MGO', hfo:'HFO', diesel:'Diesel', 'diesel terceiro':'Diesel'};
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
     const rota = state.rotas.find(x=>norm(x.nome)===norm(r[idx.trecho]));
     const emp  = state.empurradores.find(x=>norm(x.nome)===norm(r[idx.emp]));
     const cond = CONDICOES.find(c=>norm(c)===norm(r[idx.cond]));
+    if(rota){
+      // colunas Distância/Origem/Destino atualizam o cadastro da rota nas Premissas
+      let upd=false;
+      const oriV = idx.origem>=0 ? String(r[idx.origem]||'').trim() : '';
+      const dstV = idx.destino>=0 ? String(r[idx.destino]||'').trim() : '';
+      const dstNum = idx.dist>=0 ? parseFloat(String(r[idx.dist]).replace(/\./g,'').replace(',','.')) : NaN;
+      if(oriV && oriV!==rota.origem){ rota.origem=oriV; upd=true; }
+      if(dstV && dstV!==rota.destino){ rota.destino=dstV; upd=true; }
+      if(!isNaN(dstNum) && dstNum>0 && dstNum!==rota.distancia){ rota.distancia=dstNum; upd=true; }
+      if(upd) rotasAtualizadas++;
+    }
     if(!rota||!emp||!cond){ skip++; continue; }
     const combRaw = idx.comb>=0 ? norm(r[idx.comb]) : '';
     const comb = combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
@@ -589,7 +630,8 @@ function processMedRows(rows){
   }
   save();
   renderMedias();
-  alert(`Importação concluída.\nLinhas aplicadas: ${ok}\nLinhas ignoradas (sem correspondência): ${skip}`);
+  renderRot();
+  alert(`Importação concluída.\nLinhas aplicadas: ${ok}\nLinhas ignoradas (sem correspondência): ${skip}\nRotas atualizadas (Origem/Destino/Distância): ${rotasAtualizadas}`);
 }
 
 /* =========================================================
@@ -721,8 +763,8 @@ function renderMapa(){
       const cdNav = vRef ? consumoDiaViagem(vRef, day) : {};
       const horasNav = cdNav.__horas || 0;
       const horasPorto = Math.max(0, 24 - horasNav);
-      // combustível primário recebe o consumo de porto (embarcação parada)
-      const combPorto = e.combustiveis[0];
+      // consumo de porto (embarcação parada) só aplica a MGO ou Diesel Terceiro — HFO só consome em viagem
+      const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
       // colunas por combustível
       e.combustiveis.forEach(c=>{
         let consumoDia = cdNav[c] || 0;
@@ -1022,11 +1064,140 @@ function seedData(){
 }
 
 /* =========================================================
+   BASE EM PASTA (File System Access API)
+   ========================================================= */
+const BASE_FILENAME = 'mapa-abastecimento.json';
+const FS_DB = 'mapaAbastecimentoFS', FS_STORE = 'handles';
+let dirHandle = null, fileHandle = null;
+
+function fsIdb(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(FS_DB,1);
+    r.onupgradeneeded=()=>r.result.createObjectStore(FS_STORE);
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function fsIdbSet(k,v){
+  const db=await fsIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(FS_STORE,'readwrite');
+    tx.objectStore(FS_STORE).put(v,k);
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+  });
+}
+async function fsIdbGet(k){
+  const db=await fsIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(FS_STORE,'readonly');
+    const rq=tx.objectStore(FS_STORE).get(k);
+    rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error);
+  });
+}
+function updateFsStatus(msg){
+  const el=document.getElementById('fsStatus');
+  if(dirHandle){
+    el.classList.add('linked');
+    el.textContent = msg ? '✓ '+msg : 'Base: '+dirHandle.name+'/'+BASE_FILENAME;
+    el.title = dirHandle.name+'/'+BASE_FILENAME;
+  }else{
+    el.classList.remove('linked');
+    el.textContent='Base: não vinculada';
+  }
+}
+async function ensurePermission(handle){
+  const opts={mode:'readwrite'};
+  if((await handle.queryPermission(opts))==='granted') return true;
+  return (await handle.requestPermission(opts))==='granted';
+}
+async function pickFolder(){
+  if(!window.showDirectoryPicker){
+    alert('Seu navegador não suporta seleção de pasta (use Chrome/Edge). Você ainda pode usar Exportar/Importar dados.');
+    return;
+  }
+  try{
+    dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+    await fsIdbSet('dirHandle', dirHandle);
+    fileHandle = await dirHandle.getFileHandle(BASE_FILENAME,{create:true});
+    await loadFromFile(true);
+    updateFsStatus();
+  }catch(e){
+    if(e.name!=='AbortError') alert('Falha ao selecionar pasta: '+e.message);
+  }
+}
+async function loadFromFile(silent){
+  try{
+    const f=await fileHandle.getFile();
+    const txt=await f.text();
+    if(txt.trim()){
+      const data=JSON.parse(txt);
+      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[]}, data);
+      save();
+      renderView(document.querySelector('nav button.active').dataset.view);
+      if(!silent) alert('Base carregada da pasta.');
+    }else if(!silent){
+      alert('Arquivo de base vazio — será criado ao salvar.');
+    }
+  }catch(e){
+    if(!silent) alert('Não foi possível ler a base: '+e.message);
+  }
+}
+async function saveBase(){
+  if(!window.showDirectoryPicker){
+    alert('Seu navegador não suporta salvar em pasta. Use "Exportar dados".');
+    return;
+  }
+  if(!dirHandle){ await pickFolder(); }
+  if(!dirHandle) return;
+  try{
+    if(!(await ensurePermission(dirHandle))){ alert('Permissão de escrita negada.'); return; }
+    if(!fileHandle) fileHandle = await dirHandle.getFileHandle(BASE_FILENAME,{create:true});
+    const w=await fileHandle.createWritable();
+    await w.write(JSON.stringify(state,null,2));
+    await w.close();
+    updateFsStatus('Base salva às '+new Date().toLocaleTimeString('pt-BR'));
+    setTimeout(updateFsStatus, 4000);
+  }catch(e){
+    alert('Falha ao salvar base: '+e.message);
+  }
+}
+async function restoreFolderHandle(){
+  try{
+    const h=await fsIdbGet('dirHandle');
+    if(!h) return;
+    dirHandle=h;
+    updateFsStatus();
+    if((await h.queryPermission({mode:'readwrite'}))==='granted'){
+      fileHandle=await dirHandle.getFileHandle(BASE_FILENAME,{create:true});
+      await loadFromFile(true);
+    }
+  }catch(e){ /* handle inválido */ }
+}
+document.getElementById('btnPickFolder').addEventListener('click', pickFolder);
+document.getElementById('btnSaveBase').addEventListener('click', saveBase);
+
+/* =========================================================
+   TEMA CLARO / ESCURO
+   ========================================================= */
+const THEME_KEY='mapaAbastecimento_theme';
+function applyTheme(t){
+  document.body.classList.toggle('light', t==='light');
+  document.getElementById('btnTheme').textContent = t==='light' ? 'Tema escuro' : 'Tema claro';
+}
+document.getElementById('btnTheme').addEventListener('click', ()=>{
+  const next = document.body.classList.contains('light') ? 'dark' : 'light';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+
+/* =========================================================
    INIT
    ========================================================= */
 load();
 renderEmpTanqueRow();
 renderView('premissas');
+restoreFolderHandle();
 </script>
 </body>
 </html>

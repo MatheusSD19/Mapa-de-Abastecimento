@@ -120,7 +120,7 @@
   td.abast-cell{cursor:pointer;}
   td.abast-cell:hover{background:rgba(34,197,94,0.15);}
   table.mapa .hora-col{text-align:center;}
-  table.mapa .emp-sep{border-right:3px solid var(--accent2);}
+  table.mapa .emp-sep{border-right:3px solid var(--line);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;}
   .trip-chip:active{cursor:grabbing;}
   td.drop-target{outline:2px dashed var(--accent);outline-offset:-2px;}
@@ -339,7 +339,8 @@ let state = {
   rotas: [],
   medias: {},        // medias[rotaId][empId][condicao] = {tempo, consumo:{MGO,HFO,Diesel}}
   viagens: [],       // {id,empId,rotaId,condicao,dataSaida,horaSaida}
-  abastecimentos: [] // {id,empId,data,comb,qtd,status,obs}
+  abastecimentos: [],// {id,empId,data,comb,qtd,status,obs}
+  mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
 };
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
@@ -914,18 +915,21 @@ function initMapaDates(){
 document.getElementById('btnMapaRefresh').addEventListener('click', renderMapa);
 document.getElementById('btnNovaViagem').addEventListener('click', ()=>openViagemModal(null,null,null));
 
-/* ---- Filtro de empurradores exibidos no mapa ---- */
-let mapaEmpFilter = new Set();   // ids selecionados; por padrão todos
+/* ---- Filtro de empurradores exibidos no mapa (persistido na base) ---- */
+// state.mapaEmpFilter: array de ids selecionados; null/undefined = todos selecionados
+function getMapaFilterSet(){
+  const ids = empsAtivos().map(e=>e.id);
+  if(!Array.isArray(state.mapaEmpFilter)) return new Set(ids);
+  return new Set(state.mapaEmpFilter.filter(id=>ids.includes(id)));
+}
+function setMapaFilter(set){
+  state.mapaEmpFilter = [...set];
+  save();
+}
 function renderEmpFilter(){
   // apenas empurradores ativos aparecem no mapa
   const lista = empsAtivos();
-  const ids = lista.map(e=>e.id);
-  if(!mapaEmpFilter.__ready){
-    mapaEmpFilter = new Set(ids);
-    mapaEmpFilter.__ready = true;
-  }
-  // remove ids inexistentes ou inativos
-  [...mapaEmpFilter].forEach(id=>{ if(id!=='__ready' && !ids.includes(id)) mapaEmpFilter.delete(id); });
+  const sel = getMapaFilterSet();
   const panel=document.getElementById('empFilterPanel');
   panel.innerHTML =
     `<div class="dd-actions">
@@ -933,23 +937,27 @@ function renderEmpFilter(){
        <button type="button" id="ddNone">Nenhum</button>
      </div>` +
     (lista.map(e=>
-      `<label><input type="checkbox" value="${e.id}" ${mapaEmpFilter.has(e.id)?'checked':''}> ${e.nome}</label>`
+      `<label><input type="checkbox" value="${e.id}" ${sel.has(e.id)?'checked':''}> ${e.nome}</label>`
     ).join('') || '<div class="empty">Nenhum empurrador ativo.</div>');
-  const sel = lista.filter(e=>mapaEmpFilter.has(e.id)).length;
+  const nSel = lista.filter(e=>sel.has(e.id)).length;
   const tot = lista.length;
   document.getElementById('empFilterBtn').textContent =
-    (sel===tot ? 'Todos os empurradores' : sel+' de '+tot+' empurradores') + ' ▾';
+    (nSel===tot ? 'Todos os empurradores' : nSel+' de '+tot+' empurradores') + ' ▾';
   panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
     cb.addEventListener('change', ()=>{
-      if(cb.checked) mapaEmpFilter.add(cb.value); else mapaEmpFilter.delete(cb.value);
+      const s=getMapaFilterSet();
+      if(cb.checked) s.add(cb.value); else s.delete(cb.value);
+      setMapaFilter(s);
       renderMapa();
     });
   });
   panel.querySelector('#ddAll').addEventListener('click', ()=>{
-    lista.forEach(e=>mapaEmpFilter.add(e.id)); renderMapa();
+    setMapaFilter(new Set(lista.map(e=>e.id)));
+    renderMapa();
   });
   panel.querySelector('#ddNone').addEventListener('click', ()=>{
-    mapaEmpFilter.clear(); mapaEmpFilter.__ready=true; renderMapa();
+    setMapaFilter(new Set());
+    renderMapa();
   });
 }
 document.getElementById('empFilterBtn').addEventListener('click', e=>{
@@ -978,7 +986,8 @@ function renderMapa(){
   const wrap=document.getElementById('mapaWrap');
   if(!state.empurradores.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Cadastre empurradores nas Premissas.</div>'; return; }
   renderEmpFilter();
-  const emps = empsAtivos().filter(e=>mapaEmpFilter.has(e.id));
+  const _filtroSet = getMapaFilterSet();
+  const emps = empsAtivos().filter(e=>_filtroSet.has(e.id));
   if(!emps.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Nenhum empurrador selecionado no filtro acima.</div>'; return; }
   const ini=parseDate(document.getElementById('mapaIni').value);
   const fim=parseDate(document.getElementById('mapaFim').value);

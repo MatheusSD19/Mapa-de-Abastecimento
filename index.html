@@ -60,6 +60,10 @@
   .chk-group{display:flex;gap:12px;flex-wrap:wrap;}
   .chk-group label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--txt);}
   .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;}
+  tr.inativo td{opacity:.55;}
+  .situacao{font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;}
+  .situacao.ativo{background:rgba(34,197,94,.18);color:var(--ok);}
+  .situacao.inativo{background:rgba(239,68,68,.18);color:var(--bad);}
   .tag.MGO{background:#1d4ed8;color:#fff;}
   .tag.HFO{background:#7c2d12;color:#fff;}
   .tag.Diesel{background:#15803d;color:#fff;}
@@ -345,6 +349,9 @@ function fmt1(n){
 }
 function empById(id){ return state.empurradores.find(e=>e.id===id); }
 function rotaById(id){ return state.rotas.find(r=>r.id===id); }
+function ativo(x){ return !x || x.ativo !== false; }
+function empsAtivos(){ return state.empurradores.filter(ativo); }
+function rotasAtivas(){ return state.rotas.filter(ativo); }
 
 /* =========================================================
    NAVEGAÇÃO
@@ -455,23 +462,31 @@ function delEmp(id){
   Object.values(state.medias).forEach(byEmp=>{ delete byEmp[id]; });
   save(); renderEmp();
 }
+function toggleEmpAtivo(id){
+  const e=empById(id);
+  e.ativo = !ativo(e);
+  save(); renderEmp();
+}
 function renderEmp(){
   const t = document.getElementById('tblEmp');
   if(!state.empurradores.length){ t.innerHTML='<tr><td class="empty">Nenhum empurrador cadastrado.</td></tr>'; return; }
   let h = `<tr><th>Nome</th><th class="num">Potência (HP)</th><th>Combustíveis</th>
-    <th class="num">Consumo Porto (L/h)</th><th>Tanques (cap. / inicial)</th><th>Ações</th></tr>`;
+    <th class="num">Consumo Porto (L/h)</th><th>Tanques (cap. / inicial)</th><th>Situação</th><th>Ações</th></tr>`;
   state.empurradores.forEach(e=>{
     const combs = e.combustiveis.map(c=>`<span class="tag ${c}">${COMB_LABEL[c]}</span>`).join(' ');
     const tanks = e.combustiveis.map(c=>`${COMB_LABEL[c]}: ${fmt(e.tanques[c]?.capacidade)} / ${fmt(e.tanques[c]?.estoqueInicial)} L`).join('<br>');
-    h += `<tr>
+    const at = ativo(e);
+    h += `<tr class="${at?'':'inativo'}">
       <td>${e.nome}</td>
       <td class="num">${fmt(e.potencia)}</td>
       <td>${combs}</td>
       <td class="num">${fmt(e.consumoPorto)}</td>
       <td>${tanks}</td>
+      <td>${at?'<span class="situacao ativo">Ativo</span>':'<span class="situacao inativo">Inativo</span>'}</td>
       <td>
         <button class="btn sm secondary" onclick="editEmp('${e.id}')">Editar</button>
         <button class="btn sm secondary" onclick="copyEmp('${e.id}')">Copiar</button>
+        <button class="btn sm secondary" onclick="toggleEmpAtivo('${e.id}')">${at?'Inativar':'Reativar'}</button>
         <button class="btn sm danger" onclick="delEmp('${e.id}')">Excluir</button>
       </td></tr>`;
   });
@@ -525,15 +540,23 @@ function delRot(id){
   delete state.medias[id];
   save(); renderRot();
 }
+function toggleRotAtivo(id){
+  const r=rotaById(id);
+  r.ativo = !ativo(r);
+  save(); renderRot();
+}
 function renderRot(){
   const t=document.getElementById('tblRot');
   if(!state.rotas.length){ t.innerHTML='<tr><td class="empty">Nenhuma rota cadastrada.</td></tr>'; return; }
-  let h=`<tr><th>Trecho</th><th>Origem</th><th>Destino</th><th class="num">Distância (km)</th><th>Ações</th></tr>`;
+  let h=`<tr><th>Trecho</th><th>Origem</th><th>Destino</th><th class="num">Distância (km)</th><th>Situação</th><th>Ações</th></tr>`;
   state.rotas.forEach(r=>{
-    h+=`<tr><td>${r.nome}</td><td>${r.origem||'—'}</td><td>${r.destino||'—'}</td>
+    const at=ativo(r);
+    h+=`<tr class="${at?'':'inativo'}"><td>${r.nome}</td><td>${r.origem||'—'}</td><td>${r.destino||'—'}</td>
       <td class="num">${fmt(r.distancia)}</td>
+      <td>${at?'<span class="situacao ativo">Ativo</span>':'<span class="situacao inativo">Inativo</span>'}</td>
       <td><button class="btn sm secondary" onclick="editRot('${r.id}')">Editar</button>
       <button class="btn sm secondary" onclick="copyRot('${r.id}')">Copiar</button>
+      <button class="btn sm secondary" onclick="toggleRotAtivo('${r.id}')">${at?'Inativar':'Reativar'}</button>
       <button class="btn sm danger" onclick="delRot('${r.id}')">Excluir</button></td></tr>`;
   });
   t.innerHTML=h;
@@ -573,12 +596,14 @@ function mediaGeral(rotaId, empId, combustiveis){
 
 function renderMedias(){
   const c=document.getElementById('medContent');
-  if(!state.empurradores.length){
-    c.innerHTML='<div class="empty">Importe uma base de médias ou cadastre empurradores nas Premissas.</div>';
+  const emps = empsAtivos();
+  const rotas = rotasAtivas();
+  if(!emps.length){
+    c.innerHTML='<div class="empty">Importe uma base de médias ou cadastre empurradores ativos nas Premissas.</div>';
     return;
   }
   let h='';
-  state.empurradores.forEach(e=>{
+  emps.forEach(e=>{
     const open = medExpanded.has(e.id);
     const ncols = 2 + e.combustiveis.length + 1; // caret + trecho + combs + tempo
     h+=`<div class="med-emp">
@@ -587,17 +612,17 @@ function renderMedias(){
         <b>${e.nome}</b>
         ${e.combustiveis.map(cb=>`<span class="tag ${cb}">${COMB_LABEL[cb]}</span>`).join(' ')}
         <span class="spacer"></span>
-        <span class="muted" style="font-size:11px;">${state.rotas.length} trecho(s)</span>
+        <span class="muted" style="font-size:11px;">${rotas.length} trecho(s)</span>
       </div>`;
     if(open){
       h+=`<div class="med-emp-body">`;
-      if(!state.rotas.length){
-        h+=`<div class="empty">Nenhum trecho cadastrado. Importe uma base ou cadastre rotas nas Premissas.</div>`;
+      if(!rotas.length){
+        h+=`<div class="empty">Nenhum trecho ativo. Importe uma base ou cadastre rotas nas Premissas.</div>`;
       }else{
         h+=`<table><tr><th></th><th>Trecho</th>`;
         e.combustiveis.forEach(cb=>h+=`<th class="num">Consumo médio ${COMB_LABEL[cb]} (L/h)</th>`);
         h+=`<th class="num">Tempo médio (h)</th></tr>`;
-        state.rotas.forEach(r=>{
+        rotas.forEach(r=>{
           const g = mediaGeral(r.id, e.id, e.combustiveis);
           const rowKey = e.id+'|'+r.id;
           const rowOpen = medRowExpanded.has(rowKey);
@@ -669,7 +694,7 @@ function renderMedias(){
   });
 }
 document.getElementById('btnMedExpandAll').addEventListener('click', ()=>{
-  state.empurradores.forEach(e=>medExpanded.add(e.id));
+  empsAtivos().forEach(e=>medExpanded.add(e.id));
   renderMedias();
 });
 document.getElementById('btnMedCollapseAll').addEventListener('click', ()=>{
@@ -865,13 +890,14 @@ document.getElementById('btnNovaViagem').addEventListener('click', ()=>openViage
 /* ---- Filtro de empurradores exibidos no mapa ---- */
 let mapaEmpFilter = new Set();   // ids selecionados; por padrão todos
 function renderEmpFilter(){
-  // garante seleção inicial = todos
-  const ids = state.empurradores.map(e=>e.id);
+  // apenas empurradores ativos aparecem no mapa
+  const lista = empsAtivos();
+  const ids = lista.map(e=>e.id);
   if(!mapaEmpFilter.__ready){
     mapaEmpFilter = new Set(ids);
     mapaEmpFilter.__ready = true;
   }
-  // remove ids inexistentes
+  // remove ids inexistentes ou inativos
   [...mapaEmpFilter].forEach(id=>{ if(id!=='__ready' && !ids.includes(id)) mapaEmpFilter.delete(id); });
   const panel=document.getElementById('empFilterPanel');
   panel.innerHTML =
@@ -879,11 +905,11 @@ function renderEmpFilter(){
        <button type="button" id="ddAll">Todos</button>
        <button type="button" id="ddNone">Nenhum</button>
      </div>` +
-    state.empurradores.map(e=>
+    (lista.map(e=>
       `<label><input type="checkbox" value="${e.id}" ${mapaEmpFilter.has(e.id)?'checked':''}> ${e.nome}</label>`
-    ).join('') || '<div class="empty">Nenhum empurrador.</div>';
-  const sel = state.empurradores.filter(e=>mapaEmpFilter.has(e.id)).length;
-  const tot = state.empurradores.length;
+    ).join('') || '<div class="empty">Nenhum empurrador ativo.</div>');
+  const sel = lista.filter(e=>mapaEmpFilter.has(e.id)).length;
+  const tot = lista.length;
   document.getElementById('empFilterBtn').textContent =
     (sel===tot ? 'Todos os empurradores' : sel+' de '+tot+' empurradores') + ' ▾';
   panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
@@ -893,7 +919,7 @@ function renderEmpFilter(){
     });
   });
   panel.querySelector('#ddAll').addEventListener('click', ()=>{
-    state.empurradores.forEach(e=>mapaEmpFilter.add(e.id)); renderMapa();
+    lista.forEach(e=>mapaEmpFilter.add(e.id)); renderMapa();
   });
   panel.querySelector('#ddNone').addEventListener('click', ()=>{
     mapaEmpFilter.clear(); mapaEmpFilter.__ready=true; renderMapa();
@@ -925,7 +951,7 @@ function renderMapa(){
   const wrap=document.getElementById('mapaWrap');
   if(!state.empurradores.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Cadastre empurradores nas Premissas.</div>'; return; }
   renderEmpFilter();
-  const emps = state.empurradores.filter(e=>mapaEmpFilter.has(e.id));
+  const emps = empsAtivos().filter(e=>mapaEmpFilter.has(e.id));
   if(!emps.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Nenhum empurrador selecionado no filtro acima.</div>'; return; }
   const ini=parseDate(document.getElementById('mapaIni').value);
   const fim=parseDate(document.getElementById('mapaFim').value);
@@ -1047,9 +1073,13 @@ let editViagemId=null;
 function openViagemModal(vid, empId, dateStr_){
   editViagemId = vid;
   const mEmp=document.getElementById('mvEmp'), mRota=document.getElementById('mvRota');
-  mEmp.innerHTML = state.empurradores.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('');
-  mRota.innerHTML = state.rotas.map(r=>`<option value="${r.id}">${r.nome}</option>`).join('');
-  if(!state.empurradores.length||!state.rotas.length){
+  const vEdit = vid ? state.viagens.find(x=>x.id===vid) : null;
+  // lista apenas ativos; mantém o registro vinculado mesmo se inativo (ao editar)
+  const empList = state.empurradores.filter(e=>ativo(e) || (vEdit && vEdit.empId===e.id));
+  const rotList = state.rotas.filter(r=>ativo(r) || (vEdit && vEdit.rotaId===r.id));
+  mEmp.innerHTML = empList.map(e=>`<option value="${e.id}">${e.nome}${ativo(e)?'':' (inativo)'}</option>`).join('');
+  mRota.innerHTML = rotList.map(r=>`<option value="${r.id}">${r.nome}${ativo(r)?'':' (inativo)'}</option>`).join('');
+  if(!empList.length||!rotList.length){
     alert('Cadastre empurradores e rotas nas Premissas primeiro.'); return;
   }
   if(vid){
@@ -1126,9 +1156,11 @@ document.getElementById('abastFiltro').addEventListener('change', renderAbast);
 let editAbastId=null;
 function openAbastModal(id){
   editAbastId=id;
-  if(!state.empurradores.length){ alert('Cadastre empurradores primeiro.'); return; }
+  const aEdit = id ? state.abastecimentos.find(x=>x.id===id) : null;
+  const empList = state.empurradores.filter(e=>ativo(e) || (aEdit && aEdit.empId===e.id));
+  if(!empList.length){ alert('Cadastre empurradores ativos primeiro.'); return; }
   const maEmp=document.getElementById('maEmp');
-  maEmp.innerHTML=state.empurradores.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('');
+  maEmp.innerHTML=empList.map(e=>`<option value="${e.id}">${e.nome}${ativo(e)?'':' (inativo)'}</option>`).join('');
   function fillComb(){
     const e=empById(maEmp.value);
     document.getElementById('maComb').innerHTML=(e?e.combustiveis:[]).map(c=>`<option value="${c}">${COMB_LABEL[c]}</option>`).join('');

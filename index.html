@@ -111,6 +111,9 @@
   table.mapa{font-size:11px;}
   table.mapa th{position:sticky;top:0;z-index:10;}
   table.mapa td,table.mapa th{padding:3px 5px;white-space:nowrap;}
+  table.mapa td:first-child{position:sticky;left:0;z-index:5;background:var(--panel);font-weight:600;}
+  table.mapa tr.weekend td:first-child{background:var(--panel2);}
+  table.mapa th:first-child{position:sticky;left:0;top:0;z-index:15;background:var(--panel2);}
   table.mapa .emp-head{background:var(--accent2);color:#001018;text-align:center;font-size:12px;font-weight:700;}
   td.cell-clickable{cursor:pointer;}
   td.cell-clickable:hover{background:rgba(56,189,248,0.12);}

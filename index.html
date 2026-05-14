@@ -103,17 +103,21 @@
   .med-detail .inline-input{width:78px;}
   /* mapa */
   .mapa-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:8px;}
-  .mapa-wrap::-webkit-scrollbar{width:14px;height:14px;}
+  .mapa-wrap::-webkit-scrollbar{width:20px;height:20px;}
   .mapa-wrap::-webkit-scrollbar-track{background:var(--panel2);}
-  .mapa-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:7px;border:3px solid var(--panel2);}
+  .mapa-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;border:4px solid var(--panel2);}
   .mapa-wrap::-webkit-scrollbar-thumb:hover{background:var(--accent2);}
   .mapa-wrap{scrollbar-width:auto;scrollbar-color:var(--line) var(--panel2);}
   table.mapa{font-size:11px;}
   table.mapa th{position:sticky;top:0;z-index:10;}
   table.mapa td,table.mapa th{padding:3px 5px;white-space:nowrap;}
-  table.mapa .emp-head{background:var(--accent2);color:#001018;text-align:center;font-size:12px;}
+  table.mapa .emp-head{background:var(--accent2);color:#001018;text-align:center;font-size:12px;font-weight:700;}
   td.cell-clickable{cursor:pointer;}
   td.cell-clickable:hover{background:rgba(56,189,248,0.12);}
+  td.abast-cell{cursor:pointer;}
+  td.abast-cell:hover{background:rgba(34,197,94,0.15);}
+  table.mapa .hora-col{text-align:center;}
+  table.mapa .emp-sep{border-right:3px solid var(--accent2);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;}
   .trip-chip:active{cursor:grabbing;}
   td.drop-target{outline:2px dashed var(--accent);outline-offset:-2px;}
@@ -168,6 +172,7 @@
       <div class="row">
         <div class="field"><label>Nome</label><input id="empNome" placeholder="Ex.: Empurrador 01"></div>
         <div class="field"><label>Potência (HP)</label><input type="number" id="empPot" placeholder="0"></div>
+        <div class="field"><label>Cor no Mapa</label><input type="color" id="empCor" value="#0ea5e9" style="width:54px;height:32px;padding:2px;"></div>
         <div class="field">
           <label>Combustíveis utilizados</label>
           <div class="chk-group" id="empCombs">
@@ -266,7 +271,10 @@
   <div class="modal">
     <h3 id="mvTitle">Nova Viagem</h3>
     <div class="row"><div class="field" style="flex:1;"><label>Empurrador</label><select id="mvEmp" style="width:100%"></select></div></div>
-    <div class="row"><div class="field" style="flex:1;"><label>Trecho / Rota</label><select id="mvRota" style="width:100%"></select></div></div>
+    <div class="row"><div class="field" style="flex:1;"><label>Trecho / Rota <span class="muted">(digite para filtrar)</span></label>
+      <input id="mvRota" list="mvRotaList" style="width:100%" placeholder="Digite o trecho..." autocomplete="off">
+      <datalist id="mvRotaList"></datalist>
+    </div></div>
     <div class="row">
       <div class="field" style="flex:1;"><label>Condição</label>
         <select id="mvCond" style="width:100%">
@@ -276,7 +284,7 @@
     </div>
     <div class="row">
       <div class="field"><label>Dia de saída</label><input type="date" id="mvData"></div>
-      <div class="field"><label>Horário de saída</label><input type="time" id="mvHora" value="08:00"></div>
+      <div class="field"><label>Horário de saída (24h)</label><input type="text" id="mvHora" value="08:00" placeholder="HH:MM" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" style="width:90px;"></div>
     </div>
     <div id="mvCalc" class="hint"></div>
     <div class="modal-actions">
@@ -352,6 +360,18 @@ function rotaById(id){ return state.rotas.find(r=>r.id===id); }
 function ativo(x){ return !x || x.ativo !== false; }
 function empsAtivos(){ return state.empurradores.filter(ativo); }
 function rotasAtivas(){ return state.rotas.filter(ativo); }
+const EMP_PALETTE=['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#ef4444','#14b8a6','#ec4899','#84cc16','#f97316','#6366f1'];
+function getEmpCor(e){
+  if(e && e.cor) return e.cor;
+  const i=state.empurradores.indexOf(e);
+  return EMP_PALETTE[(i<0?0:i)%EMP_PALETTE.length];
+}
+function corContraste(hex){
+  const m=String(hex||'').replace('#','');
+  if(m.length<6) return '#001018';
+  const r=parseInt(m.substr(0,2),16), g=parseInt(m.substr(2,2),16), b=parseInt(m.substr(4,2),16);
+  return (0.299*r+0.587*g+0.114*b)>150 ? '#001018' : '#ffffff';
+}
 
 /* =========================================================
    NAVEGAÇÃO
@@ -395,6 +415,7 @@ document.querySelectorAll('#empCombs input').forEach(c=>c.addEventListener('chan
 function readEmpForm(){
   const nome = document.getElementById('empNome').value.trim();
   const pot = parseFloat(document.getElementById('empPot').value)||0;
+  const cor = document.getElementById('empCor').value;
   const combustiveis = [...document.querySelectorAll('#empCombs input:checked')].map(c=>c.value);
   const porto = parseFloat(document.getElementById('empPorto').value)||0;
   const tanques = {};
@@ -403,12 +424,13 @@ function readEmpForm(){
     const ini = parseFloat(document.querySelector(`[data-tank-ini="${c}"]`)?.value)||0;
     tanques[c] = {capacidade:cap, estoqueInicial:ini};
   });
-  return {nome,potencia:pot,combustiveis,consumoPorto:porto,tanques};
+  return {nome,potencia:pot,cor,combustiveis,consumoPorto:porto,tanques};
 }
 function clearEmpForm(){
   document.getElementById('empNome').value='';
   document.getElementById('empPot').value='';
   document.getElementById('empPorto').value='';
+  document.getElementById('empCor').value='#0ea5e9';
   document.querySelectorAll('#empCombs input').forEach(c=>c.checked=false);
   renderEmpTanqueRow();
   editEmpId=null;
@@ -435,6 +457,7 @@ function editEmp(id){
   document.getElementById('empNome').value=e.nome;
   document.getElementById('empPot').value=e.potencia;
   document.getElementById('empPorto').value=e.consumoPorto;
+  document.getElementById('empCor').value=getEmpCor(e);
   document.querySelectorAll('#empCombs input').forEach(c=>c.checked=e.combustiveis.includes(c.value));
   renderEmpTanqueRow();
   e.combustiveis.forEach(c=>{
@@ -476,8 +499,9 @@ function renderEmp(){
     const combs = e.combustiveis.map(c=>`<span class="tag ${c}">${COMB_LABEL[c]}</span>`).join(' ');
     const tanks = e.combustiveis.map(c=>`${COMB_LABEL[c]}: ${fmt(e.tanques[c]?.capacidade)} / ${fmt(e.tanques[c]?.estoqueInicial)} L`).join('<br>');
     const at = ativo(e);
+    const cor = getEmpCor(e);
     h += `<tr class="${at?'':'inativo'}">
-      <td>${e.nome}</td>
+      <td><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${cor};margin-right:6px;vertical-align:middle;"></span>${e.nome}</td>
       <td class="num">${fmt(e.potencia)}</td>
       <td>${combs}</td>
       <td class="num">${fmt(e.consumoPorto)}</td>
@@ -972,13 +996,15 @@ function renderMapa(){
   h+='<th>Data</th>';
   emps.forEach(e=>{
     const span = 4 + e.combustiveis.length*3;
-    h+=`<th class="emp-head" colspan="${span}">${e.nome}</th>`;
+    const cor=getEmpCor(e);
+    h+=`<th class="emp-head emp-sep" colspan="${span}" style="background:${cor};color:${corContraste(cor)}">${e.nome}</th>`;
   });
   h+='</tr><tr><th></th>';
   emps.forEach(e=>{
-    h+='<th>Horário</th><th>Viagem</th><th>Condição</th><th>Status</th>';
-    e.combustiveis.forEach(c=>{
-      h+=`<th class="num">${COMB_LABEL[c]} L/dia</th><th class="num">Abast.</th><th>Estoque / Tanque</th>`;
+    h+='<th class="hora-col">Horário</th><th>Viagem</th><th>Condição</th><th>Status</th>';
+    e.combustiveis.forEach((c,ci)=>{
+      const last = ci===e.combustiveis.length-1;
+      h+=`<th class="num">${COMB_LABEL[c]} L/dia</th><th class="num">Abast.</th><th class="${last?'emp-sep':''}">Estoque / Tanque</th>`;
     });
   });
   h+='</tr>';
@@ -1004,7 +1030,7 @@ function renderMapa(){
         viagemCell=`<span class="muted">↳ ${r?r.nome:''}</span>`;
         cond=`<span class="muted">${vAtiva.condicao}</span>`;
       }
-      h+=`<td>${horario}</td>
+      h+=`<td class="hora-col">${horario}</td>
           <td class="cell-clickable" data-emp="${e.id}" data-date="${dStr}">${viagemCell}</td>
           <td>${cond}</td><td></td>`;
       // viagem de referência para consumo de navegação no dia
@@ -1015,12 +1041,14 @@ function renderMapa(){
       // consumo de porto (embarcação parada) só aplica a MGO ou Diesel Terceiro — HFO só consome em viagem
       const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
       // colunas por combustível
-      e.combustiveis.forEach(c=>{
+      e.combustiveis.forEach((c,ci)=>{
+        const last = ci===e.combustiveis.length-1;
         let consumoDia = cdNav[c] || 0;
         if(c===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
         // abastecimentos do dia
         const abs = state.abastecimentos.filter(a=>a.empId===e.id && a.data===dStr && a.comb===c && a.status!=='Cancelado');
         const abast = abs.reduce((s,a)=>s+(a.qtd||0),0);
+        const aid = abs.length ? abs[0].id : '';
         // atualizar estoque
         estoque[e.id][c] = estoque[e.id][c] - consumoDia + abast;
         const cap = e.tanques[c]?.capacidade||0;
@@ -1028,8 +1056,8 @@ function renderMapa(){
         const pctCls = pct<15?'bad':pct<30?'warn':'ok';
         const barColor = pct<15?'var(--bad)':pct<30?'var(--warn)':'var(--ok)';
         h+=`<td class="num">${consumoDia?fmt(consumoDia):''}</td>
-            <td class="num">${abast?'<b style="color:var(--ok)">'+fmt(abast)+'</b>':''}</td>
-            <td><div class="bar"><span style="width:${Math.max(0,Math.min(100,pct)).toFixed(0)}%;background:${barColor}"></span></div>
+            <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abast?'<b style="color:var(--ok)">'+fmt(abast)+'</b>':''}</td>
+            <td class="${last?'emp-sep':''}"><div class="bar"><span style="width:${Math.max(0,Math.min(100,pct)).toFixed(0)}%;background:${barColor}"></span></div>
                 <span class="pct ${pctCls}">${fmt(estoque[e.id][c])} L · ${pct.toFixed(0)}%</span></td>`;
       });
     });
@@ -1043,6 +1071,16 @@ function renderMapa(){
     td.addEventListener('click', ev=>{
       if(ev.target.classList.contains('trip-chip')) return;
       openViagemModal(null, td.dataset.emp, td.dataset.date);
+    });
+  });
+  // click na coluna Abastecimento: novo abastecimento programado ou editar existente
+  wrap.querySelectorAll('.abast-cell').forEach(td=>{
+    td.addEventListener('click', ()=>{
+      if(td.dataset.aid){
+        openAbastModal(td.dataset.aid);
+      }else{
+        openAbastModal(null, {empId:td.dataset.emp, data:td.dataset.date, comb:td.dataset.comb});
+      }
     });
   });
   // drag & drop
@@ -1070,6 +1108,22 @@ function renderMapa(){
 
 /* ---- Modal Viagem ---- */
 let editViagemId=null;
+function getMvRotaId(){
+  const txt=document.getElementById('mvRota').value.trim();
+  const r=state.rotas.find(x=>norm(x.nome)===norm(txt));
+  return r ? r.id : '';
+}
+function normHora(s){
+  s=String(s||'').trim();
+  let m=s.match(/^(\d{1,2}):?(\d{2})$/);
+  if(m){
+    let h=+m[1], mi=+m[2];
+    if(h<=23 && mi<=59) return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
+  }
+  m=s.match(/^(\d{1,2})$/);
+  if(m){ let h=+m[1]; if(h<=23) return String(h).padStart(2,'0')+':00'; }
+  return null;
+}
 function openViagemModal(vid, empId, dateStr_){
   editViagemId = vid;
   const mEmp=document.getElementById('mvEmp'), mRota=document.getElementById('mvRota');
@@ -1078,14 +1132,16 @@ function openViagemModal(vid, empId, dateStr_){
   const empList = state.empurradores.filter(e=>ativo(e) || (vEdit && vEdit.empId===e.id));
   const rotList = state.rotas.filter(r=>ativo(r) || (vEdit && vEdit.rotaId===r.id));
   mEmp.innerHTML = empList.map(e=>`<option value="${e.id}">${e.nome}${ativo(e)?'':' (inativo)'}</option>`).join('');
-  mRota.innerHTML = rotList.map(r=>`<option value="${r.id}">${r.nome}${ativo(r)?'':' (inativo)'}</option>`).join('');
+  document.getElementById('mvRotaList').innerHTML =
+    rotList.map(r=>`<option value="${r.nome.replace(/"/g,'&quot;')}">`).join('');
   if(!empList.length||!rotList.length){
     alert('Cadastre empurradores e rotas nas Premissas primeiro.'); return;
   }
   if(vid){
     const v=state.viagens.find(x=>x.id===vid);
     document.getElementById('mvTitle').textContent='Editar Viagem';
-    mEmp.value=v.empId; mRota.value=v.rotaId;
+    mEmp.value=v.empId;
+    mRota.value=rotaById(v.rotaId)?.nome || '';
     document.getElementById('mvCond').value=v.condicao;
     document.getElementById('mvData').value=v.dataSaida;
     document.getElementById('mvHora').value=v.horaSaida||'08:00';
@@ -1093,6 +1149,7 @@ function openViagemModal(vid, empId, dateStr_){
   }else{
     document.getElementById('mvTitle').textContent='Nova Viagem';
     if(empId) mEmp.value=empId;
+    mRota.value='';
     document.getElementById('mvCond').value='Carregada';
     document.getElementById('mvData').value=dateStr_||dateStr(new Date());
     document.getElementById('mvHora').value='08:00';
@@ -1101,15 +1158,17 @@ function openViagemModal(vid, empId, dateStr_){
   updateMvCalc();
   document.getElementById('modalViagem').classList.add('show');
 }
-['mvEmp','mvRota','mvCond','mvData','mvHora'].forEach(id=>
-  document.getElementById(id).addEventListener('change', updateMvCalc));
+['mvEmp','mvRota','mvCond','mvData','mvHora'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', updateMvCalc);
+  document.getElementById(id).addEventListener('input', updateMvCalc);
+});
 function updateMvCalc(){
   const v={
     empId:document.getElementById('mvEmp').value,
-    rotaId:document.getElementById('mvRota').value,
+    rotaId:getMvRotaId(),
     condicao:document.getElementById('mvCond').value,
     dataSaida:document.getElementById('mvData').value,
-    horaSaida:document.getElementById('mvHora').value
+    horaSaida:normHora(document.getElementById('mvHora').value)||'08:00'
   };
   const el=document.getElementById('mvCalc');
   if(!v.empId||!v.rotaId||!v.dataSaida){ el.textContent=''; return; }
@@ -1126,14 +1185,18 @@ function updateMvCalc(){
     <b>Consumo total:</b> ${cons||'—'}`;
 }
 document.getElementById('mvSave').addEventListener('click', ()=>{
+  const rotaId=getMvRotaId();
+  const hora=normHora(document.getElementById('mvHora').value);
+  if(!rotaId){ alert('Selecione um trecho/rota válido da lista.'); return; }
+  if(!hora){ alert('Informe o horário no formato 24h (HH:MM).'); return; }
   const data={
     empId:document.getElementById('mvEmp').value,
-    rotaId:document.getElementById('mvRota').value,
+    rotaId:rotaId,
     condicao:document.getElementById('mvCond').value,
     dataSaida:document.getElementById('mvData').value,
-    horaSaida:document.getElementById('mvHora').value
+    horaSaida:hora
   };
-  if(!data.empId||!data.rotaId||!data.dataSaida){ alert('Preencha todos os campos.'); return; }
+  if(!data.empId||!data.dataSaida){ alert('Preencha todos os campos.'); return; }
   if(editViagemId){
     Object.assign(state.viagens.find(x=>x.id===editViagemId), data);
   }else{
@@ -1154,7 +1217,7 @@ document.getElementById('btnNovoAbast').addEventListener('click', ()=>openAbastM
 document.getElementById('abastFiltro').addEventListener('change', renderAbast);
 
 let editAbastId=null;
-function openAbastModal(id){
+function openAbastModal(id, prefill){
   editAbastId=id;
   const aEdit = id ? state.abastecimentos.find(x=>x.id===id) : null;
   const empList = state.empurradores.filter(e=>ativo(e) || (aEdit && aEdit.empId===e.id));
@@ -1178,8 +1241,10 @@ function openAbastModal(id){
     document.getElementById('maDelete').style.display='';
   }else{
     document.getElementById('maTitle').textContent='Novo Abastecimento';
+    if(prefill && prefill.empId) maEmp.value=prefill.empId;
     fillComb();
-    document.getElementById('maData').value=dateStr(new Date());
+    if(prefill && prefill.comb) document.getElementById('maComb').value=prefill.comb;
+    document.getElementById('maData').value=(prefill && prefill.data) || dateStr(new Date());
     document.getElementById('maQtd').value='';
     document.getElementById('maStatus').value='Previsto';
     document.getElementById('maObs').value='';
@@ -1202,12 +1267,12 @@ document.getElementById('maSave').addEventListener('click', ()=>{
   }else{
     state.abastecimentos.push(Object.assign({id:uid()}, data));
   }
-  save(); closeModals(); renderAbast();
+  save(); closeModals(); renderAbast(); renderMapa();
 });
 document.getElementById('maDelete').addEventListener('click', ()=>{
   if(!confirm('Excluir este abastecimento?')) return;
   state.abastecimentos=state.abastecimentos.filter(a=>a.id!==editAbastId);
-  save(); closeModals(); renderAbast();
+  save(); closeModals(); renderAbast(); renderMapa();
 });
 
 function renderAbast(){
@@ -1290,9 +1355,9 @@ document.getElementById('btnSeed').addEventListener('click', ()=>{
   renderView(document.querySelector('nav button.active').dataset.view);
 });
 function seedData(){
-  const e1={id:uid(),nome:'Empurrador Alfa',potencia:2400,combustiveis:['Diesel','HFO'],consumoPorto:60,
+  const e1={id:uid(),nome:'Empurrador Alfa',potencia:2400,cor:'#0ea5e9',combustiveis:['Diesel','HFO'],consumoPorto:60,
     tanques:{Diesel:{capacidade:150000,estoqueInicial:120000},HFO:{capacidade:600000,estoqueInicial:480000}}};
-  const e2={id:uid(),nome:'Empurrador Bravo',potencia:1800,combustiveis:['MGO'],consumoPorto:40,
+  const e2={id:uid(),nome:'Empurrador Bravo',potencia:1800,cor:'#f59e0b',combustiveis:['MGO'],consumoPorto:40,
     tanques:{MGO:{capacidade:90000,estoqueInicial:70000}}};
   const r1={id:uid(),nome:'ORI x DST',origem:'Cidade A',destino:'Cidade B',distancia:1200};
   const r2={id:uid(),nome:'DST x ORI',origem:'Cidade B',destino:'Cidade A',distancia:1200};

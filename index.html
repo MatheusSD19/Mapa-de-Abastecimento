@@ -130,6 +130,8 @@
   table.mapa tr.today td:first-child{background:rgba(56,189,248,0.22);}
   table.mapa .emp-sep{border-right:3px solid var(--line);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;}
+  .abast-chip{background:var(--ok);color:#04210f;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:700;display:inline-block;}
+  .abast-chip:active{cursor:grabbing;}
   .trip-chip:active{cursor:grabbing;}
   td.drop-target{outline:2px dashed var(--accent);outline-offset:-2px;}
   .bar{height:9px;border-radius:2px;background:var(--panel2);position:relative;min-width:46px;display:inline-block;vertical-align:middle;}
@@ -253,7 +255,7 @@
         <div class="spacer"></div>
         <button class="btn" id="btnNovaViagem">+ Nova Viagem</button>
       </div>
-      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia. Arraste o chip de uma viagem para mover o dia de saída — segurando <b>Ctrl</b> ao soltar, a viagem é <b>copiada</b> sem alterar a original.</div>
+      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia, ou na coluna <b>Abast.</b> para programar um abastecimento. Arraste o chip de uma viagem ou de um abastecimento para mover a data — segurando <b>Ctrl</b> ao soltar, o item é <b>copiado</b> sem alterar o original.</div>
       <div class="mapa-wrap" id="mapaWrap" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -1088,8 +1090,11 @@ function renderMapa(){
         const pct = cap>0 ? estoque[e.id][c]/cap*100 : 0;
         const pctCls = pct<15?'bad':pct<30?'warn':'ok';
         const barColor = pct<15?'var(--bad)':pct<30?'var(--warn)':'var(--ok)';
+        const abastChip = abast
+          ? `<span class="abast-chip" draggable="true" data-aid="${aid}">${fmt(abast)}</span>`
+          : '';
         h+=`<td class="num">${consumoDia?fmt(consumoDia):''}</td>
-            <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abast?'<b style="color:var(--ok)">'+fmt(abast)+'</b>':''}</td>
+            <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abastChip}</td>
             <td class="${last?'emp-sep':''}"><div class="bar"><span style="width:${Math.max(0,Math.min(100,pct)).toFixed(0)}%;background:${barColor}"></span></div>
                 <span class="pct ${pctCls}">${fmt(estoque[e.id][c])} L · ${pct.toFixed(0)}%</span></td>`;
       });
@@ -1145,6 +1150,38 @@ function renderMapa(){
         v.dataSaida=td.dataset.date;
       }
       save(); renderMapa();
+    });
+  });
+  // drag & drop dos abastecimentos
+  wrap.querySelectorAll('.abast-chip[draggable]').forEach(chip=>{
+    chip.addEventListener('dragstart', ev=>{
+      ev.dataTransfer.setData('text/aid', chip.dataset.aid);
+    });
+  });
+  wrap.querySelectorAll('.abast-cell').forEach(td=>{
+    td.addEventListener('dragover', ev=>{ ev.preventDefault(); td.classList.add('drop-target'); });
+    td.addEventListener('dragleave', ()=>td.classList.remove('drop-target'));
+    td.addEventListener('drop', ev=>{
+      ev.preventDefault(); td.classList.remove('drop-target');
+      const aid=ev.dataTransfer.getData('text/aid');
+      if(!aid) return;
+      const a=state.abastecimentos.find(x=>x.id===aid);
+      if(!a) return;
+      if(td.dataset.emp!==a.empId || td.dataset.comb!==a.comb){
+        alert('Mova o abastecimento dentro do mesmo empurrador e combustível.');
+        return;
+      }
+      if(ev.ctrlKey || ev.metaKey){
+        // CTRL pressionado: copia o abastecimento, sem alterar o original
+        state.abastecimentos.push({
+          id:uid(), empId:a.empId, comb:a.comb, data:td.dataset.date,
+          qtd:a.qtd, status:a.status, obs:a.obs||''
+        });
+      }else{
+        // arrasto normal: move o abastecimento
+        a.data=td.dataset.date;
+      }
+      save(); renderMapa(); renderAbast();
     });
   });
 }

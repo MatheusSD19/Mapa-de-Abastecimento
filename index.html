@@ -130,8 +130,12 @@
   table.mapa tr.today td:first-child{background:rgba(56,189,248,0.22);}
   table.mapa .emp-sep{border-right:3px solid var(--line);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;}
-  .abast-chip{background:var(--ok);color:#04210f;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:700;display:inline-block;}
+  .abast-chip{border-radius:4px;padding:1px 5px;cursor:grab;font-weight:700;display:inline-block;}
   .abast-chip:active{cursor:grabbing;}
+  .abast-chip.st-Previsto{background:var(--bad);color:#fff;}
+  .abast-chip.st-Solicitado{background:var(--ok);color:#04210f;}
+  .abast-chip.st-Realizado{background:#101010;color:#fff;}
+  .abast-chip.st-Cancelado{background:var(--info);color:#1a103d;}
   .trip-chip:active{cursor:grabbing;}
   td.drop-target{outline:2px dashed var(--accent);outline-offset:-2px;}
   .bar{height:9px;border-radius:2px;background:var(--panel2);position:relative;min-width:46px;display:inline-block;vertical-align:middle;}
@@ -1080,18 +1084,20 @@ function renderMapa(){
         const last = ci===e.combustiveis.length-1;
         let consumoDia = cdNav[c] || 0;
         if(c===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
-        // abastecimentos do dia
-        const abs = state.abastecimentos.filter(a=>a.empId===e.id && a.data===dStr && a.comb===c && a.status!=='Cancelado');
-        const abast = abs.reduce((s,a)=>s+(a.qtd||0),0);
-        const aid = abs.length ? abs[0].id : '';
+        // abastecimentos do dia (cancelados aparecem no mapa mas não somam no estoque)
+        const absAll = state.abastecimentos.filter(a=>a.empId===e.id && a.data===dStr && a.comb===c);
+        const abast = absAll.reduce((s,a)=> a.status!=='Cancelado' ? s+(a.qtd||0) : s, 0);
+        const aid = absAll.length ? absAll[0].id : '';
+        const chipStatus = absAll.length ? absAll[0].status : '';
+        const chipQtd = abast || absAll.reduce((s,a)=>s+(a.qtd||0),0);
         // atualizar estoque
         estoque[e.id][c] = estoque[e.id][c] - consumoDia + abast;
         const cap = e.tanques[c]?.capacidade||0;
         const pct = cap>0 ? estoque[e.id][c]/cap*100 : 0;
         const pctCls = pct<15?'bad':pct<30?'warn':'ok';
         const barColor = pct<15?'var(--bad)':pct<30?'var(--warn)':'var(--ok)';
-        const abastChip = abast
-          ? `<span class="abast-chip" draggable="true" data-aid="${aid}">${fmt(abast)}</span>`
+        const abastChip = absAll.length
+          ? `<span class="abast-chip st-${chipStatus}" draggable="true" data-aid="${aid}" title="${chipStatus}">${fmt(chipQtd)}</span>`
           : '';
         h+=`<td class="num">${consumoDia?fmt(consumoDia):''}</td>
             <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abastChip}</td>

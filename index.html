@@ -23,7 +23,7 @@
   .hamburger{background:var(--panel2);color:var(--txt);border:1px solid var(--line);width:34px;height:34px;border-radius:6px;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;}
   .hamburger:hover{border-color:var(--accent);}
   .layout{display:flex;align-items:stretch;}
-  .sidebar{width:200px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);padding:12px;transition:width .2s ease,padding .2s ease;overflow:hidden;display:flex;flex-direction:column;min-height:calc(100vh - 55px);}
+  .sidebar{width:200px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);padding:12px;transition:width .2s ease,padding .2s ease;overflow:hidden;display:flex;flex-direction:column;position:sticky;top:55px;align-self:flex-start;height:calc(100vh - 55px);}
   body.sidebar-collapsed .sidebar{width:0;padding:12px 0;border-right:none;}
   .sidebar .side-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;white-space:nowrap;}
   .sidebar .side-bottom{margin-top:auto;padding-top:12px;display:flex;justify-content:center;}

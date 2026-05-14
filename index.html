@@ -190,7 +190,9 @@
         <button class="tool-btn" id="btnImportMed">Importar Excel / CSV</button>
         <input type="file" id="fileMed" accept=".csv,.xlsx,.xls" style="display:none">
       </div>
-      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino</b>. O sistema atualiza automaticamente as bases pelos nomes cadastrados. As colunas <b>Distância, Origem e Destino</b> não afetam esta tela, mas atualizam o cadastro das rotas em Premissas.</div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino</b>.
+      A importação <b>cria automaticamente</b> os trechos e empurradores que ainda não existem (e adiciona os combustíveis usados por cada empurrador). Consumo é interpretado em <b>L/h</b> e Tempo em <b>horas</b>.
+      As colunas Distância, Origem e Destino atualizam o cadastro dos trechos em Premissas. Após importar, revise potência e tanques dos empurradores nas Premissas.</div>
       <div id="medContent" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -647,41 +649,74 @@ function processMedRows(rows){
     origem: header.findIndex(h=>h.includes('origem')),
     destino:header.findIndex(h=>h.includes('destino')),
   };
-  if(idx.trecho<0||idx.emp<0||idx.cond<0){
-    alert('Cabeçalho inválido. Esperado: Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino'); return;
+  if(idx.trecho<0||idx.emp<0||idx.cond<0||idx.comb<0){
+    alert('Cabeçalho inválido. Esperado: Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino');
+    return;
   }
-  let ok=0, skip=0, rotasAtualizadas=0;
-  const combMap = {mgo:'MGO', hfo:'HFO', diesel:'Diesel', 'diesel terceiro':'Diesel'};
+  const combMap = {mgo:'MGO', hfo:'HFO', diesel:'Diesel', 'diesel terceiro':'Diesel', 'óleo diesel':'Diesel', 'oleo diesel':'Diesel'};
+  let ok=0, skip=0;
+  let rotasCriadas=0, rotasAtualizadas=0, empsCriados=0, empsAtualizados=0;
+
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
-    const rota = state.rotas.find(x=>norm(x.nome)===norm(r[idx.trecho]));
-    const emp  = state.empurradores.find(x=>norm(x.nome)===norm(r[idx.emp]));
+    const trechoNome = String(r[idx.trecho]||'').trim();
+    const empNome    = String(r[idx.emp]||'').trim();
     const cond = CONDICOES.find(c=>norm(c)===norm(r[idx.cond]));
-    if(rota){
-      // colunas Distância/Origem/Destino atualizam o cadastro da rota nas Premissas
+    const combRaw = norm(r[idx.comb]);
+    const comb = combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
+    if(!trechoNome || !empNome || !cond || !comb){ skip++; continue; }
+
+    const cons  = idx.cons>=0  ? (parseNum(r[idx.cons])||0)  : 0;
+    const tempo = idx.tempo>=0 ? (parseNum(r[idx.tempo])||0) : 0;
+    const oriV  = idx.origem>=0  ? String(r[idx.origem]||'').trim()  : '';
+    const dstV  = idx.destino>=0 ? String(r[idx.destino]||'').trim() : '';
+    const dist  = idx.dist>=0 ? parseNum(r[idx.dist]) : NaN;
+
+    // ---- Rota: encontra ou cria ----
+    let rota = state.rotas.find(x=>norm(x.nome)===norm(trechoNome));
+    if(!rota){
+      rota = {id:uid(), nome:trechoNome, origem:oriV, destino:dstV, distancia:isNaN(dist)?0:dist};
+      state.rotas.push(rota);
+      rotasCriadas++;
+    }else{
       let upd=false;
-      const oriV = idx.origem>=0 ? String(r[idx.origem]||'').trim() : '';
-      const dstV = idx.destino>=0 ? String(r[idx.destino]||'').trim() : '';
-      const dstNum = idx.dist>=0 ? parseNum(r[idx.dist]) : NaN;
       if(oriV && oriV!==rota.origem){ rota.origem=oriV; upd=true; }
       if(dstV && dstV!==rota.destino){ rota.destino=dstV; upd=true; }
-      if(!isNaN(dstNum) && dstNum>0 && dstNum!==rota.distancia){ rota.distancia=dstNum; upd=true; }
+      if(!isNaN(dist) && dist>0 && dist!==rota.distancia){ rota.distancia=dist; upd=true; }
       if(upd) rotasAtualizadas++;
     }
-    if(!rota||!emp||!cond){ skip++; continue; }
-    const combRaw = idx.comb>=0 ? norm(r[idx.comb]) : '';
-    const comb = combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
-    const cons = idx.cons>=0 ? (parseNum(r[idx.cons])||0) : 0;
-    const tempo= idx.tempo>=0 ? (parseNum(r[idx.tempo])||0) : 0;
-    const patch = {tempo};
-    if(comb) patch.consumo = {[comb]:cons};
-    setMedia(rota.id, emp.id, cond, patch);
+
+    // ---- Empurrador: encontra ou cria; garante o combustível na lista ----
+    let emp = state.empurradores.find(x=>norm(x.nome)===norm(empNome));
+    if(!emp){
+      emp = {id:uid(), nome:empNome, potencia:0, combustiveis:[], consumoPorto:0, tanques:{}};
+      state.empurradores.push(emp);
+      empsCriados++;
+    }
+    if(!emp.tanques) emp.tanques={};
+    if(!emp.combustiveis.includes(comb)){
+      emp.combustiveis.push(comb);
+      if(!emp.tanques[comb]) emp.tanques[comb]={capacidade:0, estoqueInicial:0};
+      empsAtualizados++;
+    }
+
+    // ---- Média de consumo (L/h) e tempo de viagem (h) ----
+    setMedia(rota.id, emp.id, cond, {tempo, consumo:{[comb]:cons}});
     ok++;
   }
   save();
+  renderMediasSelectors();
   renderMedias();
   renderRot();
-  alert(`Importação concluída.\nLinhas aplicadas: ${ok}\nLinhas ignoradas (sem correspondência): ${skip}\nRotas atualizadas (Origem/Destino/Distância): ${rotasAtualizadas}`);
+  renderEmp();
+  alert(
+    'Importação concluída.\n'+
+    'Linhas aplicadas: '+ok+'\n'+
+    'Linhas ignoradas (dados incompletos): '+skip+'\n'+
+    'Trechos: '+rotasCriadas+' criados, '+rotasAtualizadas+' atualizados\n'+
+    'Empurradores: '+empsCriados+' criados, '+empsAtualizados+' com combustível adicionado\n\n'+
+    'Revise potência, capacidade de tanque e estoque inicial dos empurradores nas Premissas.'
+  );
 }
 
 /* =========================================================

@@ -72,8 +72,22 @@
   .modal h3{color:var(--accent);margin-bottom:12px;font-size:15px;}
   .modal .row{margin-bottom:10px;}
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+  /* dropdown filtro */
+  .dropdown{position:relative;}
+  .dropdown-btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:6px 8px;border-radius:5px;font-size:12px;cursor:pointer;min-width:190px;text-align:left;}
+  .dropdown-btn:hover{border-color:var(--accent);}
+  .dropdown-panel{display:none;position:absolute;top:100%;left:0;margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;z-index:40;min-width:220px;max-height:260px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.35);}
+  .dropdown.open .dropdown-panel{display:block;}
+  .dropdown-panel label{display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 2px;cursor:pointer;}
+  .dropdown-panel .dd-actions{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px;}
+  .dropdown-panel .dd-actions button{flex:1;font-size:11px;padding:3px 6px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:4px;cursor:pointer;}
   /* mapa */
   .mapa-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:8px;}
+  .mapa-wrap::-webkit-scrollbar{width:14px;height:14px;}
+  .mapa-wrap::-webkit-scrollbar-track{background:var(--panel2);}
+  .mapa-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:7px;border:3px solid var(--panel2);}
+  .mapa-wrap::-webkit-scrollbar-thumb:hover{background:var(--accent2);}
+  .mapa-wrap{scrollbar-width:auto;scrollbar-color:var(--line) var(--panel2);}
   table.mapa{font-size:11px;}
   table.mapa th{position:sticky;top:0;z-index:10;}
   table.mapa td,table.mapa th{padding:3px 5px;white-space:nowrap;}
@@ -188,6 +202,12 @@
       <div class="row">
         <div class="field"><label>Data inicial</label><input type="date" id="mapaIni"></div>
         <div class="field"><label>Data final</label><input type="date" id="mapaFim"></div>
+        <div class="field"><label>Empurradores exibidos</label>
+          <div class="dropdown" id="empFilterDrop">
+            <button type="button" class="dropdown-btn" id="empFilterBtn">Todos os empurradores ▾</button>
+            <div class="dropdown-panel" id="empFilterPanel"></div>
+          </div>
+        </div>
         <button class="btn secondary" id="btnMapaRefresh">Atualizar</button>
         <div class="spacer"></div>
         <button class="btn" id="btnNovaViagem">+ Nova Viagem</button>
@@ -718,6 +738,52 @@ function initMapaDates(){
 document.getElementById('btnMapaRefresh').addEventListener('click', renderMapa);
 document.getElementById('btnNovaViagem').addEventListener('click', ()=>openViagemModal(null,null,null));
 
+/* ---- Filtro de empurradores exibidos no mapa ---- */
+let mapaEmpFilter = new Set();   // ids selecionados; por padrão todos
+function renderEmpFilter(){
+  // garante seleção inicial = todos
+  const ids = state.empurradores.map(e=>e.id);
+  if(!mapaEmpFilter.__ready){
+    mapaEmpFilter = new Set(ids);
+    mapaEmpFilter.__ready = true;
+  }
+  // remove ids inexistentes
+  [...mapaEmpFilter].forEach(id=>{ if(id!=='__ready' && !ids.includes(id)) mapaEmpFilter.delete(id); });
+  const panel=document.getElementById('empFilterPanel');
+  panel.innerHTML =
+    `<div class="dd-actions">
+       <button type="button" id="ddAll">Todos</button>
+       <button type="button" id="ddNone">Nenhum</button>
+     </div>` +
+    state.empurradores.map(e=>
+      `<label><input type="checkbox" value="${e.id}" ${mapaEmpFilter.has(e.id)?'checked':''}> ${e.nome}</label>`
+    ).join('') || '<div class="empty">Nenhum empurrador.</div>';
+  const sel = state.empurradores.filter(e=>mapaEmpFilter.has(e.id)).length;
+  const tot = state.empurradores.length;
+  document.getElementById('empFilterBtn').textContent =
+    (sel===tot ? 'Todos os empurradores' : sel+' de '+tot+' empurradores') + ' ▾';
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      if(cb.checked) mapaEmpFilter.add(cb.value); else mapaEmpFilter.delete(cb.value);
+      renderMapa();
+    });
+  });
+  panel.querySelector('#ddAll').addEventListener('click', ()=>{
+    state.empurradores.forEach(e=>mapaEmpFilter.add(e.id)); renderMapa();
+  });
+  panel.querySelector('#ddNone').addEventListener('click', ()=>{
+    mapaEmpFilter.clear(); mapaEmpFilter.__ready=true; renderMapa();
+  });
+}
+document.getElementById('empFilterBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  document.getElementById('empFilterDrop').classList.toggle('open');
+});
+document.addEventListener('click', e=>{
+  const d=document.getElementById('empFilterDrop');
+  if(d && !d.contains(e.target)) d.classList.remove('open');
+});
+
 function viagensDoDia(empId, dStr){
   return state.viagens.filter(v=>v.empId===empId && v.dataSaida===dStr);
 }
@@ -734,6 +800,9 @@ function renderMapa(){
   initMapaDates();
   const wrap=document.getElementById('mapaWrap');
   if(!state.empurradores.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Cadastre empurradores nas Premissas.</div>'; return; }
+  renderEmpFilter();
+  const emps = state.empurradores.filter(e=>mapaEmpFilter.has(e.id));
+  if(!emps.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Nenhum empurrador selecionado no filtro acima.</div>'; return; }
   const ini=parseDate(document.getElementById('mapaIni').value);
   const fim=parseDate(document.getElementById('mapaFim').value);
   if(fim<ini){ wrap.innerHTML='<div class="empty" style="padding:14px;">Data final anterior à inicial.</div>'; return; }
@@ -743,7 +812,7 @@ function renderMapa(){
 
   // estoque corrente por empurrador/combustível
   const estoque={};
-  state.empurradores.forEach(e=>{
+  emps.forEach(e=>{
     estoque[e.id]={};
     e.combustiveis.forEach(c=> estoque[e.id][c]= e.tanques[c]?.estoqueInicial||0);
   });
@@ -751,12 +820,12 @@ function renderMapa(){
   // cabeçalho
   let h='<table class="mapa"><tr>';
   h+='<th>Data</th>';
-  state.empurradores.forEach(e=>{
+  emps.forEach(e=>{
     const span = 4 + e.combustiveis.length*3;
     h+=`<th class="emp-head" colspan="${span}">${e.nome}</th>`;
   });
   h+='</tr><tr><th></th>';
-  state.empurradores.forEach(e=>{
+  emps.forEach(e=>{
     h+='<th>Horário</th><th>Viagem</th><th>Condição</th><th>Status</th>';
     e.combustiveis.forEach(c=>{
       h+=`<th class="num">${COMB_LABEL[c]} L/dia</th><th class="num">Abast.</th><th>Estoque / Tanque</th>`;
@@ -768,7 +837,7 @@ function renderMapa(){
     const dStr=dateStr(day);
     const wknd = (day.getDay()===0||day.getDay()===6)?' weekend':'';
     h+=`<tr class="${wknd}"><td>${day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`;
-    state.empurradores.forEach(e=>{
+    emps.forEach(e=>{
       const vSaida = viagensDoDia(e.id,dStr);
       const vAtiva = viagemAtivaNoDia(e.id, day);
       // coluna horário/viagem/condição/status

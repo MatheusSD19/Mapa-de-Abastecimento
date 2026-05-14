@@ -124,6 +124,8 @@
   td.abast-cell:hover{background:rgba(34,197,94,0.15);}
   table.mapa .hora-col{text-align:center;}
   table.mapa .chegada{color:var(--info);font-weight:600;}
+  table.mapa tr.today td{background:rgba(56,189,248,0.13);box-shadow:inset 0 0 0 9999px rgba(56,189,248,0.07);}
+  table.mapa tr.today td:first-child{background:rgba(56,189,248,0.22);}
   table.mapa .emp-sep{border-right:3px solid var(--line);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;}
   .trip-chip:active{cursor:grabbing;}
@@ -1027,10 +1029,12 @@ function renderMapa(){
   });
   h+='</tr>';
 
+  const hojeStr=dateStr(new Date());
   dias.forEach(day=>{
     const dStr=dateStr(day);
     const wknd = (day.getDay()===0||day.getDay()===6)?' weekend':'';
-    h+=`<tr class="${wknd}"><td>${day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`;
+    const hoje = dStr===hojeStr?' today':'';
+    h+=`<tr class="${wknd}${hoje}"><td>${day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`;
     emps.forEach(e=>{
       const vSaida = viagensDoDia(e.id,dStr);
       const vAtiva = viagemAtivaNoDia(e.id, day);

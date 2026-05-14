@@ -120,14 +120,14 @@
             <label><input type="checkbox" value="Diesel"> Diesel Terceiro</label>
           </div>
         </div>
-        <div class="field"><label>Consumo médio no Porto (L/h)</label><input type="number" id="empPorto" placeholder="0"></div>
+        <div class="field"><label>Consumo médio no Porto (L/h) — MGO/Diesel</label><input type="number" id="empPorto" placeholder="0"></div>
       </div>
       <div class="row" id="empTanqueRow" style="margin-top:10px;"></div>
       <div class="row" style="margin-top:10px;">
         <button class="btn" id="btnAddEmp">Adicionar Empurrador</button>
         <button class="btn secondary" id="btnCancelEmp" style="display:none;">Cancelar edição</button>
       </div>
-      <div class="hint">Marque os combustíveis para informar capacidade do tanque e estoque inicial de cada um.</div>
+      <div class="hint">Marque os combustíveis para informar capacidade do tanque e estoque inicial de cada um. O consumo no Porto (embarcação parada) é debitado apenas de MGO ou Diesel Terceiro — o HFO só é consumido em viagem.</div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblEmp"></table></div>
     </div>
 
@@ -721,8 +721,8 @@ function renderMapa(){
       const cdNav = vRef ? consumoDiaViagem(vRef, day) : {};
       const horasNav = cdNav.__horas || 0;
       const horasPorto = Math.max(0, 24 - horasNav);
-      // combustível primário recebe o consumo de porto (embarcação parada)
-      const combPorto = e.combustiveis[0];
+      // consumo de porto (embarcação parada) só aplica a MGO ou Diesel Terceiro — HFO só consome em viagem
+      const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
       // colunas por combustível
       e.combustiveis.forEach(c=>{
         let consumoDia = cdNav[c] || 0;

@@ -120,6 +120,7 @@
   td.abast-cell{cursor:pointer;}
   td.abast-cell:hover{background:rgba(34,197,94,0.15);}
   table.mapa .hora-col{text-align:center;}
+  table.mapa .chegada{color:var(--info);font-weight:600;}
   table.mapa .emp-sep{border-right:3px solid var(--line);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;}
   .trip-chip:active{cursor:grabbing;}
@@ -1041,6 +1042,13 @@ function renderMapa(){
         const r=rotaById(vAtiva.rotaId);
         viagemCell=`<span class="muted">↳ ${r?r.nome:''}</span>`;
         cond=`<span class="muted">${vAtiva.condicao}</span>`;
+        // último dia de viagem: exibe a hora prevista de chegada
+        const cv=calcViagem(vAtiva);
+        if(!cv.incompleto && dateStr(cv.chegada)===dStr){
+          const hh=String(cv.chegada.getHours()).padStart(2,'0');
+          const mm=String(cv.chegada.getMinutes()).padStart(2,'0');
+          horario=`<span class="chegada" title="Chegada prevista">⚓ ${hh}:${mm}</span>`;
+        }
       }
       h+=`<td class="hora-col">${horario}</td>
           <td class="cell-clickable" data-emp="${e.id}" data-date="${dStr}">${viagemCell}</td>

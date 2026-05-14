@@ -165,7 +165,7 @@
         <button class="tool-btn" id="btnImportMed">Importar Excel / CSV</button>
         <input type="file" id="fileMed" accept=".csv,.xlsx,.xls" style="display:none">
       </div>
-      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo</b>. O sistema atualiza automaticamente as bases pelos nomes cadastrados.</div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino</b>. O sistema atualiza automaticamente as bases pelos nomes cadastrados. As colunas <b>Distância, Origem e Destino</b> não afetam esta tela, mas atualizam o cadastro das rotas em Premissas.</div>
       <div id="medContent" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -389,6 +389,13 @@ function editEmp(id){
   document.getElementById('btnCancelEmp').style.display='';
   window.scrollTo(0,0);
 }
+function copyEmp(id){
+  editEmp(id);
+  editEmpId = null;
+  document.getElementById('empNome').value += ' (cópia)';
+  document.getElementById('btnAddEmp').textContent='Adicionar Empurrador';
+  document.getElementById('btnCancelEmp').style.display='';
+}
 function delEmp(id){
   if(!confirm('Excluir este empurrador? Viagens e abastecimentos vinculados também serão removidos.')) return;
   state.empurradores = state.empurradores.filter(e=>e.id!==id);
@@ -413,6 +420,7 @@ function renderEmp(){
       <td>${tanks}</td>
       <td>
         <button class="btn sm secondary" onclick="editEmp('${e.id}')">Editar</button>
+        <button class="btn sm secondary" onclick="copyEmp('${e.id}')">Copiar</button>
         <button class="btn sm danger" onclick="delEmp('${e.id}')">Excluir</button>
       </td></tr>`;
   });
@@ -452,6 +460,13 @@ function editRot(id){
   document.getElementById('btnAddRot').textContent='Salvar alterações';
   document.getElementById('btnCancelRot').style.display='';
 }
+function copyRot(id){
+  editRot(id);
+  editRotId = null;
+  document.getElementById('rotNome').value += ' (cópia)';
+  document.getElementById('btnAddRot').textContent='Adicionar Rota';
+  document.getElementById('btnCancelRot').style.display='';
+}
 function delRot(id){
   if(!confirm('Excluir esta rota? Viagens vinculadas serão removidas.')) return;
   state.rotas = state.rotas.filter(r=>r.id!==id);
@@ -467,6 +482,7 @@ function renderRot(){
     h+=`<tr><td>${r.nome}</td><td>${r.origem||'—'}</td><td>${r.destino||'—'}</td>
       <td class="num">${fmt(r.distancia)}</td>
       <td><button class="btn sm secondary" onclick="editRot('${r.id}')">Editar</button>
+      <button class="btn sm secondary" onclick="copyRot('${r.id}')">Copiar</button>
       <button class="btn sm danger" onclick="delRot('${r.id}')">Excluir</button></td></tr>`;
   });
   t.innerHTML=h;
@@ -577,17 +593,31 @@ function processMedRows(rows){
     comb:   header.findIndex(h=>h.includes('combust')),
     cons:   header.findIndex(h=>h.includes('consumo')),
     tempo:  header.findIndex(h=>h.includes('tempo')),
+    dist:   header.findIndex(h=>h.includes('dist')),
+    origem: header.findIndex(h=>h.includes('origem')),
+    destino:header.findIndex(h=>h.includes('destino')),
   };
   if(idx.trecho<0||idx.emp<0||idx.cond<0){
-    alert('Cabeçalho inválido. Esperado: Trecho, Empurrador, Condição, Combustível, Consumo, Tempo'); return;
+    alert('Cabeçalho inválido. Esperado: Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino'); return;
   }
-  let ok=0, skip=0;
+  let ok=0, skip=0, rotasAtualizadas=0;
   const combMap = {mgo:'MGO', hfo:'HFO', diesel:'Diesel', 'diesel terceiro':'Diesel'};
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
     const rota = state.rotas.find(x=>norm(x.nome)===norm(r[idx.trecho]));
     const emp  = state.empurradores.find(x=>norm(x.nome)===norm(r[idx.emp]));
     const cond = CONDICOES.find(c=>norm(c)===norm(r[idx.cond]));
+    if(rota){
+      // colunas Distância/Origem/Destino atualizam o cadastro da rota nas Premissas
+      let upd=false;
+      const oriV = idx.origem>=0 ? String(r[idx.origem]||'').trim() : '';
+      const dstV = idx.destino>=0 ? String(r[idx.destino]||'').trim() : '';
+      const dstNum = idx.dist>=0 ? parseFloat(String(r[idx.dist]).replace(/\./g,'').replace(',','.')) : NaN;
+      if(oriV && oriV!==rota.origem){ rota.origem=oriV; upd=true; }
+      if(dstV && dstV!==rota.destino){ rota.destino=dstV; upd=true; }
+      if(!isNaN(dstNum) && dstNum>0 && dstNum!==rota.distancia){ rota.distancia=dstNum; upd=true; }
+      if(upd) rotasAtualizadas++;
+    }
     if(!rota||!emp||!cond){ skip++; continue; }
     const combRaw = idx.comb>=0 ? norm(r[idx.comb]) : '';
     const comb = combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
@@ -600,7 +630,8 @@ function processMedRows(rows){
   }
   save();
   renderMedias();
-  alert(`Importação concluída.\nLinhas aplicadas: ${ok}\nLinhas ignoradas (sem correspondência): ${skip}`);
+  renderRot();
+  alert(`Importação concluída.\nLinhas aplicadas: ${ok}\nLinhas ignoradas (sem correspondência): ${skip}\nRotas atualizadas (Origem/Destino/Distância): ${rotasAtualizadas}`);
 }
 
 /* =========================================================

@@ -129,13 +129,18 @@
   table.mapa tr.today td{background:rgba(56,189,248,0.13);box-shadow:inset 0 0 0 9999px rgba(56,189,248,0.07);}
   table.mapa tr.today td:first-child{background:rgba(56,189,248,0.22);}
   table.mapa .emp-sep{border-right:3px solid var(--line);}
-  .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;}
+  .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;position:relative;}
+  .trip-chip.vstat-Realizada{box-shadow:0 0 0 2px var(--bad) inset;}
+  .trip-chip.vstat-Navegando::after{content:'⚓';margin-left:3px;font-size:10px;}
+  .trip-chip.vstat-Finalizada::after{content:'✓';margin-left:3px;font-size:10px;}
+  .trip-chip.vstat-Realizada::after{content:'!';margin-left:3px;font-size:10px;color:var(--bad);font-weight:900;}
   .abast-chip{border-radius:4px;padding:1px 5px;cursor:grab;font-weight:700;display:inline-block;}
   .abast-chip:active{cursor:grabbing;}
   .abast-chip.st-Previsto{background:var(--bad);color:#fff;}
   .abast-chip.st-Solicitado{background:var(--ok);color:#04210f;}
   .abast-chip.st-Realizado{background:#101010;color:#fff;}
   .abast-chip.st-Cancelado{background:var(--info);color:#1a103d;}
+  .abast-chip.abast-late{box-shadow:0 0 0 2px var(--bad);}
   .trip-chip:active{cursor:grabbing;}
   td.drop-target{outline:2px dashed var(--accent);outline-offset:-2px;}
   .bar{height:9px;border-radius:2px;background:var(--panel2);position:relative;min-width:46px;display:inline-block;vertical-align:middle;}
@@ -148,6 +153,9 @@
   .stat-Solicitado{color:var(--warn);}
   .stat-Realizado{color:var(--ok);}
   .stat-Cancelado{color:var(--bad);text-decoration:line-through;}
+  .stat-Navegando{color:var(--accent);}
+  .stat-Realizada{color:var(--ok);}
+  .stat-Finalizada{color:var(--info);}
   .kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
   .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;min-width:130px;}
   .kpi .v{font-size:20px;font-weight:700;color:var(--accent);}
@@ -155,6 +163,29 @@
   .hint{font-size:11px;color:var(--muted);margin-top:6px;}
   .inline-input{width:78px;padding:3px 5px;font-size:11px;}
   details summary{cursor:pointer;color:var(--accent);font-size:12px;margin-bottom:8px;}
+  .alerta{display:inline-block;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(239,68,68,.22);color:var(--bad);border:1px solid var(--bad);}
+  tr.row-alert td{background:rgba(239,68,68,0.08);}
+  tr.row-alert:hover td{background:rgba(239,68,68,0.14);}
+  .pill{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;}
+  .pill.Previsto{background:rgba(148,163,184,.22);color:var(--muted);}
+  .pill.Navegando{background:rgba(56,189,248,.22);color:var(--accent);}
+  .pill.Realizada{background:rgba(34,197,94,.22);color:var(--ok);}
+  .pill.Finalizada{background:rgba(167,139,250,.22);color:var(--info);}
+  .diff-pos{color:var(--ok);font-weight:600;}
+  .diff-neg{color:var(--bad);font-weight:600;}
+  .diff-neu{color:var(--muted);}
+  .chart-wrap{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:10px;}
+  .chart-svg{width:100%;height:320px;display:block;}
+  .chart-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted);margin-top:6px;}
+  .chart-legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle;}
+  .grid-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:center;}
+  .grid-3 .hd{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .vw-card{border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--panel2);margin-bottom:10px;}
+  .vw-card h4{font-size:12px;margin-bottom:8px;color:var(--accent);}
+  .small-tbl input{width:100%;}
+  .modal.wide{width:680px;}
+  .modal.xwide{width:780px;}
 </style>
 </head>
 <body>
@@ -178,6 +209,8 @@
     <button data-view="medias">Médias de Consumo</button>
     <button data-view="mapa">Mapa de Giros</button>
     <button data-view="abastecimentos">Abastecimentos</button>
+    <button data-view="viagens">Viagens</button>
+    <button data-view="precos">Preços e Desempenho</button>
   </nav>
   <div class="side-bottom">
     <button class="theme-toggle" id="btnTheme" title="Alternar tema">🌙</button>
@@ -276,10 +309,125 @@
             <option>Previsto</option><option>Solicitado</option><option>Realizado</option><option>Cancelado</option>
           </select>
         </div>
+        <div class="field"><label>De</label><input type="date" id="abastFiltroIni"></div>
+        <div class="field"><label>Até</label><input type="date" id="abastFiltroFim"></div>
+        <div class="field"><label>Embarcação</label>
+          <select id="abastFiltroEmp"><option value="">Todas</option></select>
+        </div>
+        <button class="btn secondary" id="btnAbastFilterReset">Mês atual</button>
         <div class="spacer"></div>
         <button class="btn" id="btnNovoAbast">+ Novo Abastecimento</button>
       </div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblAbast"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= VIAGENS ================= -->
+  <section class="view" id="view-viagens">
+    <div class="kpi-row" id="viagKpis"></div>
+    <div class="card">
+      <h2>Viagens <span class="sub">— acompanhamento e finalização</span></h2>
+      <div class="row">
+        <div class="field"><label>Filtrar status</label>
+          <select id="viagFiltro">
+            <option value="">Todos</option>
+            <option>Previsto</option><option>Navegando</option><option>Realizada</option><option>Finalizada</option>
+          </select>
+        </div>
+        <div class="field"><label>De</label><input type="date" id="viagFiltroIni"></div>
+        <div class="field"><label>Até</label><input type="date" id="viagFiltroFim"></div>
+        <div class="field"><label>Embarcação</label>
+          <select id="viagFiltroEmp"><option value="">Todas</option></select>
+        </div>
+        <button class="btn secondary" id="btnViagFilterReset">Mês atual</button>
+        <div class="spacer"></div>
+        <button class="btn" id="btnNovaViagem2">+ Nova Viagem</button>
+      </div>
+      <div style="margin-top:12px;overflow:auto;"><table id="tblViag"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Métricas de Viagens Finalizadas <span class="sub">— previsto x realizado</span></h2>
+      <div id="viagMetricas"></div>
+    </div>
+
+    <div class="card">
+      <h2>Sugestões de Atualização de Médias <span class="sub">— a partir das viagens finalizadas</span></h2>
+      <div class="hint">As médias sugeridas usam a média do realizado das viagens finalizadas por trecho/empurrador/condição. Você pode editar antes de aplicar.</div>
+      <div id="viagSugestoes" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Budget Mensal de Volume por Cidade <span class="sub">— volume previsto (L) por mês/cidade</span></h2>
+      <div class="row">
+        <div class="field"><label>Mês de referência</label><input type="month" id="budgetMes"></div>
+        <div class="field"><label>Cidade</label><input id="budgetCidade" list="budgetCidadesList" placeholder="Cidade"></div>
+        <datalist id="budgetCidadesList"></datalist>
+        <div class="field"><label>Volume previsto (L)</label><input type="number" id="budgetVol" placeholder="0"></div>
+        <button class="btn" id="btnAddBudget">Salvar</button>
+      </div>
+      <div style="margin-top:12px;overflow:auto;"><table id="tblBudget"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= PRECOS E DESEMPENHO ================= -->
+  <section class="view" id="view-precos">
+    <div class="kpi-row" id="precosKpis"></div>
+
+    <div class="card">
+      <h2>Filtros <span class="sub">— gráfico e métricas</span></h2>
+      <div class="row">
+        <div class="field"><label>De</label><input type="date" id="prFiltroIni"></div>
+        <div class="field"><label>Até</label><input type="date" id="prFiltroFim"></div>
+        <div class="field"><label>Combustível</label>
+          <select id="prFiltroComb">
+            <option value="">Todos</option>
+            <option>MGO</option><option>HFO</option><option>Diesel</option>
+          </select>
+        </div>
+        <div class="field"><label>Forecast até</label>
+          <select id="prForecast">
+            <option value="0">Sem forecast</option>
+            <option value="1" selected>Final do ano</option>
+          </select>
+        </div>
+        <button class="btn secondary" id="btnPrFilterReset">YTD</button>
+      </div>
+      <div class="chart-wrap">
+        <svg id="prChart" class="chart-svg" preserveAspectRatio="none"></svg>
+        <div id="prLegend" class="chart-legend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Médias por Empurrador <span class="sub">— L/h (consumo) e L/Ton (volume) — período filtrado</span></h2>
+      <div style="overflow:auto;"><table id="tblMediasEmp"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Histórico de Preços <span class="sub">— lançamento manual ou importação</span></h2>
+      <div class="row">
+        <div class="field"><label>Data</label><input type="date" id="hpData"></div>
+        <div class="field"><label>Fornecedor</label><input id="hpForn" list="hpFornList" placeholder="Nome"></div>
+        <datalist id="hpFornList"></datalist>
+        <div class="field"><label>Cidade</label><input id="hpCidade" list="hpCidadeList" placeholder="Cidade"></div>
+        <datalist id="hpCidadeList"></datalist>
+        <div class="field"><label>Combustível</label>
+          <select id="hpComb"><option>MGO</option><option>HFO</option><option>Diesel</option></select>
+        </div>
+        <div class="field"><label>Preço (R$/L)</label><input type="number" step="0.0001" id="hpPreco" placeholder="0,00"></div>
+        <button class="btn" id="btnAddHp">Adicionar</button>
+        <div class="spacer"></div>
+        <button class="tool-btn" id="btnImportHp">Importar Excel / CSV</button>
+        <input type="file" id="fileHp" accept=".csv,.xlsx,.xls" style="display:none">
+      </div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Data (DD/MM/AAAA), Fornecedor, Combustível, Preço (R$/L)</b>. Cidade é opcional.</div>
+      <div style="margin-top:12px;overflow:auto;max-height:360px;"><table id="tblHp"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Fornecedores Cadastrados <span class="sub">— cadastro silencioso a partir dos abastecimentos</span></h2>
+      <div style="overflow:auto;"><table id="tblForn"></table></div>
     </div>
   </section>
 </main>
@@ -304,6 +452,7 @@
     <div class="row">
       <div class="field"><label>Dia de saída</label><input type="date" id="mvData"></div>
       <div class="field"><label>Horário de saída (24h)</label><input type="text" id="mvHora" value="08:00" placeholder="HH:MM" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" style="width:90px;"></div>
+      <div class="field" id="mvVolField"><label>Volume previsto (Ton) <span class="muted">[Carregada]</span></label><input type="number" id="mvVol" placeholder="0"></div>
     </div>
     <div id="mvCalc" class="hint"></div>
     <div class="modal-actions">
@@ -316,13 +465,16 @@
 
 <!-- ===== MODAL ABASTECIMENTO ===== -->
 <div class="modal-bg" id="modalAbast">
-  <div class="modal">
+  <div class="modal wide">
     <h3 id="maTitle">Novo Abastecimento</h3>
     <div class="row"><div class="field" style="flex:1;"><label>Empurrador</label><select id="maEmp" style="width:100%"></select></div></div>
     <div class="row">
       <div class="field"><label>Data</label><input type="date" id="maData"></div>
       <div class="field"><label>Combustível</label><select id="maComb"></select></div>
       <div class="field"><label>Quantidade (L)</label><input type="number" id="maQtd" placeholder="0"></div>
+      <div class="field"><label>Cidade</label><input id="maCidade" list="maCidadeList" placeholder="Cidade do abastecimento" style="width:200px;">
+        <datalist id="maCidadeList"></datalist>
+      </div>
     </div>
     <div class="row">
       <div class="field" style="flex:1;"><label>Status</label>
@@ -331,11 +483,35 @@
         </select>
       </div>
     </div>
+    <div id="maRealizadoBox" style="display:none;border-top:1px solid var(--line);padding-top:10px;margin-top:6px;">
+      <div class="muted" style="font-size:11px;margin-bottom:6px;">Informações de realização — preencher ao confirmar como "Realizado".</div>
+      <div class="row">
+        <div class="field" style="flex:1;"><label>Fornecedor</label>
+          <input id="maForn" list="maFornList" placeholder="Nome do fornecedor" style="width:100%">
+          <datalist id="maFornList"></datalist>
+        </div>
+        <div class="field"><label>Preço (R$/L)</label><input type="number" step="0.0001" id="maPreco" placeholder="0,00"></div>
+      </div>
+      <div class="hint" id="maRealizadoHint"></div>
+    </div>
     <div class="row"><div class="field" style="flex:1;"><label>Observação</label><input id="maObs" style="width:100%" placeholder="Opcional"></div></div>
     <div class="modal-actions">
       <button class="btn danger sm" id="maDelete" style="display:none;">Excluir</button>
       <button class="btn secondary" data-close>Cancelar</button>
       <button class="btn" id="maSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL FINALIZAR VIAGEM ===== -->
+<div class="modal-bg" id="modalFinViagem">
+  <div class="modal xwide">
+    <h3>Finalizar Viagem</h3>
+    <div id="fvHeader" class="muted" style="font-size:12px;margin-bottom:10px;"></div>
+    <div id="fvBody"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" data-close>Cancelar</button>
+      <button class="btn" id="fvSave">Finalizar</button>
     </div>
   </div>
 </div>
@@ -349,15 +525,27 @@ const CONDICOES = ['Carregada','Vazia','Scort Tug','Escoteiro'];
 const COMBS = ['MGO','HFO','Diesel'];
 const COMB_LABEL = {MGO:'MGO', HFO:'HFO', Diesel:'Diesel Terceiro'};
 const STATUS = ['Previsto','Solicitado','Realizado','Cancelado'];
+const VSTATUS = ['Previsto','Navegando','Realizada','Finalizada'];
 
 let state = {
   empurradores: [],
   rotas: [],
   medias: {},        // medias[rotaId][empId][condicao] = {tempo, consumo:{MGO,HFO,Diesel}}
-  viagens: [],       // {id,empId,rotaId,condicao,dataSaida,horaSaida}
-  abastecimentos: [],// {id,empId,data,comb,qtd,status,obs}
+  viagens: [],       // {id,empId,rotaId,condicao,dataSaida,horaSaida,status,volumeCarregada,tempoRealizado,consumoRealizado:{},volumeRealizado}
+  abastecimentos: [],// {id,empId,data,comb,qtd,status,obs,cidade,preco,fornecedorId}
+  fornecedores: [],  // {id,nome,cidade}
+  historicoPrecos: [],// {id,data,fornecedorId,combustivel,preco}
+  budgetVolume: {},  // {cidade:{'YYYY-MM':litros}}
   mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
 };
+
+function ensureState(){
+  if(!state.fornecedores) state.fornecedores=[];
+  if(!state.historicoPrecos) state.historicoPrecos=[];
+  if(!state.budgetVolume) state.budgetVolume={};
+  state.viagens.forEach(v=>{ if(!v.status) v.status='Previsto'; });
+  state.abastecimentos.forEach(a=>{ if(!('cidade' in a)) a.cidade=''; });
+}
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
@@ -366,7 +554,20 @@ function load(){
     const raw = localStorage.getItem(STORE_KEY);
     if(raw){ state = Object.assign(state, JSON.parse(raw)); }
   }catch(e){ console.warn('load falhou', e); }
+  ensureState();
 }
+function fmt2(n){
+  if(n===null||n===undefined||isNaN(n)) return '—';
+  return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtMoney(n){
+  if(n===null||n===undefined||isNaN(n)) return '—';
+  return 'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function firstDayOfMonth(d){ d=d||new Date(); return new Date(d.getFullYear(),d.getMonth(),1); }
+function lastDayOfMonth(d){ d=d||new Date(); return new Date(d.getFullYear(),d.getMonth()+1,0); }
+function ymStr(d){ return d.toISOString().slice(0,7); }
 function fmt(n){
   if(n===null||n===undefined||isNaN(n)) return '—';
   return Number(n).toLocaleString('pt-BR',{maximumFractionDigits:0});
@@ -406,10 +607,42 @@ document.querySelectorAll('nav button').forEach(b=>{
   });
 });
 function renderView(v){
+  refreshViagemStatuses();
   if(v==='premissas'){ renderEmp(); renderRot(); }
   if(v==='medias'){ renderMedias(); }
   if(v==='mapa'){ renderMapa(); }
   if(v==='abastecimentos'){ renderAbast(); }
+  if(v==='viagens'){ renderViagens(); }
+  if(v==='precos'){ renderPrecos(); }
+}
+
+/* =========================================================
+   VIAGEM: status automático
+   ========================================================= */
+// Status automático: Previsto até saída; Navegando entre saída e chegada prevista;
+// Realizada após a chegada prevista; Finalizada só por ação do usuário.
+function computeAutoStatus(v){
+  if(v.status==='Finalizada') return 'Finalizada';
+  const c=calcViagem(v);
+  if(c.incompleto){
+    const hoje=new Date(); hoje.setHours(0,0,0,0);
+    const saida=new Date(v.dataSaida+'T00:00:00');
+    if(saida>hoje) return 'Previsto';
+    return 'Realizada';
+  }
+  const now=new Date();
+  if(now < c.saida) return 'Previsto';
+  if(now >= c.saida && now < c.chegada) return 'Navegando';
+  return 'Realizada';
+}
+function refreshViagemStatuses(){
+  let changed=false;
+  state.viagens.forEach(v=>{
+    if(v.status==='Finalizada') return;
+    const auto=computeAutoStatus(v);
+    if(v.status!==auto){ v.status=auto; changed=true; }
+  });
+  if(changed) save();
 }
 
 /* =========================================================
@@ -1053,7 +1286,8 @@ function renderMapa(){
         const v=vSaida[0];
         const r=rotaById(v.rotaId);
         horario=v.horaSaida||'';
-        viagemCell=`<span class="trip-chip" draggable="true" data-vid="${v.id}"
+        viagemCell=`<span class="trip-chip vstat-${v.status||'Previsto'}" draggable="true" data-vid="${v.id}"
+          title="${v.status||'Previsto'}${v.status==='Realizada'?' — aguarda finalização':''}"
           style="background:${empCor};color:${corContraste(empCor)}"
           onclick="openViagemModal('${v.id}')">${r?r.nome:'?'}</span>`;
         cond=v.condicao;
@@ -1096,8 +1330,9 @@ function renderMapa(){
         const pct = cap>0 ? estoque[e.id][c]/cap*100 : 0;
         const pctCls = pct<15?'bad':pct<30?'warn':'ok';
         const barColor = pct<15?'var(--bad)':pct<30?'var(--warn)':'var(--ok)';
+        const atras = absAll.length && isAbastAtrasado(absAll[0]);
         const abastChip = absAll.length
-          ? `<span class="abast-chip st-${chipStatus}" draggable="true" data-aid="${aid}" title="${chipStatus}">${fmt(chipQtd)}</span>`
+          ? `<span class="abast-chip st-${chipStatus}${atras?' abast-late':''}" draggable="true" data-aid="${aid}" title="${chipStatus}${atras?' — atrasado!':''}">${atras?'⚠ ':''}${fmt(chipQtd)}</span>`
           : '';
         h+=`<td class="num">${consumoDia?fmt(consumoDia):''}</td>
             <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abastChip}</td>
@@ -1231,6 +1466,7 @@ function openViagemModal(vid, empId, dateStr_){
     document.getElementById('mvCond').value=v.condicao;
     document.getElementById('mvData').value=v.dataSaida;
     document.getElementById('mvHora').value=v.horaSaida||'08:00';
+    document.getElementById('mvVol').value=v.volumeCarregada||'';
     document.getElementById('mvDelete').style.display='';
   }else{
     document.getElementById('mvTitle').textContent='Nova Viagem';
@@ -1239,11 +1475,18 @@ function openViagemModal(vid, empId, dateStr_){
     document.getElementById('mvCond').value='Carregada';
     document.getElementById('mvData').value=dateStr_||dateStr(new Date());
     document.getElementById('mvHora').value='08:00';
+    document.getElementById('mvVol').value='';
     document.getElementById('mvDelete').style.display='none';
   }
+  updateMvVolVisibility();
   updateMvCalc();
   document.getElementById('modalViagem').classList.add('show');
 }
+function updateMvVolVisibility(){
+  const cond=document.getElementById('mvCond').value;
+  document.getElementById('mvVolField').style.display = (cond==='Carregada') ? '' : 'none';
+}
+document.getElementById('mvCond').addEventListener('change', updateMvVolVisibility);
 ['mvEmp','mvRota','mvCond','mvData','mvHora'].forEach(id=>{
   document.getElementById(id).addEventListener('change', updateMvCalc);
   document.getElementById(id).addEventListener('input', updateMvCalc);
@@ -1280,29 +1523,78 @@ document.getElementById('mvSave').addEventListener('click', ()=>{
     rotaId:rotaId,
     condicao:document.getElementById('mvCond').value,
     dataSaida:document.getElementById('mvData').value,
-    horaSaida:hora
+    horaSaida:hora,
+    volumeCarregada: (document.getElementById('mvCond').value==='Carregada')
+      ? (parseFloat(document.getElementById('mvVol').value)||0) : 0
   };
   if(!data.empId||!data.dataSaida){ alert('Preencha todos os campos.'); return; }
   if(editViagemId){
     Object.assign(state.viagens.find(x=>x.id===editViagemId), data);
   }else{
-    state.viagens.push(Object.assign({id:uid()}, data));
+    const novo = Object.assign({id:uid(), status:'Previsto'}, data);
+    state.viagens.push(novo);
   }
+  refreshViagemStatuses();
   save(); closeModals(); renderMapa();
+  if(document.getElementById('view-viagens').classList.contains('active')) renderViagens();
 });
 document.getElementById('mvDelete').addEventListener('click', ()=>{
   if(!confirm('Excluir esta viagem?')) return;
   state.viagens=state.viagens.filter(v=>v.id!==editViagemId);
   save(); closeModals(); renderMapa();
+  if(document.getElementById('view-viagens').classList.contains('active')) renderViagens();
 });
 
 /* =========================================================
    ABASTECIMENTOS
    ========================================================= */
 document.getElementById('btnNovoAbast').addEventListener('click', ()=>openAbastModal(null));
-document.getElementById('abastFiltro').addEventListener('change', renderAbast);
+['abastFiltro','abastFiltroIni','abastFiltroFim','abastFiltroEmp'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', renderAbast);
+});
+document.getElementById('btnAbastFilterReset').addEventListener('click', ()=>{
+  document.getElementById('abastFiltro').value='';
+  document.getElementById('abastFiltroEmp').value='';
+  document.getElementById('abastFiltroIni').value=dateStr(firstDayOfMonth());
+  document.getElementById('abastFiltroFim').value=dateStr(lastDayOfMonth());
+  renderAbast();
+});
 
 let editAbastId=null;
+function getCidades(){
+  const set=new Set();
+  state.fornecedores.forEach(f=>{ if(f.cidade) set.add(f.cidade); });
+  state.abastecimentos.forEach(a=>{ if(a.cidade) set.add(a.cidade); });
+  state.rotas.forEach(r=>{ if(r.origem) set.add(r.origem); if(r.destino) set.add(r.destino); });
+  return [...set].sort();
+}
+function fornecedoresPorCidade(cidade){
+  const c=(cidade||'').trim().toLowerCase();
+  if(!c) return state.fornecedores.slice();
+  return state.fornecedores.filter(f=>(f.cidade||'').toLowerCase()===c);
+}
+function getOrCreateFornecedor(nome, cidade){
+  nome=(nome||'').trim(); cidade=(cidade||'').trim();
+  if(!nome) return null;
+  let f = state.fornecedores.find(x =>
+    x.nome.toLowerCase()===nome.toLowerCase() &&
+    (x.cidade||'').toLowerCase()===cidade.toLowerCase()
+  );
+  if(!f){
+    // try match by name only and update city if missing
+    const sameName = state.fornecedores.filter(x=>x.nome.toLowerCase()===nome.toLowerCase());
+    if(sameName.length===1 && !sameName[0].cidade && cidade){
+      sameName[0].cidade=cidade;
+      f=sameName[0];
+    }
+  }
+  if(!f){
+    f={id:uid(), nome, cidade};
+    state.fornecedores.push(f);
+  }
+  return f;
+}
+
 function openAbastModal(id, prefill){
   editAbastId=id;
   const aEdit = id ? state.abastecimentos.find(x=>x.id===id) : null;
@@ -1315,6 +1607,11 @@ function openAbastModal(id, prefill){
     document.getElementById('maComb').innerHTML=(e?e.combustiveis:[]).map(c=>`<option value="${c}">${COMB_LABEL[c]}</option>`).join('');
   }
   maEmp.onchange=fillComb;
+
+  // popular datalist cidades
+  document.getElementById('maCidadeList').innerHTML =
+    getCidades().map(c=>`<option value="${c.replace(/"/g,'&quot;')}">`).join('');
+
   if(id){
     const a=state.abastecimentos.find(x=>x.id===id);
     document.getElementById('maTitle').textContent='Editar Abastecimento';
@@ -1324,6 +1621,10 @@ function openAbastModal(id, prefill){
     document.getElementById('maQtd').value=a.qtd;
     document.getElementById('maStatus').value=a.status;
     document.getElementById('maObs').value=a.obs||'';
+    document.getElementById('maCidade').value=a.cidade||'';
+    document.getElementById('maPreco').value=a.preco||'';
+    const forn = a.fornecedorId ? state.fornecedores.find(f=>f.id===a.fornecedorId) : null;
+    document.getElementById('maForn').value = forn ? forn.nome : '';
     document.getElementById('maDelete').style.display='';
   }else{
     document.getElementById('maTitle').textContent='Novo Abastecimento';
@@ -1334,10 +1635,40 @@ function openAbastModal(id, prefill){
     document.getElementById('maQtd').value='';
     document.getElementById('maStatus').value='Previsto';
     document.getElementById('maObs').value='';
+    document.getElementById('maCidade').value='';
+    document.getElementById('maPreco').value='';
+    document.getElementById('maForn').value='';
     document.getElementById('maDelete').style.display='none';
   }
+  refreshAbastRealizadoBox();
   document.getElementById('modalAbast').classList.add('show');
 }
+
+function refreshAbastRealizadoBox(){
+  const st = document.getElementById('maStatus').value;
+  const box = document.getElementById('maRealizadoBox');
+  const showRealizado = (st==='Realizado');
+  box.style.display = showRealizado ? '' : 'none';
+  if(!showRealizado) return;
+  // ao mudar cidade, sugerir lista de fornecedores
+  const cidade = document.getElementById('maCidade').value.trim();
+  const lista = fornecedoresPorCidade(cidade);
+  const dl = document.getElementById('maFornList');
+  dl.innerHTML = lista.map(f=>`<option value="${f.nome.replace(/"/g,'&quot;')}">`).join('');
+  const hint = document.getElementById('maRealizadoHint');
+  if(cidade){
+    hint.innerHTML = lista.length
+      ? `<b>${lista.length}</b> fornecedor(es) sugerido(s) para <b>${cidade}</b>. Se for novo, digite o nome — o cadastro é criado automaticamente.`
+      : `Nenhum fornecedor cadastrado para <b>${cidade}</b>. Digite o nome do fornecedor — o cadastro será criado automaticamente.`;
+  }else{
+    hint.innerHTML = `Informe a cidade para sugerir fornecedores existentes. Novos fornecedores são cadastrados automaticamente.`;
+  }
+}
+['maStatus','maCidade'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', refreshAbastRealizadoBox);
+  document.getElementById(id).addEventListener('change', refreshAbastRealizadoBox);
+});
+
 document.getElementById('maSave').addEventListener('click', ()=>{
   const data={
     empId:document.getElementById('maEmp').value,
@@ -1345,9 +1676,32 @@ document.getElementById('maSave').addEventListener('click', ()=>{
     data:document.getElementById('maData').value,
     qtd:parseFloat(document.getElementById('maQtd').value)||0,
     status:document.getElementById('maStatus').value,
-    obs:document.getElementById('maObs').value.trim()
+    obs:document.getElementById('maObs').value.trim(),
+    cidade:document.getElementById('maCidade').value.trim(),
+    preco:parseFloat(document.getElementById('maPreco').value)||0,
+    fornecedorId:null
   };
   if(!data.empId||!data.comb||!data.data||!data.qtd){ alert('Preencha empurrador, combustível, data e quantidade.'); return; }
+  if(data.status==='Realizado'){
+    const fornNome = document.getElementById('maForn').value.trim();
+    if(!fornNome){ alert('Informe o fornecedor (será cadastrado automaticamente se for novo).'); return; }
+    if(!data.preco){ alert('Informe o preço (R$/L) para confirmar o abastecimento como Realizado.'); return; }
+    const f = getOrCreateFornecedor(fornNome, data.cidade);
+    data.fornecedorId = f ? f.id : null;
+    // também registra no histórico de preços (sem duplicar mesma data/fornecedor/comb/preço)
+    if(f && data.preco>0){
+      const dup = state.historicoPrecos.some(p =>
+        p.fornecedorId===f.id && p.combustivel===data.comb &&
+        p.data===data.data && Math.abs((p.preco||0)-data.preco)<0.0001
+      );
+      if(!dup){
+        state.historicoPrecos.push({
+          id:uid(), data:data.data, fornecedorId:f.id,
+          combustivel:data.comb, preco:data.preco
+        });
+      }
+    }
+  }
   if(editAbastId){
     Object.assign(state.abastecimentos.find(x=>x.id===editAbastId), data);
   }else{
@@ -1361,31 +1715,71 @@ document.getElementById('maDelete').addEventListener('click', ()=>{
   save(); closeModals(); renderAbast(); renderMapa();
 });
 
+function isAbastAtrasado(a){
+  if(a.status!=='Previsto' && a.status!=='Solicitado') return false;
+  if(!a.data) return false;
+  return a.data < todayStr();
+}
+
+function initAbastFilters(){
+  const iniEl=document.getElementById('abastFiltroIni');
+  const fimEl=document.getElementById('abastFiltroFim');
+  if(!iniEl.value) iniEl.value=dateStr(firstDayOfMonth());
+  if(!fimEl.value) fimEl.value=dateStr(lastDayOfMonth());
+  const sel=document.getElementById('abastFiltroEmp');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todas</option>'+
+    state.empurradores.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('');
+  sel.value=cur||'';
+}
+
 function renderAbast(){
+  initAbastFilters();
   const filtro=document.getElementById('abastFiltro').value;
-  // KPIs
+  const ini=document.getElementById('abastFiltroIni').value;
+  const fim=document.getElementById('abastFiltroFim').value;
+  const empF=document.getElementById('abastFiltroEmp').value;
+
+  let list=state.abastecimentos.slice();
+  if(filtro) list=list.filter(a=>a.status===filtro);
+  if(ini) list=list.filter(a=>!a.data || a.data>=ini);
+  if(fim) list=list.filter(a=>!a.data || a.data<=fim);
+  if(empF) list=list.filter(a=>a.empId===empF);
+  list.sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+
+  // KPIs (refletindo o filtro)
   const kpis=document.getElementById('abastKpis');
   const counts={};
-  STATUS.forEach(s=>counts[s]=state.abastecimentos.filter(a=>a.status===s).length);
-  const totalL=state.abastecimentos.filter(a=>a.status!=='Cancelado').reduce((s,a)=>s+(a.qtd||0),0);
-  kpis.innerHTML=STATUS.map(s=>`<div class="kpi"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
-    `<div class="kpi"><div class="v">${fmt(totalL)}</div><div class="l">Litros programados</div></div>`;
-  // tabela
+  STATUS.forEach(s=>counts[s]=list.filter(a=>a.status===s).length);
+  const totalL=list.filter(a=>a.status!=='Cancelado').reduce((s,a)=>s+(a.qtd||0),0);
+  const totalRealL=list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+(a.qtd||0),0);
+  const totalRealValor=list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+((a.qtd||0)*(a.preco||0)),0);
+  const atrasados=list.filter(isAbastAtrasado).length;
+  kpis.innerHTML=
+    STATUS.map(s=>`<div class="kpi"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
+    `<div class="kpi"><div class="v">${fmt(totalL)}</div><div class="l">Litros (filtro)</div></div>`+
+    `<div class="kpi"><div class="v">${fmt(totalRealL)}</div><div class="l">Litros Realizados</div></div>`+
+    `<div class="kpi"><div class="v">${fmtMoney(totalRealValor)}</div><div class="l">R$ Realizado</div></div>`+
+    (atrasados ? `<div class="kpi"><div class="v" style="color:var(--bad)">${atrasados}</div><div class="l">⚠ Atrasados</div></div>` : '');
+
   const t=document.getElementById('tblAbast');
-  let list=[...state.abastecimentos];
-  if(filtro) list=list.filter(a=>a.status===filtro);
-  list.sort((a,b)=>(a.data||'').localeCompare(b.data||''));
-  if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum abastecimento.</td></tr>'; return; }
-  let h=`<tr><th>Data</th><th>Empurrador</th><th>Combustível</th><th class="num">Quantidade (L)</th>
-    <th>Status</th><th>Observação</th><th>Ações</th></tr>`;
+  if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum abastecimento no filtro.</td></tr>'; return; }
+  let h=`<tr><th></th><th>Data</th><th>Empurrador</th><th>Cidade</th><th>Combustível</th><th class="num">Quantidade (L)</th>
+    <th class="num">Preço (R$/L)</th><th>Fornecedor</th><th>Status</th><th>Observação</th><th>Ações</th></tr>`;
   list.forEach(a=>{
     const e=empById(a.empId);
     const d=a.data?parseDate(a.data).toLocaleDateString('pt-BR'):'—';
-    h+=`<tr>
+    const atras=isAbastAtrasado(a);
+    const forn = a.fornecedorId ? state.fornecedores.find(f=>f.id===a.fornecedorId) : null;
+    h+=`<tr class="${atras?'row-alert':''}">
+      <td>${atras?'<span class="alerta" title="Status pendente com data passada — encerre a programação">⚠</span>':''}</td>
       <td>${d}</td>
       <td>${e?e.nome:'—'}</td>
+      <td>${a.cidade||'—'}</td>
       <td><span class="tag ${a.comb}">${COMB_LABEL[a.comb]||a.comb}</span></td>
       <td class="num">${fmt(a.qtd)}</td>
+      <td class="num">${a.preco?fmt2(a.preco):'—'}</td>
+      <td>${forn?forn.nome:'—'}</td>
       <td>
         <select class="status-sel" onchange="changeAbastStatus('${a.id}',this.value)">
           ${STATUS.map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
@@ -1399,7 +1793,785 @@ function renderAbast(){
 }
 function changeAbastStatus(id,val){
   const a=state.abastecimentos.find(x=>x.id===id);
-  a.status=val; save(); renderAbast();
+  // Se transitando para Realizado e ainda não tem fornecedor/preço, abre modal
+  if(val==='Realizado' && (!a.fornecedorId || !a.preco)){
+    openAbastModal(id);
+    // pré-seleciona o novo status no modal
+    setTimeout(()=>{
+      const s=document.getElementById('maStatus');
+      s.value='Realizado';
+      refreshAbastRealizadoBox();
+    },0);
+    // não persiste ainda; usuário precisa confirmar pelo modal
+    renderAbast();
+    return;
+  }
+  a.status=val; save(); renderAbast(); renderMapa();
+}
+
+/* =========================================================
+   VIAGENS — módulo dedicado
+   ========================================================= */
+document.getElementById('btnNovaViagem2').addEventListener('click', ()=>openViagemModal(null,null,null));
+['viagFiltro','viagFiltroIni','viagFiltroFim','viagFiltroEmp'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', renderViagens);
+});
+document.getElementById('btnViagFilterReset').addEventListener('click', ()=>{
+  document.getElementById('viagFiltro').value='';
+  document.getElementById('viagFiltroEmp').value='';
+  document.getElementById('viagFiltroIni').value=dateStr(firstDayOfMonth());
+  document.getElementById('viagFiltroFim').value=dateStr(lastDayOfMonth());
+  renderViagens();
+});
+
+function initViagFilters(){
+  const iniEl=document.getElementById('viagFiltroIni');
+  const fimEl=document.getElementById('viagFiltroFim');
+  if(!iniEl.value) iniEl.value=dateStr(firstDayOfMonth());
+  if(!fimEl.value) fimEl.value=dateStr(lastDayOfMonth());
+  const sel=document.getElementById('viagFiltroEmp');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todas</option>'+
+    state.empurradores.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('');
+  sel.value=cur||'';
+}
+
+function isViagemPendente(v){
+  // Realizada mas não Finalizada: aguarda finalização
+  return v.status==='Realizada';
+}
+
+function renderViagens(){
+  initViagFilters();
+  refreshViagemStatuses();
+  const filtro=document.getElementById('viagFiltro').value;
+  const ini=document.getElementById('viagFiltroIni').value;
+  const fim=document.getElementById('viagFiltroFim').value;
+  const empF=document.getElementById('viagFiltroEmp').value;
+
+  let list=state.viagens.slice();
+  if(filtro) list=list.filter(v=>v.status===filtro);
+  if(ini) list=list.filter(v=>!v.dataSaida || v.dataSaida>=ini);
+  if(fim) list=list.filter(v=>!v.dataSaida || v.dataSaida<=fim);
+  if(empF) list=list.filter(v=>v.empId===empF);
+  list.sort((a,b)=>(a.dataSaida||'').localeCompare(b.dataSaida||''));
+
+  // KPIs
+  const kpis=document.getElementById('viagKpis');
+  const counts={};
+  VSTATUS.forEach(s=>counts[s]=list.filter(v=>v.status===s).length);
+  const pendentes = list.filter(isViagemPendente).length;
+  kpis.innerHTML=
+    VSTATUS.map(s=>`<div class="kpi"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
+    (pendentes ? `<div class="kpi"><div class="v" style="color:var(--bad)">${pendentes}</div><div class="l">⚠ Aguardando Finalizar</div></div>`:'');
+
+  const t=document.getElementById('tblViag');
+  if(!list.length){
+    t.innerHTML='<tr><td class="empty">Nenhuma viagem no filtro.</td></tr>';
+    renderViagemMetricas();
+    renderSugestoesMedias();
+    renderBudget();
+    return;
+  }
+  let h=`<tr><th></th><th>Saída</th><th>Empurrador</th><th>Trecho</th><th>Condição</th>
+    <th>Chegada Prevista</th><th class="num">Tempo Prev. (h)</th><th>Status</th><th>Ações</th></tr>`;
+  list.forEach(v=>{
+    const e=empById(v.empId), r=rotaById(v.rotaId);
+    const c=calcViagem(v);
+    const chegada = (c && !c.incompleto) ? c.chegada.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    const tempo = (c && !c.incompleto) ? fmt1(c.horas) : '—';
+    const pend = isViagemPendente(v);
+    h+=`<tr class="${pend?'row-alert':''}">
+      <td>${pend?'<span class="alerta" title="Viagem realizada — aguarda finalização">⚠</span>':''}</td>
+      <td>${v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—'} ${v.horaSaida||''}</td>
+      <td>${e?e.nome:'—'}</td>
+      <td>${r?r.nome:'—'}</td>
+      <td>${v.condicao}</td>
+      <td>${chegada}</td>
+      <td class="num">${tempo}</td>
+      <td><span class="pill ${v.status}">${v.status}</span></td>
+      <td>
+        <button class="btn sm secondary" onclick="openViagemModal('${v.id}')">Editar</button>
+        ${v.status==='Realizada'?`<button class="btn sm" onclick="openFinalizarViagem('${v.id}')">Finalizar</button>`:''}
+        ${v.status==='Finalizada'?`<button class="btn sm secondary" onclick="openFinalizarViagem('${v.id}')">Ver/Editar</button>`:''}
+      </td>
+    </tr>`;
+  });
+  t.innerHTML=h;
+
+  renderViagemMetricas();
+  renderSugestoesMedias();
+  renderBudget();
+}
+
+function renderViagemMetricas(){
+  const wrap=document.getElementById('viagMetricas');
+  const fin = state.viagens.filter(v=>v.status==='Finalizada');
+  if(!fin.length){ wrap.innerHTML='<div class="empty">Nenhuma viagem finalizada ainda.</div>'; return; }
+  // KPIs globais
+  let totHorasPrev=0, totHorasReal=0;
+  let consPrev={}, consReal={};
+  let volPrev=0, volReal=0;
+  fin.forEach(v=>{
+    const c=calcViagem(v);
+    if(!c.incompleto){
+      totHorasPrev+=c.horas;
+      Object.entries(c.consumoTotal).forEach(([k,val])=>{
+        consPrev[k]=(consPrev[k]||0)+val;
+      });
+    }
+    totHorasReal += v.tempoRealizado||0;
+    if(v.consumoRealizado){
+      Object.entries(v.consumoRealizado).forEach(([k,val])=>{
+        consReal[k]=(consReal[k]||0)+(val||0);
+      });
+    }
+    if(v.condicao==='Carregada'){
+      volPrev += v.volumeCarregada||0;
+      volReal += v.volumeRealizado||0;
+    }
+  });
+  function diffCell(prev, real){
+    const d = real - prev;
+    const pct = prev>0 ? (d/prev*100) : null;
+    const cls = Math.abs(pct||0)<3 ? 'diff-neu' : (d>=0 ? 'diff-pos' : 'diff-neg');
+    return `<span class="${cls}">${(d>=0?'+':'')+fmt1(d)} ${pct!==null?`(${(pct>=0?'+':'')+pct.toFixed(1)}%)`:''}</span>`;
+  }
+  let h=`<div class="grid-3" style="margin-bottom:12px;">
+    <div></div><div class="hd">Previsto</div><div class="hd">Realizado / Δ</div>
+    <div>Tempo total (h)</div><div>${fmt1(totHorasPrev)}</div><div>${fmt1(totHorasReal)} &nbsp; ${diffCell(totHorasPrev,totHorasReal)}</div>`;
+  const combs = [...new Set([...Object.keys(consPrev), ...Object.keys(consReal)])];
+  combs.forEach(c=>{
+    h+=`<div>Consumo ${COMB_LABEL[c]||c} (L)</div><div>${fmt(consPrev[c]||0)}</div><div>${fmt(consReal[c]||0)} &nbsp; ${diffCell(consPrev[c]||0, consReal[c]||0)}</div>`;
+  });
+  h+=`<div>Volume navegado (Carregada)</div><div>${fmt(volPrev)}</div><div>${fmt(volReal)} &nbsp; ${diffCell(volPrev, volReal)}</div>`;
+  h+=`</div>`;
+
+  // Tabela detalhada
+  h+=`<div style="overflow:auto;"><table>
+    <tr><th>Saída</th><th>Empurrador</th><th>Trecho</th><th>Cond.</th>
+    <th class="num">Tempo Prev.</th><th class="num">Tempo Real</th><th class="num">Δ%</th>
+    <th class="num">Cons. Prev.</th><th class="num">Cons. Real</th><th class="num">Δ%</th>
+    <th class="num">Vol. Prev.</th><th class="num">Vol. Real</th><th class="num">Δ%</th></tr>`;
+  fin.forEach(v=>{
+    const e=empById(v.empId), r=rotaById(v.rotaId);
+    const c=calcViagem(v);
+    const tprev=c.incompleto?0:c.horas;
+    const treal=v.tempoRealizado||0;
+    const cprev = c.incompleto?0:Object.values(c.consumoTotal||{}).reduce((a,b)=>a+b,0);
+    const creal = Object.values(v.consumoRealizado||{}).reduce((a,b)=>a+(b||0),0);
+    const vprev = v.condicao==='Carregada' ? (v.volumeCarregada||0) : 0;
+    const vreal = v.condicao==='Carregada' ? (v.volumeRealizado||0) : 0;
+    function pct(p,r){ return p>0 ? `<span class="${Math.abs((r-p)/p*100)<3?'diff-neu':(r-p>=0?'diff-pos':'diff-neg')}">${((r-p)/p*100).toFixed(1)}%</span>` : '—'; }
+    h+=`<tr><td>${parseDate(v.dataSaida).toLocaleDateString('pt-BR')}</td>
+      <td>${e?e.nome:'—'}</td><td>${r?r.nome:'—'}</td><td>${v.condicao}</td>
+      <td class="num">${fmt1(tprev)}</td><td class="num">${fmt1(treal)}</td><td class="num">${pct(tprev,treal)}</td>
+      <td class="num">${fmt(cprev)}</td><td class="num">${fmt(creal)}</td><td class="num">${pct(cprev,creal)}</td>
+      <td class="num">${vprev?fmt(vprev):'—'}</td><td class="num">${vreal?fmt(vreal):'—'}</td>
+      <td class="num">${v.condicao==='Carregada'?pct(vprev,vreal):'—'}</td>
+    </tr>`;
+  });
+  h+=`</table></div>`;
+  wrap.innerHTML=h;
+}
+
+function sugestoesMediasAggregadas(){
+  // por (rotaId, empId, condicao): média do realizado nas viagens Finalizadas
+  const agg={};
+  state.viagens.filter(v=>v.status==='Finalizada').forEach(v=>{
+    if(!v.rotaId||!v.empId||!v.condicao) return;
+    const k=v.rotaId+'|'+v.empId+'|'+v.condicao;
+    if(!agg[k]) agg[k]={rotaId:v.rotaId,empId:v.empId,cond:v.condicao,tempos:[],consumos:{}};
+    if(v.tempoRealizado>0) agg[k].tempos.push(v.tempoRealizado);
+    if(v.consumoRealizado && v.tempoRealizado>0){
+      Object.entries(v.consumoRealizado).forEach(([c,l])=>{
+        if(!l) return;
+        agg[k].consumos[c]=agg[k].consumos[c]||[];
+        agg[k].consumos[c].push((l||0)/v.tempoRealizado); // L/h
+      });
+    }
+  });
+  return Object.values(agg).map(a=>{
+    const tempoMed = a.tempos.length ? a.tempos.reduce((s,x)=>s+x,0)/a.tempos.length : 0;
+    const consMed = {};
+    Object.entries(a.consumos).forEach(([c,arr])=>{
+      consMed[c]=arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : 0;
+    });
+    return {rotaId:a.rotaId, empId:a.empId, cond:a.cond, tempoMed, consMed, n:a.tempos.length};
+  });
+}
+
+function renderSugestoesMedias(){
+  const wrap=document.getElementById('viagSugestoes');
+  const sug=sugestoesMediasAggregadas();
+  if(!sug.length){ wrap.innerHTML='<div class="empty">Nenhuma sugestão — finalize viagens com tempo e consumo realizados.</div>'; return; }
+  let h=`<table><tr><th>Empurrador</th><th>Trecho</th><th>Condição</th>
+    <th class="num">Tempo atual (h)</th><th class="num">Tempo sugerido (h)</th>
+    <th>Consumos atuais (L/h)</th><th>Consumos sugeridos (L/h)</th>
+    <th class="num">Amostras</th><th>Ação</th></tr>`;
+  sug.forEach((s,idx)=>{
+    const e=empById(s.empId), r=rotaById(s.rotaId);
+    const cur=getMedia(s.rotaId,s.empId,s.cond)||{tempo:0,consumo:{}};
+    const combs = e ? e.combustiveis : Object.keys(s.consMed);
+    const curCons = combs.map(c=>`${COMB_LABEL[c]||c}: ${cur.consumo[c]?fmt1(cur.consumo[c]):'—'}`).join('<br>');
+    const sugConsInputs = combs.map(c=>`${COMB_LABEL[c]||c}: <input class="inline-input" type="number" step="any" id="sug-c-${idx}-${c}" value="${(s.consMed[c]||0).toFixed(2)}">`).join('<br>');
+    h+=`<tr>
+      <td>${e?e.nome:'—'}</td>
+      <td>${r?r.nome:'—'}</td>
+      <td>${s.cond}</td>
+      <td class="num">${cur.tempo?fmt1(cur.tempo):'—'}</td>
+      <td class="num"><input class="inline-input" type="number" step="any" id="sug-t-${idx}" value="${s.tempoMed.toFixed(2)}"></td>
+      <td>${curCons}</td>
+      <td>${sugConsInputs}</td>
+      <td class="num">${s.n}</td>
+      <td><button class="btn sm" onclick="aplicarSugestaoMedia(${idx})">Aplicar</button></td>
+    </tr>`;
+  });
+  h+=`</table>`;
+  wrap.innerHTML=h;
+  window.__sugCache = sug;
+}
+window.aplicarSugestaoMedia = function(idx){
+  const s = window.__sugCache[idx]; if(!s) return;
+  const tempo = parseFloat(document.getElementById('sug-t-'+idx).value)||0;
+  const e = empById(s.empId);
+  const consumo = {};
+  (e?e.combustiveis:Object.keys(s.consMed)).forEach(c=>{
+    const el=document.getElementById('sug-c-'+idx+'-'+c);
+    if(el) consumo[c]=parseFloat(el.value)||0;
+  });
+  setMedia(s.rotaId, s.empId, s.cond, {tempo, consumo});
+  save();
+  renderSugestoesMedias();
+  alert('Média atualizada.');
+};
+
+/* =========================================================
+   FINALIZAR VIAGEM
+   ========================================================= */
+let finViagemId=null;
+function openFinalizarViagem(vid){
+  finViagemId=vid;
+  const v=state.viagens.find(x=>x.id===vid); if(!v) return;
+  const e=empById(v.empId), r=rotaById(v.rotaId);
+  const c=calcViagem(v);
+  const header=document.getElementById('fvHeader');
+  header.innerHTML = `<b>${e?e.nome:'—'}</b> · ${r?r.nome:'—'} · ${v.condicao} · saída ${parseDate(v.dataSaida).toLocaleDateString('pt-BR')} ${v.horaSaida||''}`;
+
+  const tempoPrev = c.incompleto?0:c.horas;
+  const tempoReal = v.tempoRealizado || tempoPrev;
+  const combs = e ? e.combustiveis : Object.keys(c.consumoTotal||{});
+  const isCarregada = v.condicao==='Carregada';
+
+  let h=`<div class="grid-3">
+    <div class="hd">Item</div><div class="hd">Previsto</div><div class="hd">Realizado / Δ</div>
+    <div>Tempo (h)</div>
+    <div>${fmt1(tempoPrev)}</div>
+    <div><input type="number" step="any" id="fvTempoReal" value="${tempoReal||''}" placeholder="horas"> <span id="fvTempoDiff" class="muted"></span></div>`;
+  combs.forEach(cb=>{
+    const prev = c.incompleto?0:(c.consumoTotal[cb]||0);
+    const real = (v.consumoRealizado && v.consumoRealizado[cb]) ? v.consumoRealizado[cb] : prev;
+    h+=`<div>Consumo ${COMB_LABEL[cb]||cb} (L)</div>
+        <div>${fmt(prev)}</div>
+        <div><input type="number" step="any" data-fv-cons="${cb}" data-fv-prev="${prev}" value="${real||''}" placeholder="L"> <span class="muted" data-fv-diff-cons="${cb}"></span></div>`;
+  });
+  if(isCarregada){
+    const volPrev = v.volumeCarregada||0;
+    const volReal = v.volumeRealizado||volPrev;
+    h+=`<div>Volume navegado (Ton)</div>
+        <div>${volPrev?fmt(volPrev):'—'}</div>
+        <div><input type="number" step="any" id="fvVolReal" value="${volReal||''}" placeholder="ton"> <span id="fvVolDiff" class="muted"></span></div>`;
+  }
+  h+=`</div>
+    <div class="hint">A finalização gravará tempo, consumo e volume realizados; estes dados alimentam as métricas e as sugestões de atualização das Médias.</div>`;
+  document.getElementById('fvBody').innerHTML=h;
+
+  function diffSpan(prev, real){
+    if(!prev) return '';
+    const d = real-prev;
+    const pct = (d/prev*100);
+    const cls = Math.abs(pct)<3 ? 'diff-neu' : (d>=0 ? 'diff-pos' : 'diff-neg');
+    return `<span class="${cls}">${(d>=0?'+':'')+fmt1(d)} (${(pct>=0?'+':'')+pct.toFixed(1)}%)</span>`;
+  }
+  function recalcDiffs(){
+    const tr = parseFloat(document.getElementById('fvTempoReal').value)||0;
+    document.getElementById('fvTempoDiff').innerHTML = diffSpan(tempoPrev, tr);
+    document.querySelectorAll('[data-fv-cons]').forEach(inp=>{
+      const cb=inp.dataset.fvCons;
+      const prev=parseFloat(inp.dataset.fvPrev)||0;
+      const real=parseFloat(inp.value)||0;
+      document.querySelector(`[data-fv-diff-cons="${cb}"]`).innerHTML=diffSpan(prev,real);
+    });
+    if(isCarregada){
+      const vp = v.volumeCarregada||0;
+      const vr = parseFloat(document.getElementById('fvVolReal').value)||0;
+      document.getElementById('fvVolDiff').innerHTML = diffSpan(vp, vr);
+    }
+  }
+  document.getElementById('fvBody').addEventListener('input', recalcDiffs);
+  recalcDiffs();
+  document.getElementById('modalFinViagem').classList.add('show');
+}
+document.getElementById('fvSave').addEventListener('click', ()=>{
+  const v=state.viagens.find(x=>x.id===finViagemId); if(!v) return;
+  const tempoReal = parseFloat(document.getElementById('fvTempoReal').value)||0;
+  if(!tempoReal){ alert('Informe o tempo realizado (em horas).'); return; }
+  const cons={};
+  document.querySelectorAll('[data-fv-cons]').forEach(inp=>{
+    cons[inp.dataset.fvCons]=parseFloat(inp.value)||0;
+  });
+  v.tempoRealizado=tempoReal;
+  v.consumoRealizado=cons;
+  if(v.condicao==='Carregada'){
+    const vr=document.getElementById('fvVolReal');
+    v.volumeRealizado = vr ? (parseFloat(vr.value)||0) : 0;
+  }
+  v.status='Finalizada';
+  v.finalizadaEm = todayStr();
+  save(); closeModals(); renderViagens();
+});
+
+/* =========================================================
+   BUDGET DE VOLUME POR CIDADE
+   ========================================================= */
+document.getElementById('btnAddBudget').addEventListener('click', ()=>{
+  const mes=document.getElementById('budgetMes').value;
+  const cidade=document.getElementById('budgetCidade').value.trim();
+  const vol=parseFloat(document.getElementById('budgetVol').value)||0;
+  if(!mes||!cidade){ alert('Informe mês e cidade.'); return; }
+  state.budgetVolume[cidade] = state.budgetVolume[cidade] || {};
+  state.budgetVolume[cidade][mes] = vol;
+  document.getElementById('budgetVol').value='';
+  save(); renderBudget();
+});
+function renderBudget(){
+  // popular datalist cidades
+  document.getElementById('budgetCidadesList').innerHTML =
+    getCidades().map(c=>`<option value="${c.replace(/"/g,'&quot;')}">`).join('');
+  const mesEl=document.getElementById('budgetMes');
+  if(!mesEl.value) mesEl.value=ymStr(new Date());
+  const t=document.getElementById('tblBudget');
+  const cidades = Object.keys(state.budgetVolume).filter(c=>Object.keys(state.budgetVolume[c]||{}).length);
+  if(!cidades.length){ t.innerHTML='<tr><td class="empty">Nenhum budget cadastrado.</td></tr>'; return; }
+  const meses = [...new Set(cidades.flatMap(c=>Object.keys(state.budgetVolume[c])))].sort();
+  let h=`<tr><th>Cidade</th>${meses.map(m=>`<th class="num">${m}</th>`).join('')}<th></th></tr>`;
+  cidades.forEach(c=>{
+    h+=`<tr><td>${c}</td>`;
+    meses.forEach(m=>{
+      const v=state.budgetVolume[c][m]||0;
+      h+=`<td class="num"><input class="inline-input" type="number" step="any" value="${v||''}"
+            onchange="setBudget('${c.replace(/'/g,"\\'")}','${m}', this.value)"></td>`;
+    });
+    h+=`<td><button class="btn sm danger" onclick="delBudget('${c.replace(/'/g,"\\'")}')">Excluir</button></td></tr>`;
+  });
+  t.innerHTML=h;
+}
+window.setBudget=function(cidade,mes,val){
+  state.budgetVolume[cidade]=state.budgetVolume[cidade]||{};
+  const v=parseFloat(val)||0;
+  if(v) state.budgetVolume[cidade][mes]=v;
+  else delete state.budgetVolume[cidade][mes];
+  save();
+};
+window.delBudget=function(cidade){
+  if(!confirm('Excluir todo o budget desta cidade?')) return;
+  delete state.budgetVolume[cidade];
+  save(); renderBudget();
+};
+
+/* =========================================================
+   PREÇOS E DESEMPENHO
+   ========================================================= */
+['prFiltroIni','prFiltroFim','prFiltroComb','prForecast'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', renderPrecos);
+});
+document.getElementById('btnPrFilterReset').addEventListener('click', ()=>{
+  document.getElementById('prFiltroComb').value='';
+  const now=new Date();
+  document.getElementById('prFiltroIni').value=dateStr(new Date(now.getFullYear(),0,1));
+  document.getElementById('prFiltroFim').value=dateStr(now);
+  renderPrecos();
+});
+
+document.getElementById('btnAddHp').addEventListener('click', ()=>{
+  const d=document.getElementById('hpData').value;
+  const nome=document.getElementById('hpForn').value.trim();
+  const cidade=document.getElementById('hpCidade').value.trim();
+  const comb=document.getElementById('hpComb').value;
+  const preco=parseFloat(document.getElementById('hpPreco').value)||0;
+  if(!d||!nome||!preco){ alert('Informe data, fornecedor e preço.'); return; }
+  const f = getOrCreateFornecedor(nome, cidade);
+  state.historicoPrecos.push({id:uid(), data:d, fornecedorId:f.id, combustivel:comb, preco});
+  document.getElementById('hpData').value='';
+  document.getElementById('hpForn').value='';
+  document.getElementById('hpCidade').value='';
+  document.getElementById('hpPreco').value='';
+  save(); renderPrecos();
+});
+
+document.getElementById('btnImportHp').addEventListener('click', ()=>document.getElementById('fileHp').click());
+document.getElementById('fileHp').addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  const isCsv=/\.csv$/i.test(file.name);
+  reader.onload = ev=>{
+    let rows=[];
+    try{
+      if(isCsv){ rows=parseCSV(ev.target.result); }
+      else{
+        const wb=XLSX.read(ev.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      }
+      processHpRows(rows);
+    }catch(err){ alert('Falha ao ler arquivo: '+err.message); }
+    e.target.value='';
+  };
+  if(isCsv) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
+});
+
+function parseDataBR(v){
+  if(v instanceof Date) return v.toISOString().slice(0,10);
+  if(typeof v==='number'){
+    // Excel serial
+    const base=new Date(Date.UTC(1899,11,30));
+    const d=new Date(base.getTime()+v*86400000);
+    return d.toISOString().slice(0,10);
+  }
+  const s=String(v||'').trim();
+  let m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(m){
+    let yy=+m[3]; if(yy<100) yy+=2000;
+    return `${yy}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+  }
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return s.slice(0,10);
+  return '';
+}
+
+function processHpRows(rows){
+  if(!rows.length){ alert('Arquivo vazio.'); return; }
+  const header=rows[0].map(norm);
+  const idx={
+    data:   header.findIndex(h=>h.includes('data')),
+    forn:   header.findIndex(h=>h.includes('forn')),
+    cidade: header.findIndex(h=>h.includes('cidade')),
+    comb:   header.findIndex(h=>h.includes('combust')),
+    preco:  header.findIndex(h=>h.includes('pre')||h.includes('valor')||h.includes('r$')),
+  };
+  if(idx.data<0||idx.forn<0||idx.comb<0||idx.preco<0){
+    alert('Cabeçalho inválido. Esperado: Data, Fornecedor, Combustível, Preço (R$/L). Cidade é opcional.'); return;
+  }
+  const combMap={mgo:'MGO',hfo:'HFO',diesel:'Diesel','diesel terceiro':'Diesel','óleo diesel':'Diesel','oleo diesel':'Diesel'};
+  let ok=0, skip=0;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const dt=parseDataBR(r[idx.data]);
+    const nome=String(r[idx.forn]||'').trim();
+    const cidade=idx.cidade>=0?String(r[idx.cidade]||'').trim():'';
+    const combRaw=norm(r[idx.comb]);
+    const comb=combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
+    const preco=parseNum(r[idx.preco]);
+    if(!dt||!nome||!comb||isNaN(preco)){ skip++; continue; }
+    const f=getOrCreateFornecedor(nome, cidade);
+    state.historicoPrecos.push({id:uid(), data:dt, fornecedorId:f.id, combustivel:comb, preco});
+    ok++;
+  }
+  save(); renderPrecos();
+  alert(`Importação concluída.\nRegistros adicionados: ${ok}\nIgnorados: ${skip}`);
+}
+
+function initPrecosFilters(){
+  const ini=document.getElementById('prFiltroIni');
+  const fim=document.getElementById('prFiltroFim');
+  if(!ini.value || !fim.value){
+    const now=new Date();
+    if(!ini.value) ini.value=dateStr(new Date(now.getFullYear(),0,1));
+    if(!fim.value) fim.value=dateStr(now);
+  }
+}
+
+function renderPrecos(){
+  initPrecosFilters();
+  // datalist fornecedores e cidades
+  document.getElementById('hpFornList').innerHTML =
+    state.fornecedores.map(f=>`<option value="${f.nome.replace(/"/g,'&quot;')}">`).join('');
+  document.getElementById('hpCidadeList').innerHTML =
+    getCidades().map(c=>`<option value="${c.replace(/"/g,'&quot;')}">`).join('');
+
+  const ini=document.getElementById('prFiltroIni').value;
+  const fim=document.getElementById('prFiltroFim').value;
+  const cbF=document.getElementById('prFiltroComb').value;
+
+  // Abastecimentos Realizados no período → litros, R$
+  const absReal = state.abastecimentos.filter(a=>{
+    if(a.status!=='Realizado') return false;
+    if(ini && a.data<ini) return false;
+    if(fim && a.data>fim) return false;
+    if(cbF && a.comb!==cbF) return false;
+    return true;
+  });
+  const totalLitros = absReal.reduce((s,a)=>s+(a.qtd||0),0);
+  const totalR$ = absReal.reduce((s,a)=>s+((a.qtd||0)*(a.preco||0)),0);
+  const precoMedio = totalLitros>0 ? totalR$/totalLitros : 0;
+
+  // Médias de viagens finalizadas no período: L/h e L/Ton
+  const finPeriodo = state.viagens.filter(v=>{
+    if(v.status!=='Finalizada') return false;
+    if(ini && v.dataSaida<ini) return false;
+    if(fim && v.dataSaida>fim) return false;
+    return true;
+  });
+  let totHorasFin=0, totConsFin=0, totVolFin=0, totConsCarregada=0;
+  finPeriodo.forEach(v=>{
+    totHorasFin += v.tempoRealizado||0;
+    const cTot = Object.values(v.consumoRealizado||{}).reduce((s,x)=>s+(x||0),0);
+    totConsFin += cTot;
+    if(v.condicao==='Carregada' && v.volumeRealizado){
+      totVolFin += v.volumeRealizado;
+      totConsCarregada += cTot;
+    }
+  });
+  const lh = totHorasFin>0 ? totConsFin/totHorasFin : 0;
+  const lTon = totVolFin>0 ? totConsCarregada/totVolFin : 0;
+
+  const kpis=document.getElementById('precosKpis');
+  kpis.innerHTML=`
+    <div class="kpi"><div class="v">${fmt(totalLitros)}</div><div class="l">Litros (período)</div></div>
+    <div class="kpi"><div class="v">${fmtMoney(totalR$)}</div><div class="l">R$ pago</div></div>
+    <div class="kpi"><div class="v">${precoMedio?fmt2(precoMedio):'—'}</div><div class="l">R$/L médio</div></div>
+    <div class="kpi"><div class="v">${lh?fmt1(lh):'—'}</div><div class="l">Consumo médio L/h</div></div>
+    <div class="kpi"><div class="v">${lTon?fmt1(lTon):'—'}</div><div class="l">L/Ton (Carregada)</div></div>
+    <div class="kpi"><div class="v">${finPeriodo.length}</div><div class="l">Viagens finalizadas</div></div>
+  `;
+
+  renderPrecosChart(ini, fim, cbF);
+  renderMediasPorEmpurrador(ini, fim);
+  renderHpTable();
+  renderFornTable();
+}
+
+function renderHpTable(){
+  const t=document.getElementById('tblHp');
+  const list=state.historicoPrecos.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum lançamento de preço.</td></tr>'; return; }
+  let h=`<tr><th>Data</th><th>Fornecedor</th><th>Cidade</th><th>Combustível</th><th class="num">Preço (R$/L)</th><th></th></tr>`;
+  list.forEach(p=>{
+    const f=state.fornecedores.find(x=>x.id===p.fornecedorId);
+    h+=`<tr>
+      <td>${p.data?parseDate(p.data).toLocaleDateString('pt-BR'):'—'}</td>
+      <td>${f?f.nome:'—'}</td>
+      <td>${f?f.cidade||'—':'—'}</td>
+      <td><span class="tag ${p.combustivel}">${COMB_LABEL[p.combustivel]||p.combustivel}</span></td>
+      <td class="num">${fmt2(p.preco)}</td>
+      <td><button class="btn sm danger" onclick="delHp('${p.id}')">Excluir</button></td>
+    </tr>`;
+  });
+  t.innerHTML=h;
+}
+window.delHp=function(id){
+  state.historicoPrecos=state.historicoPrecos.filter(p=>p.id!==id);
+  save(); renderHpTable();
+};
+function renderFornTable(){
+  const t=document.getElementById('tblForn');
+  if(!state.fornecedores.length){ t.innerHTML='<tr><td class="empty">Nenhum fornecedor cadastrado.</td></tr>'; return; }
+  let h=`<tr><th>Nome</th><th>Cidade</th><th class="num">Abastecimentos</th><th class="num">Preço médio (R$/L)</th><th></th></tr>`;
+  state.fornecedores.forEach(f=>{
+    const abs=state.abastecimentos.filter(a=>a.fornecedorId===f.id);
+    const precos = state.historicoPrecos.filter(p=>p.fornecedorId===f.id);
+    const todosPrecos = [...abs.filter(a=>a.preco).map(a=>a.preco), ...precos.map(p=>p.preco)];
+    const med = todosPrecos.length ? todosPrecos.reduce((s,x)=>s+x,0)/todosPrecos.length : 0;
+    h+=`<tr>
+      <td><input class="inline-input" style="width:160px;" value="${f.nome.replace(/"/g,'&quot;')}" onchange="updForn('${f.id}','nome',this.value)"></td>
+      <td><input class="inline-input" style="width:140px;" value="${(f.cidade||'').replace(/"/g,'&quot;')}" onchange="updForn('${f.id}','cidade',this.value)"></td>
+      <td class="num">${abs.length}</td>
+      <td class="num">${med?fmt2(med):'—'}</td>
+      <td><button class="btn sm danger" onclick="delForn('${f.id}')">Excluir</button></td>
+    </tr>`;
+  });
+  t.innerHTML=h;
+}
+window.updForn=function(id,k,val){
+  const f=state.fornecedores.find(x=>x.id===id);
+  if(!f) return;
+  f[k]=val.trim();
+  save();
+};
+window.delForn=function(id){
+  const abs=state.abastecimentos.filter(a=>a.fornecedorId===id).length;
+  const hp=state.historicoPrecos.filter(p=>p.fornecedorId===id).length;
+  if(abs||hp){
+    if(!confirm(`Este fornecedor tem ${abs} abastecimento(s) e ${hp} preço(s) vinculados. Excluir mesmo assim? Os vínculos ficarão sem fornecedor.`)) return;
+  }
+  state.fornecedores=state.fornecedores.filter(f=>f.id!==id);
+  state.abastecimentos.forEach(a=>{ if(a.fornecedorId===id) a.fornecedorId=null; });
+  state.historicoPrecos=state.historicoPrecos.filter(p=>p.fornecedorId!==id);
+  save(); renderFornTable();
+};
+
+function renderMediasPorEmpurrador(ini, fim){
+  const t=document.getElementById('tblMediasEmp');
+  const emps=state.empurradores.slice();
+  if(!emps.length){ t.innerHTML='<tr><td class="empty">Cadastre empurradores.</td></tr>'; return; }
+  let h=`<tr><th>Empurrador</th><th class="num">Horas navegadas</th><th class="num">Consumo total (L)</th>
+    <th class="num">L/h</th><th class="num">Volume navegado (Ton)</th><th class="num">L/Ton</th><th class="num">Viagens</th></tr>`;
+  let gH=0,gC=0,gV=0,gCC=0,gN=0;
+  emps.forEach(e=>{
+    const fin = state.viagens.filter(v=>{
+      if(v.status!=='Finalizada') return false;
+      if(v.empId!==e.id) return false;
+      if(ini && v.dataSaida<ini) return false;
+      if(fim && v.dataSaida>fim) return false;
+      return true;
+    });
+    let hh=0,cc=0,vv=0,ccCarregada=0;
+    fin.forEach(v=>{
+      hh+=v.tempoRealizado||0;
+      const c=Object.values(v.consumoRealizado||{}).reduce((s,x)=>s+(x||0),0);
+      cc+=c;
+      if(v.condicao==='Carregada' && v.volumeRealizado){ vv+=v.volumeRealizado; ccCarregada+=c; }
+    });
+    const lh = hh>0 ? cc/hh : 0;
+    const lT = vv>0 ? ccCarregada/vv : 0;
+    gH+=hh; gC+=cc; gV+=vv; gCC+=ccCarregada; gN+=fin.length;
+    h+=`<tr><td>${e.nome}</td><td class="num">${fmt1(hh)}</td><td class="num">${fmt(cc)}</td>
+      <td class="num">${lh?fmt1(lh):'—'}</td>
+      <td class="num">${vv?fmt(vv):'—'}</td>
+      <td class="num">${lT?fmt1(lT):'—'}</td>
+      <td class="num">${fin.length}</td></tr>`;
+  });
+  const lhG = gH>0?gC/gH:0;
+  const lTG = gV>0?gCC/gV:0;
+  h+=`<tr style="font-weight:700;background:var(--panel2);">
+    <td>Geral</td><td class="num">${fmt1(gH)}</td><td class="num">${fmt(gC)}</td>
+    <td class="num">${lhG?fmt1(lhG):'—'}</td>
+    <td class="num">${gV?fmt(gV):'—'}</td>
+    <td class="num">${lTG?fmt1(lTG):'—'}</td>
+    <td class="num">${gN}</td></tr>`;
+  t.innerHTML=h;
+}
+
+/* ---- Gráfico de Preços ---- */
+function renderPrecosChart(ini, fim, cbF){
+  const svg=document.getElementById('prChart');
+  const legend=document.getElementById('prLegend');
+  // Agrupar histórico por mês × combustível
+  const filtered = state.historicoPrecos.filter(p=>{
+    if(ini && p.data<ini) return false;
+    if(fim && p.data>fim) return false;
+    if(cbF && p.combustivel!==cbF) return false;
+    return true;
+  });
+  if(!filtered.length){
+    svg.innerHTML='';
+    legend.innerHTML='<div class="empty">Sem dados de preços para o filtro atual.</div>';
+    return;
+  }
+  // bucket mensal
+  const combs = cbF ? [cbF] : [...new Set(filtered.map(p=>p.combustivel))];
+  const monthSet = new Set(filtered.map(p=>p.data.slice(0,7)));
+  // gera lista de meses ordenados entre min e max
+  const minM=[...monthSet].sort()[0];
+  const maxM=[...monthSet].sort().reverse()[0];
+  const months=[];
+  let cur = new Date(minM+'-01T00:00:00');
+  const end = new Date(maxM+'-01T00:00:00');
+  while(cur<=end){
+    months.push(ymStr(cur));
+    cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+  }
+  // séries com forecast
+  const forecast = document.getElementById('prForecast').value==='1';
+  if(forecast){
+    const now=new Date();
+    const endYear=new Date(now.getFullYear(),11,1);
+    let lastM=new Date(maxM+'-01T00:00:00');
+    while(lastM<endYear){
+      lastM=new Date(lastM.getFullYear(), lastM.getMonth()+1, 1);
+      months.push(ymStr(lastM));
+    }
+  }
+  const series = combs.map((cb,i)=>{
+    const pts = months.map(m=>{
+      const arr = filtered.filter(p=>p.combustivel===cb && p.data.slice(0,7)===m).map(p=>p.preco);
+      return arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
+    });
+    // forecast: regressão linear simples sobre os meses que TÊM dado
+    let trend=null;
+    if(forecast){
+      const xy=pts.map((y,j)=>[j,y]).filter(([,y])=>y!=null);
+      if(xy.length>=2){
+        const n=xy.length;
+        const sx=xy.reduce((s,[x])=>s+x,0);
+        const sy=xy.reduce((s,[,y])=>s+y,0);
+        const sxx=xy.reduce((s,[x])=>s+x*x,0);
+        const sxy=xy.reduce((s,[x,y])=>s+x*y,0);
+        const slope=(n*sxy - sx*sy)/(n*sxx - sx*sx || 1);
+        const intercept=(sy - slope*sx)/n;
+        trend = months.map((_,j)=>intercept+slope*j);
+      }
+    }
+    return {cb, pts, trend, color:cbColor(cb,i)};
+  });
+
+  // Render
+  const W=svg.clientWidth||800, H=320, padL=46, padR=14, padT=14, padB=36;
+  const xs = months.length>1 ? (W-padL-padR)/(months.length-1) : 0;
+  const allY = series.flatMap(s=>[...(s.pts.filter(v=>v!=null)),...((s.trend||[]))]);
+  const minY = Math.min(...allY)*0.95, maxY = Math.max(...allY)*1.05;
+  const y = v=> H - padB - (v-minY)/(maxY-minY||1)*(H-padT-padB);
+  const x = i=> padL + i*xs;
+  let svgH = '';
+  // axes
+  for(let g=0;g<=4;g++){
+    const yv = minY + (maxY-minY)*g/4;
+    const yy = y(yv);
+    svgH += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="currentColor" stroke-opacity="0.12"/>`;
+    svgH += `<text x="${padL-4}" y="${yy+3}" font-size="10" text-anchor="end" fill="currentColor" opacity="0.6">${fmt2(yv)}</text>`;
+  }
+  // x labels (sample)
+  const step = Math.max(1, Math.ceil(months.length/12));
+  months.forEach((m,i)=>{
+    if(i%step!==0 && i!==months.length-1) return;
+    svgH += `<text x="${x(i)}" y="${H-padB+14}" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">${m}</text>`;
+  });
+  // forecast cutoff line
+  if(forecast){
+    const idxCut = months.indexOf(maxM);
+    if(idxCut>=0){
+      svgH += `<line x1="${x(idxCut)}" y1="${padT}" x2="${x(idxCut)}" y2="${H-padB}" stroke="currentColor" stroke-opacity="0.3" stroke-dasharray="3 3"/>`;
+      svgH += `<text x="${x(idxCut)+4}" y="${padT+10}" font-size="10" fill="currentColor" opacity="0.5">forecast →</text>`;
+    }
+  }
+  // series
+  series.forEach(s=>{
+    // pontos reais — linha sólida
+    let path='', started=false;
+    s.pts.forEach((v,i)=>{
+      if(v==null){ started=false; return; }
+      path += (started?' L ':'M ')+x(i)+' '+y(v);
+      started=true;
+    });
+    svgH += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+    s.pts.forEach((v,i)=>{
+      if(v==null) return;
+      svgH += `<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${s.color}"><title>${s.cb} · ${months[i]} · R$ ${fmt2(v)}</title></circle>`;
+    });
+    // tendência — linha tracejada
+    if(s.trend){
+      const tp = s.trend.map((v,i)=>`${i===0?'M':'L'} ${x(i)} ${y(v)}`).join(' ');
+      svgH += `<path d="${tp}" fill="none" stroke="${s.color}" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.7"/>`;
+    }
+  });
+  svg.innerHTML = svgH;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  legend.innerHTML = series.map(s=>`<span><span class="sw" style="background:${s.color}"></span>${COMB_LABEL[s.cb]||s.cb}</span>`).join('') +
+    (forecast?'<span style="margin-left:8px;">— linha tracejada: tendência (regressão linear)</span>':'');
+}
+function cbColor(cb,i){
+  const map={MGO:'#1d4ed8', HFO:'#b45309', Diesel:'#15803d'};
+  return map[cb] || ['#0ea5e9','#f59e0b','#22c55e','#a78bfa','#ef4444'][i%5];
 }
 
 /* =========================================================
@@ -1427,7 +2599,8 @@ document.getElementById('fileImportData').addEventListener('change', e=>{
   r.onload=ev=>{
     try{
       const data=JSON.parse(ev.target.result);
-      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[]}, data);
+      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],historicoPrecos:[],budgetVolume:{}}, data);
+      ensureState();
       save(); renderView(document.querySelector('nav button.active').dataset.view);
       alert('Dados importados.');
     }catch(err){ alert('Arquivo inválido: '+err.message); }
@@ -1457,16 +2630,47 @@ function seedData(){
     setMedia(r.id,e2.id,'Vazia',{tempo:92,consumo:{MGO:78}});
   });
   const today=new Date();
+  // Viagens — algumas históricas finalizadas para alimentar métricas
+  const vFinId = uid();
   state.viagens=[
-    {id:uid(),empId:e1.id,rotaId:r1.id,condicao:'Carregada',dataSaida:dateStr(addDays(today,1)),horaSaida:'08:00'},
-    {id:uid(),empId:e1.id,rotaId:r2.id,condicao:'Vazia',dataSaida:dateStr(addDays(today,8)),horaSaida:'14:00'},
-    {id:uid(),empId:e2.id,rotaId:r1.id,condicao:'Carregada',dataSaida:dateStr(addDays(today,2)),horaSaida:'10:00'}
+    // Finalizada (passado)
+    {id:vFinId, empId:e1.id, rotaId:r1.id, condicao:'Carregada',
+     dataSaida:dateStr(addDays(today,-20)), horaSaida:'08:00',
+     status:'Finalizada', volumeCarregada:5000, tempoRealizado:100,
+     consumoRealizado:{Diesel:5200, HFO:64000}, volumeRealizado:4980},
+    // Realizada (aguarda finalização)
+    {id:uid(), empId:e2.id, rotaId:r1.id, condicao:'Carregada',
+     dataSaida:dateStr(addDays(today,-3)), horaSaida:'10:00',
+     status:'Realizada', volumeCarregada:3000},
+    // Futuras
+    {id:uid(),empId:e1.id,rotaId:r1.id,condicao:'Carregada',dataSaida:dateStr(addDays(today,1)),horaSaida:'08:00',status:'Previsto',volumeCarregada:5000},
+    {id:uid(),empId:e1.id,rotaId:r2.id,condicao:'Vazia',dataSaida:dateStr(addDays(today,8)),horaSaida:'14:00',status:'Previsto'},
+    {id:uid(),empId:e2.id,rotaId:r1.id,condicao:'Carregada',dataSaida:dateStr(addDays(today,2)),horaSaida:'10:00',status:'Previsto',volumeCarregada:3500}
   ];
+  // Fornecedores e abastecimentos
+  const f1={id:uid(),nome:'Posto Marítimo Cidade B',cidade:'Cidade B'};
+  const f2={id:uid(),nome:'Bunker Cidade A',cidade:'Cidade A'};
+  state.fornecedores=[f1,f2];
   state.abastecimentos=[
-    {id:uid(),empId:e1.id,comb:'Diesel',data:dateStr(addDays(today,5)),qtd:30000,status:'Solicitado',obs:'Porto B'},
-    {id:uid(),empId:e1.id,comb:'HFO',data:dateStr(addDays(today,5)),qtd:200000,status:'Previsto',obs:''},
-    {id:uid(),empId:e2.id,comb:'MGO',data:dateStr(addDays(today,7)),qtd:30000,status:'Previsto',obs:''}
+    {id:uid(),empId:e1.id,comb:'Diesel',data:dateStr(addDays(today,-15)),qtd:30000,status:'Realizado',obs:'',cidade:'Cidade B',preco:6.85,fornecedorId:f1.id},
+    {id:uid(),empId:e1.id,comb:'HFO',data:dateStr(addDays(today,-15)),qtd:200000,status:'Realizado',obs:'',cidade:'Cidade B',preco:4.20,fornecedorId:f1.id},
+    {id:uid(),empId:e1.id,comb:'Diesel',data:dateStr(addDays(today,5)),qtd:30000,status:'Solicitado',obs:'Porto B',cidade:'Cidade B',preco:0,fornecedorId:null},
+    {id:uid(),empId:e1.id,comb:'HFO',data:dateStr(addDays(today,5)),qtd:200000,status:'Previsto',obs:'',cidade:'',preco:0,fornecedorId:null},
+    {id:uid(),empId:e2.id,comb:'MGO',data:dateStr(addDays(today,7)),qtd:30000,status:'Previsto',obs:'',cidade:'Cidade A',preco:0,fornecedorId:null},
+    // Atrasado: data passada e ainda Solicitado
+    {id:uid(),empId:e2.id,comb:'MGO',data:dateStr(addDays(today,-2)),qtd:20000,status:'Solicitado',obs:'',cidade:'Cidade B',preco:0,fornecedorId:null}
   ];
+  // Histórico de preços
+  state.historicoPrecos=[];
+  for(let m=10;m>=0;m--){
+    const dt=dateStr(addDays(today,-m*30));
+    state.historicoPrecos.push({id:uid(),data:dt,fornecedorId:f1.id,combustivel:'Diesel',preco:6.50+m*0.04});
+    state.historicoPrecos.push({id:uid(),data:dt,fornecedorId:f1.id,combustivel:'HFO',preco:4.00+m*0.02});
+    state.historicoPrecos.push({id:uid(),data:dt,fornecedorId:f2.id,combustivel:'MGO',preco:7.10+m*0.05});
+  }
+  // Budget exemplo
+  const cMes = ymStr(new Date());
+  state.budgetVolume={'Cidade A':{[cMes]:50000},'Cidade B':{[cMes]:300000}};
 }
 
 /* =========================================================
@@ -1537,7 +2741,8 @@ async function loadFromFile(silent){
     const txt=await f.text();
     if(txt.trim()){
       const data=JSON.parse(txt);
-      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[]}, data);
+      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],historicoPrecos:[],budgetVolume:{}}, data);
+      ensureState();
       save();
       renderView(document.querySelector('nav button.active').dataset.view);
       if(!silent) alert('Base carregada da pasta.');

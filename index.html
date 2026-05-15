@@ -457,6 +457,7 @@
     <div id="mvCalc" class="hint"></div>
     <div class="modal-actions">
       <button class="btn danger sm" id="mvDelete" style="display:none;">Excluir</button>
+      <button class="btn sm" id="mvFinalizar" style="display:none;background:var(--info);color:#1a103d;">Finalizar Viagem</button>
       <button class="btn secondary" data-close>Cancelar</button>
       <button class="btn" id="mvSave">Salvar</button>
     </div>
@@ -1468,6 +1469,9 @@ function openViagemModal(vid, empId, dateStr_){
     document.getElementById('mvHora').value=v.horaSaida||'08:00';
     document.getElementById('mvVol').value=v.volumeCarregada||'';
     document.getElementById('mvDelete').style.display='';
+    const btnFin=document.getElementById('mvFinalizar');
+    btnFin.style.display='';
+    btnFin.textContent = (v.status==='Finalizada') ? 'Ver Finalização' : 'Finalizar Viagem';
   }else{
     document.getElementById('mvTitle').textContent='Nova Viagem';
     if(empId) mEmp.value=empId;
@@ -1477,6 +1481,7 @@ function openViagemModal(vid, empId, dateStr_){
     document.getElementById('mvHora').value='08:00';
     document.getElementById('mvVol').value='';
     document.getElementById('mvDelete').style.display='none';
+    document.getElementById('mvFinalizar').style.display='none';
   }
   updateMvVolVisibility();
   updateMvCalc();
@@ -1543,6 +1548,12 @@ document.getElementById('mvDelete').addEventListener('click', ()=>{
   state.viagens=state.viagens.filter(v=>v.id!==editViagemId);
   save(); closeModals(); renderMapa();
   if(document.getElementById('view-viagens').classList.contains('active')) renderViagens();
+});
+document.getElementById('mvFinalizar').addEventListener('click', ()=>{
+  if(!editViagemId) return;
+  const vid=editViagemId;
+  closeModals();
+  openFinalizarViagem(vid);
 });
 
 /* =========================================================

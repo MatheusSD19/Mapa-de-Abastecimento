@@ -20,8 +20,17 @@
   body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:13px;}
   header{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;}
   header h1{font-size:16px;font-weight:600;color:var(--accent);white-space:nowrap;}
-  nav{display:flex;gap:6px;flex-wrap:wrap;}
-  nav button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
+  .hamburger{background:var(--panel2);color:var(--txt);border:1px solid var(--line);width:34px;height:34px;border-radius:6px;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;}
+  .hamburger:hover{border-color:var(--accent);}
+  .layout{display:flex;align-items:stretch;}
+  .sidebar{width:200px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);padding:12px;transition:width .2s ease,padding .2s ease;overflow:hidden;display:flex;flex-direction:column;position:sticky;top:55px;align-self:flex-start;height:calc(100vh - 55px);}
+  body.sidebar-collapsed .sidebar{width:0;padding:12px 0;border-right:none;}
+  .sidebar .side-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;white-space:nowrap;}
+  .sidebar .side-bottom{margin-top:auto;padding-top:12px;display:flex;justify-content:center;}
+  .theme-toggle{width:42px;height:42px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-size:18px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .theme-toggle:hover{border-color:var(--accent);}
+  nav{display:flex;flex-direction:column;gap:6px;}
+  nav button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);padding:9px 12px;border-radius:6px;cursor:pointer;font-size:12px;text-align:left;white-space:nowrap;}
   nav button:hover{border-color:var(--accent);}
   nav button.active{background:var(--accent2);border-color:var(--accent);color:#001018;font-weight:600;}
   .spacer{flex:1;}
@@ -29,7 +38,7 @@
   .tool-btn:hover{border-color:var(--accent);}
   .fs-status{font-size:11px;color:var(--muted);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;}
   .fs-status.linked{color:var(--ok);}
-  main{padding:16px;}
+  main{padding:16px;flex:1;min-width:0;}
   .view{display:none;}
   .view.active{display:block;}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:16px;}
@@ -54,6 +63,10 @@
   .chk-group{display:flex;gap:12px;flex-wrap:wrap;}
   .chk-group label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--txt);}
   .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;}
+  tr.inativo td{opacity:.55;}
+  .situacao{font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;}
+  .situacao.ativo{background:rgba(34,197,94,.18);color:var(--ok);}
+  .situacao.inativo{background:rgba(239,68,68,.18);color:var(--bad);}
   .tag.MGO{background:#1d4ed8;color:#fff;}
   .tag.HFO{background:#7c2d12;color:#fff;}
   .tag.Diesel{background:#15803d;color:#fff;}
@@ -66,15 +79,63 @@
   .modal h3{color:var(--accent);margin-bottom:12px;font-size:15px;}
   .modal .row{margin-bottom:10px;}
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+  /* dropdown filtro */
+  .dropdown{position:relative;}
+  .dropdown-btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:6px 8px;border-radius:5px;font-size:12px;cursor:pointer;min-width:190px;text-align:left;}
+  .dropdown-btn:hover{border-color:var(--accent);}
+  .dropdown-panel{display:none;position:absolute;top:100%;left:0;margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;z-index:40;min-width:220px;max-height:260px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.35);}
+  .dropdown.open .dropdown-panel{display:block;}
+  .dropdown-panel label{display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 2px;cursor:pointer;}
+  .dropdown-panel .dd-actions{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px;}
+  .dropdown-panel .dd-actions button{flex:1;font-size:11px;padding:3px 6px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:4px;cursor:pointer;}
+  /* medias */
+  .med-emp{border:1px solid var(--line);border-radius:8px;margin-bottom:10px;overflow:hidden;}
+  .med-emp-head{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel2);cursor:pointer;user-select:none;}
+  .med-emp-head:hover{background:rgba(56,189,248,0.08);}
+  .med-emp-head .caret{color:var(--accent);width:14px;display:inline-block;}
+  .med-emp-head b{font-size:13px;}
+  .med-emp-body{padding:10px 12px;}
+  .med-emp-body table{margin:0;}
+  tr.med-rota-row{cursor:pointer;}
+  tr.med-rota-row:hover td{background:rgba(56,189,248,0.10);}
+  tr.med-rota-row td:first-child{color:var(--accent);width:18px;text-align:center;}
+  tr.med-rota-row.med-empty td{color:var(--muted);}
+  tr.med-detail-row td{background:rgba(0,0,0,0.12);padding:8px 10px;}
+  body.light tr.med-detail-row td{background:rgba(0,0,0,0.04);}
+  .med-detail th{font-size:10px;}
+  .med-detail .inline-input{width:78px;}
   /* mapa */
   .mapa-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:8px;}
+  .mapa-wrap::-webkit-scrollbar{width:20px;height:20px;}
+  .mapa-wrap::-webkit-scrollbar-track{background:var(--panel2);}
+  .mapa-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;border:4px solid var(--panel2);}
+  .mapa-wrap::-webkit-scrollbar-thumb:hover{background:var(--accent2);}
+  .mapa-wrap{scrollbar-width:auto;scrollbar-color:var(--line) var(--panel2);}
   table.mapa{font-size:11px;}
-  table.mapa th{position:sticky;top:0;z-index:10;}
   table.mapa td,table.mapa th{padding:3px 5px;white-space:nowrap;}
-  table.mapa .emp-head{background:var(--accent2);color:#001018;text-align:center;font-size:12px;}
+  table.mapa tr.mapa-h1 th{position:sticky;top:0;z-index:12;}
+  table.mapa tr.mapa-h2 th{position:sticky;top:24px;z-index:11;}
+  table.mapa td:first-child{position:sticky;left:0;z-index:5;background:var(--panel);font-weight:600;}
+  table.mapa tr.weekend td:first-child{background:var(--panel2);}
+  table.mapa tr.mapa-h1 th:first-child{position:sticky;left:0;z-index:22;background:var(--panel2);}
+  table.mapa tr.mapa-h2 th:first-child{position:sticky;left:0;z-index:21;background:var(--panel2);}
+  table.mapa .emp-head{background:var(--accent2);color:#001018;text-align:center;font-size:12px;font-weight:700;}
   td.cell-clickable{cursor:pointer;}
   td.cell-clickable:hover{background:rgba(56,189,248,0.12);}
+  td.abast-cell{cursor:pointer;}
+  td.abast-cell:hover{background:rgba(34,197,94,0.15);}
+  table.mapa .hora-col{text-align:center;}
+  table.mapa .chegada{color:var(--info);font-weight:600;}
+  table.mapa tr.today td{background:rgba(56,189,248,0.13);box-shadow:inset 0 0 0 9999px rgba(56,189,248,0.07);}
+  table.mapa tr.today td:first-child{background:rgba(56,189,248,0.22);}
+  table.mapa .emp-sep{border-right:3px solid var(--line);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;}
+  .abast-chip{border-radius:4px;padding:1px 5px;cursor:grab;font-weight:700;display:inline-block;}
+  .abast-chip:active{cursor:grabbing;}
+  .abast-chip.st-Previsto{background:var(--bad);color:#fff;}
+  .abast-chip.st-Solicitado{background:var(--ok);color:#04210f;}
+  .abast-chip.st-Realizado{background:#101010;color:#fff;}
+  .abast-chip.st-Cancelado{background:var(--info);color:#1a103d;}
   .trip-chip:active{cursor:grabbing;}
   td.drop-target{outline:2px dashed var(--accent);outline-offset:-2px;}
   .bar{height:9px;border-radius:2px;background:var(--panel2);position:relative;min-width:46px;display:inline-block;vertical-align:middle;}
@@ -98,15 +159,9 @@
 </head>
 <body>
 <header>
+  <button class="hamburger" id="btnSidebar" title="Recolher / expandir menu">☰</button>
   <h1>⛴ Mapa de Abastecimento</h1>
-  <nav>
-    <button data-view="premissas" class="active">Premissas</button>
-    <button data-view="medias">Médias de Consumo</button>
-    <button data-view="mapa">Mapa de Giros</button>
-    <button data-view="abastecimentos">Abastecimentos</button>
-  </nav>
   <div class="spacer"></div>
-  <button class="tool-btn" id="btnTheme">Tema claro</button>
   <span id="fsStatus" class="fs-status">Base: não vinculada</span>
   <button class="tool-btn" id="btnPickFolder">Selecionar pasta</button>
   <button class="tool-btn" id="btnSaveBase">Salvar base</button>
@@ -115,6 +170,19 @@
   <input type="file" id="fileImportData" accept="application/json" style="display:none">
   <button class="tool-btn" id="btnSeed">Dados exemplo</button>
 </header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="side-title">Módulos</div>
+  <nav>
+    <button data-view="premissas" class="active">Premissas</button>
+    <button data-view="medias">Médias de Consumo</button>
+    <button data-view="mapa">Mapa de Giros</button>
+    <button data-view="abastecimentos">Abastecimentos</button>
+  </nav>
+  <div class="side-bottom">
+    <button class="theme-toggle" id="btnTheme" title="Alternar tema">🌙</button>
+  </div>
+</aside>
 <main>
   <!-- ================= PREMISSAS ================= -->
   <section class="view active" id="view-premissas">
@@ -123,6 +191,7 @@
       <div class="row">
         <div class="field"><label>Nome</label><input id="empNome" placeholder="Ex.: Empurrador 01"></div>
         <div class="field"><label>Potência (HP)</label><input type="number" id="empPot" placeholder="0"></div>
+        <div class="field"><label>Cor no Mapa</label><input type="color" id="empCor" value="#0ea5e9" style="width:54px;height:32px;padding:2px;"></div>
         <div class="field">
           <label>Combustíveis utilizados</label>
           <div class="chk-group" id="empCombs">
@@ -159,13 +228,16 @@
   <!-- ================= MEDIAS ================= -->
   <section class="view" id="view-medias">
     <div class="card">
-      <h2>Médias de Consumo e Tempo de Viagem <span class="sub">— por trecho, embarcação e condição</span></h2>
+      <h2>Médias de Consumo e Tempo de Viagem <span class="sub">— por embarcação e trecho</span></h2>
       <div class="row">
-        <div class="field"><label>Trecho</label><select id="medRota"></select></div>
         <button class="tool-btn" id="btnImportMed">Importar Excel / CSV</button>
         <input type="file" id="fileMed" accept=".csv,.xlsx,.xls" style="display:none">
+        <button class="btn secondary" id="btnMedExpandAll">Expandir todos</button>
+        <button class="btn secondary" id="btnMedCollapseAll">Recolher todos</button>
       </div>
-      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino</b>. O sistema atualiza automaticamente as bases pelos nomes cadastrados. As colunas <b>Distância, Origem e Destino</b> não afetam esta tela, mas atualizam o cadastro das rotas em Premissas.</div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino</b>.
+      A importação <b>substitui integralmente</b> a base de médias anterior e <b>cria automaticamente</b> os trechos e empurradores que ainda não existem (adicionando os combustíveis usados por cada um). Consumo é interpretado em <b>L/h</b> e Tempo em <b>horas</b>.
+      As colunas Distância, Origem e Destino atualizam o cadastro dos trechos em Premissas. Após importar, revise potência e tanques dos empurradores nas Premissas.</div>
       <div id="medContent" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -177,11 +249,17 @@
       <div class="row">
         <div class="field"><label>Data inicial</label><input type="date" id="mapaIni"></div>
         <div class="field"><label>Data final</label><input type="date" id="mapaFim"></div>
+        <div class="field"><label>Empurradores exibidos</label>
+          <div class="dropdown" id="empFilterDrop">
+            <button type="button" class="dropdown-btn" id="empFilterBtn">Todos os empurradores ▾</button>
+            <div class="dropdown-panel" id="empFilterPanel"></div>
+          </div>
+        </div>
         <button class="btn secondary" id="btnMapaRefresh">Atualizar</button>
         <div class="spacer"></div>
         <button class="btn" id="btnNovaViagem">+ Nova Viagem</button>
       </div>
-      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia. Arraste o chip de uma viagem para mover o dia de saída.</div>
+      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia, ou na coluna <b>Abast.</b> para programar um abastecimento. Arraste o chip de uma viagem ou de um abastecimento para mover a data — segurando <b>Ctrl</b> ao soltar, o item é <b>copiado</b> sem alterar o original.</div>
       <div class="mapa-wrap" id="mapaWrap" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -205,13 +283,17 @@
     </div>
   </section>
 </main>
+</div>
 
 <!-- ===== MODAL VIAGEM ===== -->
 <div class="modal-bg" id="modalViagem">
   <div class="modal">
     <h3 id="mvTitle">Nova Viagem</h3>
     <div class="row"><div class="field" style="flex:1;"><label>Empurrador</label><select id="mvEmp" style="width:100%"></select></div></div>
-    <div class="row"><div class="field" style="flex:1;"><label>Trecho / Rota</label><select id="mvRota" style="width:100%"></select></div></div>
+    <div class="row"><div class="field" style="flex:1;"><label>Trecho / Rota <span class="muted">(digite para filtrar)</span></label>
+      <input id="mvRota" list="mvRotaList" style="width:100%" placeholder="Digite o trecho..." autocomplete="off">
+      <datalist id="mvRotaList"></datalist>
+    </div></div>
     <div class="row">
       <div class="field" style="flex:1;"><label>Condição</label>
         <select id="mvCond" style="width:100%">
@@ -221,7 +303,7 @@
     </div>
     <div class="row">
       <div class="field"><label>Dia de saída</label><input type="date" id="mvData"></div>
-      <div class="field"><label>Horário de saída</label><input type="time" id="mvHora" value="08:00"></div>
+      <div class="field"><label>Horário de saída (24h)</label><input type="text" id="mvHora" value="08:00" placeholder="HH:MM" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" style="width:90px;"></div>
     </div>
     <div id="mvCalc" class="hint"></div>
     <div class="modal-actions">
@@ -273,7 +355,8 @@ let state = {
   rotas: [],
   medias: {},        // medias[rotaId][empId][condicao] = {tempo, consumo:{MGO,HFO,Diesel}}
   viagens: [],       // {id,empId,rotaId,condicao,dataSaida,horaSaida}
-  abastecimentos: [] // {id,empId,data,comb,qtd,status,obs}
+  abastecimentos: [],// {id,empId,data,comb,qtd,status,obs}
+  mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
 };
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
@@ -294,6 +377,21 @@ function fmt1(n){
 }
 function empById(id){ return state.empurradores.find(e=>e.id===id); }
 function rotaById(id){ return state.rotas.find(r=>r.id===id); }
+function ativo(x){ return !x || x.ativo !== false; }
+function empsAtivos(){ return state.empurradores.filter(ativo); }
+function rotasAtivas(){ return state.rotas.filter(ativo); }
+const EMP_PALETTE=['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#ef4444','#14b8a6','#ec4899','#84cc16','#f97316','#6366f1'];
+function getEmpCor(e){
+  if(e && e.cor) return e.cor;
+  const i=state.empurradores.indexOf(e);
+  return EMP_PALETTE[(i<0?0:i)%EMP_PALETTE.length];
+}
+function corContraste(hex){
+  const m=String(hex||'').replace('#','');
+  if(m.length<6) return '#001018';
+  const r=parseInt(m.substr(0,2),16), g=parseInt(m.substr(2,2),16), b=parseInt(m.substr(4,2),16);
+  return (0.299*r+0.587*g+0.114*b)>150 ? '#001018' : '#ffffff';
+}
 
 /* =========================================================
    NAVEGAÇÃO
@@ -309,7 +407,7 @@ document.querySelectorAll('nav button').forEach(b=>{
 });
 function renderView(v){
   if(v==='premissas'){ renderEmp(); renderRot(); }
-  if(v==='medias'){ renderMediasSelectors(); renderMedias(); }
+  if(v==='medias'){ renderMedias(); }
   if(v==='mapa'){ renderMapa(); }
   if(v==='abastecimentos'){ renderAbast(); }
 }
@@ -337,6 +435,7 @@ document.querySelectorAll('#empCombs input').forEach(c=>c.addEventListener('chan
 function readEmpForm(){
   const nome = document.getElementById('empNome').value.trim();
   const pot = parseFloat(document.getElementById('empPot').value)||0;
+  const cor = document.getElementById('empCor').value;
   const combustiveis = [...document.querySelectorAll('#empCombs input:checked')].map(c=>c.value);
   const porto = parseFloat(document.getElementById('empPorto').value)||0;
   const tanques = {};
@@ -345,12 +444,13 @@ function readEmpForm(){
     const ini = parseFloat(document.querySelector(`[data-tank-ini="${c}"]`)?.value)||0;
     tanques[c] = {capacidade:cap, estoqueInicial:ini};
   });
-  return {nome,potencia:pot,combustiveis,consumoPorto:porto,tanques};
+  return {nome,potencia:pot,cor,combustiveis,consumoPorto:porto,tanques};
 }
 function clearEmpForm(){
   document.getElementById('empNome').value='';
   document.getElementById('empPot').value='';
   document.getElementById('empPorto').value='';
+  document.getElementById('empCor').value='#0ea5e9';
   document.querySelectorAll('#empCombs input').forEach(c=>c.checked=false);
   renderEmpTanqueRow();
   editEmpId=null;
@@ -377,6 +477,7 @@ function editEmp(id){
   document.getElementById('empNome').value=e.nome;
   document.getElementById('empPot').value=e.potencia;
   document.getElementById('empPorto').value=e.consumoPorto;
+  document.getElementById('empCor').value=getEmpCor(e);
   document.querySelectorAll('#empCombs input').forEach(c=>c.checked=e.combustiveis.includes(c.value));
   renderEmpTanqueRow();
   e.combustiveis.forEach(c=>{
@@ -404,23 +505,32 @@ function delEmp(id){
   Object.values(state.medias).forEach(byEmp=>{ delete byEmp[id]; });
   save(); renderEmp();
 }
+function toggleEmpAtivo(id){
+  const e=empById(id);
+  e.ativo = !ativo(e);
+  save(); renderEmp();
+}
 function renderEmp(){
   const t = document.getElementById('tblEmp');
   if(!state.empurradores.length){ t.innerHTML='<tr><td class="empty">Nenhum empurrador cadastrado.</td></tr>'; return; }
   let h = `<tr><th>Nome</th><th class="num">Potência (HP)</th><th>Combustíveis</th>
-    <th class="num">Consumo Porto (L/h)</th><th>Tanques (cap. / inicial)</th><th>Ações</th></tr>`;
+    <th class="num">Consumo Porto (L/h)</th><th>Tanques (cap. / inicial)</th><th>Situação</th><th>Ações</th></tr>`;
   state.empurradores.forEach(e=>{
     const combs = e.combustiveis.map(c=>`<span class="tag ${c}">${COMB_LABEL[c]}</span>`).join(' ');
     const tanks = e.combustiveis.map(c=>`${COMB_LABEL[c]}: ${fmt(e.tanques[c]?.capacidade)} / ${fmt(e.tanques[c]?.estoqueInicial)} L`).join('<br>');
-    h += `<tr>
-      <td>${e.nome}</td>
+    const at = ativo(e);
+    const cor = getEmpCor(e);
+    h += `<tr class="${at?'':'inativo'}">
+      <td><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${cor};margin-right:6px;vertical-align:middle;"></span>${e.nome}</td>
       <td class="num">${fmt(e.potencia)}</td>
       <td>${combs}</td>
       <td class="num">${fmt(e.consumoPorto)}</td>
       <td>${tanks}</td>
+      <td>${at?'<span class="situacao ativo">Ativo</span>':'<span class="situacao inativo">Inativo</span>'}</td>
       <td>
         <button class="btn sm secondary" onclick="editEmp('${e.id}')">Editar</button>
         <button class="btn sm secondary" onclick="copyEmp('${e.id}')">Copiar</button>
+        <button class="btn sm secondary" onclick="toggleEmpAtivo('${e.id}')">${at?'Inativar':'Reativar'}</button>
         <button class="btn sm danger" onclick="delEmp('${e.id}')">Excluir</button>
       </td></tr>`;
   });
@@ -474,15 +584,23 @@ function delRot(id){
   delete state.medias[id];
   save(); renderRot();
 }
+function toggleRotAtivo(id){
+  const r=rotaById(id);
+  r.ativo = !ativo(r);
+  save(); renderRot();
+}
 function renderRot(){
   const t=document.getElementById('tblRot');
   if(!state.rotas.length){ t.innerHTML='<tr><td class="empty">Nenhuma rota cadastrada.</td></tr>'; return; }
-  let h=`<tr><th>Trecho</th><th>Origem</th><th>Destino</th><th class="num">Distância (km)</th><th>Ações</th></tr>`;
+  let h=`<tr><th>Trecho</th><th>Origem</th><th>Destino</th><th class="num">Distância (km)</th><th>Situação</th><th>Ações</th></tr>`;
   state.rotas.forEach(r=>{
-    h+=`<tr><td>${r.nome}</td><td>${r.origem||'—'}</td><td>${r.destino||'—'}</td>
+    const at=ativo(r);
+    h+=`<tr class="${at?'':'inativo'}"><td>${r.nome}</td><td>${r.origem||'—'}</td><td>${r.destino||'—'}</td>
       <td class="num">${fmt(r.distancia)}</td>
+      <td>${at?'<span class="situacao ativo">Ativo</span>':'<span class="situacao inativo">Inativo</span>'}</td>
       <td><button class="btn sm secondary" onclick="editRot('${r.id}')">Editar</button>
       <button class="btn sm secondary" onclick="copyRot('${r.id}')">Copiar</button>
+      <button class="btn sm secondary" onclick="toggleRotAtivo('${r.id}')">${at?'Inativar':'Reativar'}</button>
       <button class="btn sm danger" onclick="delRot('${r.id}')">Excluir</button></td></tr>`;
   });
   t.innerHTML=h;
@@ -503,58 +621,130 @@ function setMedia(rotaId, empId, cond, patch){
     consumo: Object.assign({}, cur.consumo, patch.consumo||{})
   };
 }
-function renderMediasSelectors(){
-  const sel=document.getElementById('medRota');
-  const prev=sel.value;
-  sel.innerHTML = state.rotas.map(r=>`<option value="${r.id}">${r.nome}</option>`).join('') ||
-    '<option value="">— cadastre rotas primeiro —</option>';
-  if(prev) sel.value=prev;
+// estado de expansão da tela de médias
+const medExpanded = new Set();      // empIds expandidos
+const medRowExpanded = new Set();   // chaves "empId|rotaId" expandidas
+
+// média geral do barco numa rota: faz a média entre as condições preenchidas
+function mediaGeral(rotaId, empId, combustiveis){
+  const conds = CONDICOES.map(cd=>getMedia(rotaId,empId,cd)).filter(Boolean);
+  const consumo={};
+  combustiveis.forEach(cb=>{
+    const vals = conds.map(m=>m.consumo?.[cb]).filter(v=>v>0);
+    consumo[cb] = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  });
+  const tempos = conds.map(m=>m.tempo).filter(v=>v>0);
+  const tempo = tempos.length ? tempos.reduce((a,b)=>a+b,0)/tempos.length : 0;
+  return {consumo, tempo, condicoesComDados:conds.length};
 }
-document.getElementById('medRota').addEventListener('change', renderMedias);
 
 function renderMedias(){
   const c=document.getElementById('medContent');
-  const rotaId=document.getElementById('medRota').value;
-  if(!rotaId || !state.empurradores.length){
-    c.innerHTML='<div class="empty">Cadastre rotas e empurradores nas Premissas para lançar as médias.</div>';
+  const emps = empsAtivos();
+  const rotas = rotasAtivas();
+  if(!emps.length){
+    c.innerHTML='<div class="empty">Importe uma base de médias ou cadastre empurradores ativos nas Premissas.</div>';
     return;
   }
   let h='';
-  state.empurradores.forEach(e=>{
-    h+=`<div style="margin-bottom:18px;">
-      <div style="font-weight:600;color:var(--accent);margin-bottom:4px;">${e.nome}
-        &nbsp;${e.combustiveis.map(cb=>`<span class="tag ${cb}">${COMB_LABEL[cb]}</span>`).join(' ')}</div>
-      <table><tr><th>Condição</th>
-        ${e.combustiveis.map(cb=>`<th class="num">Consumo ${COMB_LABEL[cb]} (L/h)</th>`).join('')}
-        <th class="num">Tempo viagem (h)</th></tr>`;
-    CONDICOES.forEach(cond=>{
-      const m=getMedia(rotaId,e.id,cond)||{tempo:0,consumo:{}};
-      h+=`<tr><td>${cond}</td>`;
-      e.combustiveis.forEach(cb=>{
-        h+=`<td class="num"><input class="inline-input" type="number"
-          data-med-cons="${e.id}|${cond}|${cb}" value="${m.consumo[cb]||''}"></td>`;
-      });
-      h+=`<td class="num"><input class="inline-input" type="number"
-          data-med-tempo="${e.id}|${cond}" value="${m.tempo||''}"></td></tr>`;
-    });
-    h+=`</table></div>`;
+  emps.forEach(e=>{
+    const open = medExpanded.has(e.id);
+    const ncols = 2 + e.combustiveis.length + 1; // caret + trecho + combs + tempo
+    h+=`<div class="med-emp">
+      <div class="med-emp-head" data-emp="${e.id}">
+        <span class="caret">${open?'▼':'▶'}</span>
+        <b>${e.nome}</b>
+        ${e.combustiveis.map(cb=>`<span class="tag ${cb}">${COMB_LABEL[cb]}</span>`).join(' ')}
+        <span class="spacer"></span>
+        <span class="muted" style="font-size:11px;">${rotas.length} trecho(s)</span>
+      </div>`;
+    if(open){
+      h+=`<div class="med-emp-body">`;
+      if(!rotas.length){
+        h+=`<div class="empty">Nenhum trecho ativo. Importe uma base ou cadastre rotas nas Premissas.</div>`;
+      }else{
+        h+=`<table><tr><th></th><th>Trecho</th>`;
+        e.combustiveis.forEach(cb=>h+=`<th class="num">Consumo médio ${COMB_LABEL[cb]} (L/h)</th>`);
+        h+=`<th class="num">Tempo médio (h)</th></tr>`;
+        rotas.forEach(r=>{
+          const g = mediaGeral(r.id, e.id, e.combustiveis);
+          const rowKey = e.id+'|'+r.id;
+          const rowOpen = medRowExpanded.has(rowKey);
+          const empty = g.condicoesComDados===0;
+          h+=`<tr class="med-rota-row ${empty?'med-empty':''}" data-rowkey="${rowKey}">
+            <td>${rowOpen?'▼':'▶'}</td>
+            <td>${r.nome}</td>`;
+          e.combustiveis.forEach(cb=>h+=`<td class="num">${g.consumo[cb]?fmt1(g.consumo[cb]):'—'}</td>`);
+          h+=`<td class="num">${g.tempo?fmt1(g.tempo):'—'}</td></tr>`;
+          if(rowOpen){
+            h+=`<tr class="med-detail-row"><td colspan="${ncols}">
+              <div class="muted" style="font-size:11px;margin-bottom:4px;">Médias por condição — ${e.nome} · ${r.nome}</div>
+              <table class="med-detail"><tr><th>Condição</th>`;
+            e.combustiveis.forEach(cb=>h+=`<th class="num">Consumo ${COMB_LABEL[cb]} (L/h)</th>`);
+            h+=`<th class="num">Tempo viagem (h)</th></tr>`;
+            CONDICOES.forEach(cond=>{
+              const m=getMedia(r.id,e.id,cond)||{tempo:0,consumo:{}};
+              h+=`<tr><td>${cond}</td>`;
+              e.combustiveis.forEach(cb=>{
+                h+=`<td class="num"><input class="inline-input" type="number" step="any"
+                  data-med-cons="${r.id}|${e.id}|${cond}|${cb}" value="${m.consumo[cb]||''}"></td>`;
+              });
+              h+=`<td class="num"><input class="inline-input" type="number" step="any"
+                  data-med-tempo="${r.id}|${e.id}|${cond}" value="${m.tempo||''}"></td></tr>`;
+            });
+            h+=`</table></td></tr>`;
+          }
+        });
+        h+=`</table>`;
+      }
+      h+=`</div>`;
+    }
+    h+=`</div>`;
   });
   c.innerHTML=h;
+
+  // expandir/recolher empurrador
+  c.querySelectorAll('.med-emp-head').forEach(head=>{
+    head.addEventListener('click', ()=>{
+      const id=head.dataset.emp;
+      if(medExpanded.has(id)) medExpanded.delete(id); else medExpanded.add(id);
+      renderMedias();
+    });
+  });
+  // expandir/recolher linha de trecho
+  c.querySelectorAll('.med-rota-row').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      const k=row.dataset.rowkey;
+      if(medRowExpanded.has(k)) medRowExpanded.delete(k); else medRowExpanded.add(k);
+      renderMedias();
+    });
+  });
+  // edição das médias por condição
   c.querySelectorAll('[data-med-cons]').forEach(inp=>{
+    inp.addEventListener('click', ev=>ev.stopPropagation());
     inp.addEventListener('change', ()=>{
-      const [empId,cond,cb]=inp.dataset.medCons.split('|');
+      const [rotaId,empId,cond,cb]=inp.dataset.medCons.split('|');
       setMedia(rotaId,empId,cond,{consumo:{[cb]:parseFloat(inp.value)||0}});
-      save();
+      save(); renderMedias();
     });
   });
   c.querySelectorAll('[data-med-tempo]').forEach(inp=>{
+    inp.addEventListener('click', ev=>ev.stopPropagation());
     inp.addEventListener('change', ()=>{
-      const [empId,cond]=inp.dataset.medTempo.split('|');
+      const [rotaId,empId,cond]=inp.dataset.medTempo.split('|');
       setMedia(rotaId,empId,cond,{tempo:parseFloat(inp.value)||0});
-      save();
+      save(); renderMedias();
     });
   });
 }
+document.getElementById('btnMedExpandAll').addEventListener('click', ()=>{
+  empsAtivos().forEach(e=>medExpanded.add(e.id));
+  renderMedias();
+});
+document.getElementById('btnMedCollapseAll').addEventListener('click', ()=>{
+  medExpanded.clear(); medRowExpanded.clear();
+  renderMedias();
+});
 
 /* ---- Import Excel / CSV ---- */
 document.getElementById('btnImportMed').addEventListener('click', ()=>document.getElementById('fileMed').click());
@@ -583,6 +773,24 @@ function parseCSV(text){
   return text.replace(/\r/g,'').split('\n').filter(l=>l.trim()).map(l=>l.split(delim));
 }
 function norm(s){ return String(s||'').trim().toLowerCase(); }
+// Interpreta números no padrão brasileiro: vírgula = decimal, ponto = separador de milhar.
+function parseNum(v){
+  if(v===null||v===undefined) return NaN;
+  if(typeof v==='number') return v;
+  let s=String(v).trim();
+  if(!s) return NaN;
+  s=s.replace(/\s/g,'').replace(/[^\d.,\-]/g,'');
+  if(!s) return NaN;
+  if(s.includes(',')){
+    // vírgula é o separador decimal — pontos são milhares
+    s=s.replace(/\./g,'').replace(',','.');
+  }else{
+    // sem vírgula: no padrão BR o ponto é separador de milhar
+    s=s.replace(/\./g,'');
+  }
+  const n=parseFloat(s);
+  return isNaN(n)?NaN:n;
+}
 function processMedRows(rows){
   if(!rows.length){ alert('Arquivo vazio.'); return; }
   const header = rows[0].map(norm);
@@ -597,41 +805,76 @@ function processMedRows(rows){
     origem: header.findIndex(h=>h.includes('origem')),
     destino:header.findIndex(h=>h.includes('destino')),
   };
-  if(idx.trecho<0||idx.emp<0||idx.cond<0){
-    alert('Cabeçalho inválido. Esperado: Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino'); return;
+  if(idx.trecho<0||idx.emp<0||idx.cond<0||idx.comb<0){
+    alert('Cabeçalho inválido. Esperado: Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino');
+    return;
   }
-  let ok=0, skip=0, rotasAtualizadas=0;
-  const combMap = {mgo:'MGO', hfo:'HFO', diesel:'Diesel', 'diesel terceiro':'Diesel'};
+  const combMap = {mgo:'MGO', hfo:'HFO', diesel:'Diesel', 'diesel terceiro':'Diesel', 'óleo diesel':'Diesel', 'oleo diesel':'Diesel'};
+  let ok=0, skip=0;
+  let rotasCriadas=0, rotasAtualizadas=0, empsCriados=0, empsAtualizados=0;
+
+  // a base de médias é substituída integralmente a cada importação
+  state.medias = {};
+
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
-    const rota = state.rotas.find(x=>norm(x.nome)===norm(r[idx.trecho]));
-    const emp  = state.empurradores.find(x=>norm(x.nome)===norm(r[idx.emp]));
+    const trechoNome = String(r[idx.trecho]||'').trim();
+    const empNome    = String(r[idx.emp]||'').trim();
     const cond = CONDICOES.find(c=>norm(c)===norm(r[idx.cond]));
-    if(rota){
-      // colunas Distância/Origem/Destino atualizam o cadastro da rota nas Premissas
+    const combRaw = norm(r[idx.comb]);
+    const comb = combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
+    if(!trechoNome || !empNome || !cond || !comb){ skip++; continue; }
+
+    const cons  = idx.cons>=0  ? (parseNum(r[idx.cons])||0)  : 0;
+    const tempo = idx.tempo>=0 ? (parseNum(r[idx.tempo])||0) : 0;
+    const oriV  = idx.origem>=0  ? String(r[idx.origem]||'').trim()  : '';
+    const dstV  = idx.destino>=0 ? String(r[idx.destino]||'').trim() : '';
+    const dist  = idx.dist>=0 ? parseNum(r[idx.dist]) : NaN;
+
+    // ---- Rota: encontra ou cria ----
+    let rota = state.rotas.find(x=>norm(x.nome)===norm(trechoNome));
+    if(!rota){
+      rota = {id:uid(), nome:trechoNome, origem:oriV, destino:dstV, distancia:isNaN(dist)?0:dist};
+      state.rotas.push(rota);
+      rotasCriadas++;
+    }else{
       let upd=false;
-      const oriV = idx.origem>=0 ? String(r[idx.origem]||'').trim() : '';
-      const dstV = idx.destino>=0 ? String(r[idx.destino]||'').trim() : '';
-      const dstNum = idx.dist>=0 ? parseFloat(String(r[idx.dist]).replace(/\./g,'').replace(',','.')) : NaN;
       if(oriV && oriV!==rota.origem){ rota.origem=oriV; upd=true; }
       if(dstV && dstV!==rota.destino){ rota.destino=dstV; upd=true; }
-      if(!isNaN(dstNum) && dstNum>0 && dstNum!==rota.distancia){ rota.distancia=dstNum; upd=true; }
+      if(!isNaN(dist) && dist>0 && dist!==rota.distancia){ rota.distancia=dist; upd=true; }
       if(upd) rotasAtualizadas++;
     }
-    if(!rota||!emp||!cond){ skip++; continue; }
-    const combRaw = idx.comb>=0 ? norm(r[idx.comb]) : '';
-    const comb = combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
-    const cons = idx.cons>=0 ? parseFloat(String(r[idx.cons]).replace(/\./g,'').replace(',','.'))||0 : 0;
-    const tempo= idx.tempo>=0 ? parseFloat(String(r[idx.tempo]).replace(',','.'))||0 : 0;
-    const patch = {tempo};
-    if(comb) patch.consumo = {[comb]:cons};
-    setMedia(rota.id, emp.id, cond, patch);
+
+    // ---- Empurrador: encontra ou cria; garante o combustível na lista ----
+    let emp = state.empurradores.find(x=>norm(x.nome)===norm(empNome));
+    if(!emp){
+      emp = {id:uid(), nome:empNome, potencia:0, combustiveis:[], consumoPorto:0, tanques:{}};
+      state.empurradores.push(emp);
+      empsCriados++;
+    }
+    if(!emp.tanques) emp.tanques={};
+    if(!emp.combustiveis.includes(comb)){
+      emp.combustiveis.push(comb);
+      if(!emp.tanques[comb]) emp.tanques[comb]={capacidade:0, estoqueInicial:0};
+      empsAtualizados++;
+    }
+
+    // ---- Média de consumo (L/h) e tempo de viagem (h) ----
+    setMedia(rota.id, emp.id, cond, {tempo, consumo:{[comb]:cons}});
     ok++;
   }
   save();
   renderMedias();
   renderRot();
-  alert(`Importação concluída.\nLinhas aplicadas: ${ok}\nLinhas ignoradas (sem correspondência): ${skip}\nRotas atualizadas (Origem/Destino/Distância): ${rotasAtualizadas}`);
+  renderEmp();
+  alert(
+    'Importação concluída — base de médias substituída.\n'+
+    'Linhas aplicadas: '+ok+'\n'+
+    'Linhas ignoradas (dados incompletos): '+skip+'\n'+
+    'Trechos: '+rotasCriadas+' criados, '+rotasAtualizadas+' atualizados\n'+
+    'Empurradores: '+empsCriados+' criados, '+empsAtualizados+' com combustível adicionado\n\n'+
+    'Revise potência, capacidade de tanque e estoque inicial dos empurradores nas Premissas.'
+  );
 }
 
 /* =========================================================
@@ -688,6 +931,60 @@ function initMapaDates(){
 document.getElementById('btnMapaRefresh').addEventListener('click', renderMapa);
 document.getElementById('btnNovaViagem').addEventListener('click', ()=>openViagemModal(null,null,null));
 
+/* ---- Filtro de empurradores exibidos no mapa (persistido na base) ---- */
+// state.mapaEmpFilter: array de ids selecionados; null/undefined = todos selecionados
+function getMapaFilterSet(){
+  const ids = empsAtivos().map(e=>e.id);
+  if(!Array.isArray(state.mapaEmpFilter)) return new Set(ids);
+  return new Set(state.mapaEmpFilter.filter(id=>ids.includes(id)));
+}
+function setMapaFilter(set){
+  state.mapaEmpFilter = [...set];
+  save();
+}
+function renderEmpFilter(){
+  // apenas empurradores ativos aparecem no mapa
+  const lista = empsAtivos();
+  const sel = getMapaFilterSet();
+  const panel=document.getElementById('empFilterPanel');
+  panel.innerHTML =
+    `<div class="dd-actions">
+       <button type="button" id="ddAll">Todos</button>
+       <button type="button" id="ddNone">Nenhum</button>
+     </div>` +
+    (lista.map(e=>
+      `<label><input type="checkbox" value="${e.id}" ${sel.has(e.id)?'checked':''}> ${e.nome}</label>`
+    ).join('') || '<div class="empty">Nenhum empurrador ativo.</div>');
+  const nSel = lista.filter(e=>sel.has(e.id)).length;
+  const tot = lista.length;
+  document.getElementById('empFilterBtn').textContent =
+    (nSel===tot ? 'Todos os empurradores' : nSel+' de '+tot+' empurradores') + ' ▾';
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const s=getMapaFilterSet();
+      if(cb.checked) s.add(cb.value); else s.delete(cb.value);
+      setMapaFilter(s);
+      renderMapa();
+    });
+  });
+  panel.querySelector('#ddAll').addEventListener('click', ()=>{
+    setMapaFilter(new Set(lista.map(e=>e.id)));
+    renderMapa();
+  });
+  panel.querySelector('#ddNone').addEventListener('click', ()=>{
+    setMapaFilter(new Set());
+    renderMapa();
+  });
+}
+document.getElementById('empFilterBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  document.getElementById('empFilterDrop').classList.toggle('open');
+});
+document.addEventListener('click', e=>{
+  const d=document.getElementById('empFilterDrop');
+  if(d && !d.contains(e.target)) d.classList.remove('open');
+});
+
 function viagensDoDia(empId, dStr){
   return state.viagens.filter(v=>v.empId===empId && v.dataSaida===dStr);
 }
@@ -704,6 +1001,10 @@ function renderMapa(){
   initMapaDates();
   const wrap=document.getElementById('mapaWrap');
   if(!state.empurradores.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Cadastre empurradores nas Premissas.</div>'; return; }
+  renderEmpFilter();
+  const _filtroSet = getMapaFilterSet();
+  const emps = empsAtivos().filter(e=>_filtroSet.has(e.id));
+  if(!emps.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Nenhum empurrador selecionado no filtro acima.</div>'; return; }
   const ini=parseDate(document.getElementById('mapaIni').value);
   const fim=parseDate(document.getElementById('mapaFim').value);
   if(fim<ini){ wrap.innerHTML='<div class="empty" style="padding:14px;">Data final anterior à inicial.</div>'; return; }
@@ -713,32 +1014,37 @@ function renderMapa(){
 
   // estoque corrente por empurrador/combustível
   const estoque={};
-  state.empurradores.forEach(e=>{
+  emps.forEach(e=>{
     estoque[e.id]={};
     e.combustiveis.forEach(c=> estoque[e.id][c]= e.tanques[c]?.estoqueInicial||0);
   });
 
   // cabeçalho
-  let h='<table class="mapa"><tr>';
+  let h='<table class="mapa"><tr class="mapa-h1">';
   h+='<th>Data</th>';
-  state.empurradores.forEach(e=>{
+  emps.forEach(e=>{
     const span = 4 + e.combustiveis.length*3;
-    h+=`<th class="emp-head" colspan="${span}">${e.nome}</th>`;
+    const cor=getEmpCor(e);
+    h+=`<th class="emp-head emp-sep" colspan="${span}" style="background:${cor};color:${corContraste(cor)}">${e.nome}</th>`;
   });
-  h+='</tr><tr><th></th>';
-  state.empurradores.forEach(e=>{
-    h+='<th>Horário</th><th>Viagem</th><th>Condição</th><th>Status</th>';
-    e.combustiveis.forEach(c=>{
-      h+=`<th class="num">${COMB_LABEL[c]} L/dia</th><th class="num">Abast.</th><th>Estoque / Tanque</th>`;
+  h+='</tr><tr class="mapa-h2"><th></th>';
+  emps.forEach(e=>{
+    h+='<th class="hora-col">Horário</th><th>Viagem</th><th>Condição</th><th>Status</th>';
+    e.combustiveis.forEach((c,ci)=>{
+      const last = ci===e.combustiveis.length-1;
+      h+=`<th class="num">${COMB_LABEL[c]} L/dia</th><th class="num">Abast.</th><th class="${last?'emp-sep':''}">Estoque / Tanque</th>`;
     });
   });
   h+='</tr>';
 
+  const hojeStr=dateStr(new Date());
   dias.forEach(day=>{
     const dStr=dateStr(day);
     const wknd = (day.getDay()===0||day.getDay()===6)?' weekend':'';
-    h+=`<tr class="${wknd}"><td>${day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`;
-    state.empurradores.forEach(e=>{
+    const hoje = dStr===hojeStr?' today':'';
+    h+=`<tr class="${wknd}${hoje}"><td>${day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`;
+    emps.forEach(e=>{
+      const empCor=getEmpCor(e);
       const vSaida = viagensDoDia(e.id,dStr);
       const vAtiva = viagemAtivaNoDia(e.id, day);
       // coluna horário/viagem/condição/status
@@ -748,14 +1054,22 @@ function renderMapa(){
         const r=rotaById(v.rotaId);
         horario=v.horaSaida||'';
         viagemCell=`<span class="trip-chip" draggable="true" data-vid="${v.id}"
+          style="background:${empCor};color:${corContraste(empCor)}"
           onclick="openViagemModal('${v.id}')">${r?r.nome:'?'}</span>`;
         cond=v.condicao;
       }else if(vAtiva){
         const r=rotaById(vAtiva.rotaId);
         viagemCell=`<span class="muted">↳ ${r?r.nome:''}</span>`;
         cond=`<span class="muted">${vAtiva.condicao}</span>`;
+        // último dia de viagem: exibe a hora prevista de chegada
+        const cv=calcViagem(vAtiva);
+        if(!cv.incompleto && dateStr(cv.chegada)===dStr){
+          const hh=String(cv.chegada.getHours()).padStart(2,'0');
+          const mm=String(cv.chegada.getMinutes()).padStart(2,'0');
+          horario=`<span class="chegada" title="Chegada prevista">⚓ ${hh}:${mm}</span>`;
+        }
       }
-      h+=`<td>${horario}</td>
+      h+=`<td class="hora-col">${horario}</td>
           <td class="cell-clickable" data-emp="${e.id}" data-date="${dStr}">${viagemCell}</td>
           <td>${cond}</td><td></td>`;
       // viagem de referência para consumo de navegação no dia
@@ -766,21 +1080,28 @@ function renderMapa(){
       // consumo de porto (embarcação parada) só aplica a MGO ou Diesel Terceiro — HFO só consome em viagem
       const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
       // colunas por combustível
-      e.combustiveis.forEach(c=>{
+      e.combustiveis.forEach((c,ci)=>{
+        const last = ci===e.combustiveis.length-1;
         let consumoDia = cdNav[c] || 0;
         if(c===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
-        // abastecimentos do dia
-        const abs = state.abastecimentos.filter(a=>a.empId===e.id && a.data===dStr && a.comb===c && a.status!=='Cancelado');
-        const abast = abs.reduce((s,a)=>s+(a.qtd||0),0);
+        // abastecimentos do dia (cancelados aparecem no mapa mas não somam no estoque)
+        const absAll = state.abastecimentos.filter(a=>a.empId===e.id && a.data===dStr && a.comb===c);
+        const abast = absAll.reduce((s,a)=> a.status!=='Cancelado' ? s+(a.qtd||0) : s, 0);
+        const aid = absAll.length ? absAll[0].id : '';
+        const chipStatus = absAll.length ? absAll[0].status : '';
+        const chipQtd = abast || absAll.reduce((s,a)=>s+(a.qtd||0),0);
         // atualizar estoque
         estoque[e.id][c] = estoque[e.id][c] - consumoDia + abast;
         const cap = e.tanques[c]?.capacidade||0;
         const pct = cap>0 ? estoque[e.id][c]/cap*100 : 0;
         const pctCls = pct<15?'bad':pct<30?'warn':'ok';
         const barColor = pct<15?'var(--bad)':pct<30?'var(--warn)':'var(--ok)';
+        const abastChip = absAll.length
+          ? `<span class="abast-chip st-${chipStatus}" draggable="true" data-aid="${aid}" title="${chipStatus}">${fmt(chipQtd)}</span>`
+          : '';
         h+=`<td class="num">${consumoDia?fmt(consumoDia):''}</td>
-            <td class="num">${abast?'<b style="color:var(--ok)">'+fmt(abast)+'</b>':''}</td>
-            <td><div class="bar"><span style="width:${Math.max(0,Math.min(100,pct)).toFixed(0)}%;background:${barColor}"></span></div>
+            <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abastChip}</td>
+            <td class="${last?'emp-sep':''}"><div class="bar"><span style="width:${Math.max(0,Math.min(100,pct)).toFixed(0)}%;background:${barColor}"></span></div>
                 <span class="pct ${pctCls}">${fmt(estoque[e.id][c])} L · ${pct.toFixed(0)}%</span></td>`;
       });
     });
@@ -796,6 +1117,16 @@ function renderMapa(){
       openViagemModal(null, td.dataset.emp, td.dataset.date);
     });
   });
+  // click na coluna Abastecimento: novo abastecimento programado ou editar existente
+  wrap.querySelectorAll('.abast-cell').forEach(td=>{
+    td.addEventListener('click', ()=>{
+      if(td.dataset.aid){
+        openAbastModal(td.dataset.aid);
+      }else{
+        openAbastModal(null, {empId:td.dataset.emp, data:td.dataset.date, comb:td.dataset.comb});
+      }
+    });
+  });
   // drag & drop
   wrap.querySelectorAll('.trip-chip[draggable]').forEach(chip=>{
     chip.addEventListener('dragstart', ev=>{
@@ -809,30 +1140,94 @@ function renderMapa(){
       ev.preventDefault(); td.classList.remove('drop-target');
       const vid=ev.dataTransfer.getData('text/vid');
       const v=state.viagens.find(x=>x.id===vid);
-      if(v && td.dataset.emp===v.empId){
-        v.dataSaida=td.dataset.date;
-        save(); renderMapa();
-      }else if(v){
+      if(!v) return;
+      if(td.dataset.emp!==v.empId){
         alert('Mova a viagem dentro do mesmo empurrador.');
+        return;
       }
+      if(ev.ctrlKey || ev.metaKey){
+        // CTRL pressionado: copia a viagem, sem alterar a original
+        state.viagens.push({
+          id:uid(), empId:v.empId, rotaId:v.rotaId, condicao:v.condicao,
+          dataSaida:td.dataset.date, horaSaida:v.horaSaida
+        });
+      }else{
+        // arrasto normal: move a viagem
+        v.dataSaida=td.dataset.date;
+      }
+      save(); renderMapa();
+    });
+  });
+  // drag & drop dos abastecimentos
+  wrap.querySelectorAll('.abast-chip[draggable]').forEach(chip=>{
+    chip.addEventListener('dragstart', ev=>{
+      ev.dataTransfer.setData('text/aid', chip.dataset.aid);
+    });
+  });
+  wrap.querySelectorAll('.abast-cell').forEach(td=>{
+    td.addEventListener('dragover', ev=>{ ev.preventDefault(); td.classList.add('drop-target'); });
+    td.addEventListener('dragleave', ()=>td.classList.remove('drop-target'));
+    td.addEventListener('drop', ev=>{
+      ev.preventDefault(); td.classList.remove('drop-target');
+      const aid=ev.dataTransfer.getData('text/aid');
+      if(!aid) return;
+      const a=state.abastecimentos.find(x=>x.id===aid);
+      if(!a) return;
+      if(td.dataset.emp!==a.empId || td.dataset.comb!==a.comb){
+        alert('Mova o abastecimento dentro do mesmo empurrador e combustível.');
+        return;
+      }
+      if(ev.ctrlKey || ev.metaKey){
+        // CTRL pressionado: copia o abastecimento, sem alterar o original
+        state.abastecimentos.push({
+          id:uid(), empId:a.empId, comb:a.comb, data:td.dataset.date,
+          qtd:a.qtd, status:a.status, obs:a.obs||''
+        });
+      }else{
+        // arrasto normal: move o abastecimento
+        a.data=td.dataset.date;
+      }
+      save(); renderMapa(); renderAbast();
     });
   });
 }
 
 /* ---- Modal Viagem ---- */
 let editViagemId=null;
+function getMvRotaId(){
+  const txt=document.getElementById('mvRota').value.trim();
+  const r=state.rotas.find(x=>norm(x.nome)===norm(txt));
+  return r ? r.id : '';
+}
+function normHora(s){
+  s=String(s||'').trim();
+  let m=s.match(/^(\d{1,2}):?(\d{2})$/);
+  if(m){
+    let h=+m[1], mi=+m[2];
+    if(h<=23 && mi<=59) return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
+  }
+  m=s.match(/^(\d{1,2})$/);
+  if(m){ let h=+m[1]; if(h<=23) return String(h).padStart(2,'0')+':00'; }
+  return null;
+}
 function openViagemModal(vid, empId, dateStr_){
   editViagemId = vid;
   const mEmp=document.getElementById('mvEmp'), mRota=document.getElementById('mvRota');
-  mEmp.innerHTML = state.empurradores.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('');
-  mRota.innerHTML = state.rotas.map(r=>`<option value="${r.id}">${r.nome}</option>`).join('');
-  if(!state.empurradores.length||!state.rotas.length){
+  const vEdit = vid ? state.viagens.find(x=>x.id===vid) : null;
+  // lista apenas ativos; mantém o registro vinculado mesmo se inativo (ao editar)
+  const empList = state.empurradores.filter(e=>ativo(e) || (vEdit && vEdit.empId===e.id));
+  const rotList = state.rotas.filter(r=>ativo(r) || (vEdit && vEdit.rotaId===r.id));
+  mEmp.innerHTML = empList.map(e=>`<option value="${e.id}">${e.nome}${ativo(e)?'':' (inativo)'}</option>`).join('');
+  document.getElementById('mvRotaList').innerHTML =
+    rotList.map(r=>`<option value="${r.nome.replace(/"/g,'&quot;')}">`).join('');
+  if(!empList.length||!rotList.length){
     alert('Cadastre empurradores e rotas nas Premissas primeiro.'); return;
   }
   if(vid){
     const v=state.viagens.find(x=>x.id===vid);
     document.getElementById('mvTitle').textContent='Editar Viagem';
-    mEmp.value=v.empId; mRota.value=v.rotaId;
+    mEmp.value=v.empId;
+    mRota.value=rotaById(v.rotaId)?.nome || '';
     document.getElementById('mvCond').value=v.condicao;
     document.getElementById('mvData').value=v.dataSaida;
     document.getElementById('mvHora').value=v.horaSaida||'08:00';
@@ -840,6 +1235,7 @@ function openViagemModal(vid, empId, dateStr_){
   }else{
     document.getElementById('mvTitle').textContent='Nova Viagem';
     if(empId) mEmp.value=empId;
+    mRota.value='';
     document.getElementById('mvCond').value='Carregada';
     document.getElementById('mvData').value=dateStr_||dateStr(new Date());
     document.getElementById('mvHora').value='08:00';
@@ -848,15 +1244,17 @@ function openViagemModal(vid, empId, dateStr_){
   updateMvCalc();
   document.getElementById('modalViagem').classList.add('show');
 }
-['mvEmp','mvRota','mvCond','mvData','mvHora'].forEach(id=>
-  document.getElementById(id).addEventListener('change', updateMvCalc));
+['mvEmp','mvRota','mvCond','mvData','mvHora'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', updateMvCalc);
+  document.getElementById(id).addEventListener('input', updateMvCalc);
+});
 function updateMvCalc(){
   const v={
     empId:document.getElementById('mvEmp').value,
-    rotaId:document.getElementById('mvRota').value,
+    rotaId:getMvRotaId(),
     condicao:document.getElementById('mvCond').value,
     dataSaida:document.getElementById('mvData').value,
-    horaSaida:document.getElementById('mvHora').value
+    horaSaida:normHora(document.getElementById('mvHora').value)||'08:00'
   };
   const el=document.getElementById('mvCalc');
   if(!v.empId||!v.rotaId||!v.dataSaida){ el.textContent=''; return; }
@@ -873,14 +1271,18 @@ function updateMvCalc(){
     <b>Consumo total:</b> ${cons||'—'}`;
 }
 document.getElementById('mvSave').addEventListener('click', ()=>{
+  const rotaId=getMvRotaId();
+  const hora=normHora(document.getElementById('mvHora').value);
+  if(!rotaId){ alert('Selecione um trecho/rota válido da lista.'); return; }
+  if(!hora){ alert('Informe o horário no formato 24h (HH:MM).'); return; }
   const data={
     empId:document.getElementById('mvEmp').value,
-    rotaId:document.getElementById('mvRota').value,
+    rotaId:rotaId,
     condicao:document.getElementById('mvCond').value,
     dataSaida:document.getElementById('mvData').value,
-    horaSaida:document.getElementById('mvHora').value
+    horaSaida:hora
   };
-  if(!data.empId||!data.rotaId||!data.dataSaida){ alert('Preencha todos os campos.'); return; }
+  if(!data.empId||!data.dataSaida){ alert('Preencha todos os campos.'); return; }
   if(editViagemId){
     Object.assign(state.viagens.find(x=>x.id===editViagemId), data);
   }else{
@@ -901,11 +1303,13 @@ document.getElementById('btnNovoAbast').addEventListener('click', ()=>openAbastM
 document.getElementById('abastFiltro').addEventListener('change', renderAbast);
 
 let editAbastId=null;
-function openAbastModal(id){
+function openAbastModal(id, prefill){
   editAbastId=id;
-  if(!state.empurradores.length){ alert('Cadastre empurradores primeiro.'); return; }
+  const aEdit = id ? state.abastecimentos.find(x=>x.id===id) : null;
+  const empList = state.empurradores.filter(e=>ativo(e) || (aEdit && aEdit.empId===e.id));
+  if(!empList.length){ alert('Cadastre empurradores ativos primeiro.'); return; }
   const maEmp=document.getElementById('maEmp');
-  maEmp.innerHTML=state.empurradores.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('');
+  maEmp.innerHTML=empList.map(e=>`<option value="${e.id}">${e.nome}${ativo(e)?'':' (inativo)'}</option>`).join('');
   function fillComb(){
     const e=empById(maEmp.value);
     document.getElementById('maComb').innerHTML=(e?e.combustiveis:[]).map(c=>`<option value="${c}">${COMB_LABEL[c]}</option>`).join('');
@@ -923,8 +1327,10 @@ function openAbastModal(id){
     document.getElementById('maDelete').style.display='';
   }else{
     document.getElementById('maTitle').textContent='Novo Abastecimento';
+    if(prefill && prefill.empId) maEmp.value=prefill.empId;
     fillComb();
-    document.getElementById('maData').value=dateStr(new Date());
+    if(prefill && prefill.comb) document.getElementById('maComb').value=prefill.comb;
+    document.getElementById('maData').value=(prefill && prefill.data) || dateStr(new Date());
     document.getElementById('maQtd').value='';
     document.getElementById('maStatus').value='Previsto';
     document.getElementById('maObs').value='';
@@ -947,12 +1353,12 @@ document.getElementById('maSave').addEventListener('click', ()=>{
   }else{
     state.abastecimentos.push(Object.assign({id:uid()}, data));
   }
-  save(); closeModals(); renderAbast();
+  save(); closeModals(); renderAbast(); renderMapa();
 });
 document.getElementById('maDelete').addEventListener('click', ()=>{
   if(!confirm('Excluir este abastecimento?')) return;
   state.abastecimentos=state.abastecimentos.filter(a=>a.id!==editAbastId);
-  save(); closeModals(); renderAbast();
+  save(); closeModals(); renderAbast(); renderMapa();
 });
 
 function renderAbast(){
@@ -1035,9 +1441,9 @@ document.getElementById('btnSeed').addEventListener('click', ()=>{
   renderView(document.querySelector('nav button.active').dataset.view);
 });
 function seedData(){
-  const e1={id:uid(),nome:'Empurrador Alfa',potencia:2400,combustiveis:['Diesel','HFO'],consumoPorto:60,
+  const e1={id:uid(),nome:'Empurrador Alfa',potencia:2400,cor:'#0ea5e9',combustiveis:['Diesel','HFO'],consumoPorto:60,
     tanques:{Diesel:{capacidade:150000,estoqueInicial:120000},HFO:{capacidade:600000,estoqueInicial:480000}}};
-  const e2={id:uid(),nome:'Empurrador Bravo',potencia:1800,combustiveis:['MGO'],consumoPorto:40,
+  const e2={id:uid(),nome:'Empurrador Bravo',potencia:1800,cor:'#f59e0b',combustiveis:['MGO'],consumoPorto:40,
     tanques:{MGO:{capacidade:90000,estoqueInicial:70000}}};
   const r1={id:uid(),nome:'ORI x DST',origem:'Cidade A',destino:'Cidade B',distancia:1200};
   const r2={id:uid(),nome:'DST x ORI',origem:'Cidade B',destino:'Cidade A',distancia:1200};
@@ -1181,8 +1587,11 @@ document.getElementById('btnSaveBase').addEventListener('click', saveBase);
    ========================================================= */
 const THEME_KEY='mapaAbastecimento_theme';
 function applyTheme(t){
-  document.body.classList.toggle('light', t==='light');
-  document.getElementById('btnTheme').textContent = t==='light' ? 'Tema escuro' : 'Tema claro';
+  const light = t==='light';
+  document.body.classList.toggle('light', light);
+  const btn=document.getElementById('btnTheme');
+  btn.textContent = light ? '☀️' : '🌙';
+  btn.title = light ? 'Tema claro — clique para o escuro' : 'Tema escuro — clique para o claro';
 }
 document.getElementById('btnTheme').addEventListener('click', ()=>{
   const next = document.body.classList.contains('light') ? 'dark' : 'light';
@@ -1190,6 +1599,16 @@ document.getElementById('btnTheme').addEventListener('click', ()=>{
   applyTheme(next);
 });
 applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+
+/* =========================================================
+   SIDEBAR RECOLHÍVEL
+   ========================================================= */
+const SIDEBAR_KEY='mapaAbastecimento_sidebar';
+document.getElementById('btnSidebar').addEventListener('click', ()=>{
+  document.body.classList.toggle('sidebar-collapsed');
+  localStorage.setItem(SIDEBAR_KEY, document.body.classList.contains('sidebar-collapsed')?'1':'0');
+});
+if(localStorage.getItem(SIDEBAR_KEY)==='1') document.body.classList.add('sidebar-collapsed');
 
 /* =========================================================
    INIT

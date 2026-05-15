@@ -2132,20 +2132,24 @@ function renderViagemMetricas(){
       volReal += v.volumeRealizado||0;
     }
   });
-  function diffCell(prev, real){
+  // Tempo e Consumo: realizar menos é melhor (verde). Volume: realizar mais é melhor.
+  function diffCell(prev, real, higherIsBetter){
     const d = real - prev;
     const pct = prev>0 ? (d/prev*100) : null;
-    const cls = Math.abs(pct||0)<3 ? 'diff-neu' : (d>=0 ? 'diff-pos' : 'diff-neg');
+    let cls;
+    if(Math.abs(pct||0)<3) cls='diff-neu';
+    else if(higherIsBetter) cls = d>=0 ? 'diff-pos' : 'diff-neg';
+    else                    cls = d<=0 ? 'diff-pos' : 'diff-neg';
     return `<span class="${cls}">${(d>=0?'+':'')+fmt1(d)} ${pct!==null?`(${(pct>=0?'+':'')+pct.toFixed(1)}%)`:''}</span>`;
   }
   let h=`<div class="grid-3" style="margin-bottom:12px;">
     <div></div><div class="hd">Previsto</div><div class="hd">Realizado / Δ</div>
-    <div>Tempo total (h)</div><div>${fmt1(totHorasPrev)}</div><div>${fmt1(totHorasReal)} &nbsp; ${diffCell(totHorasPrev,totHorasReal)}</div>`;
+    <div>Tempo total (h)</div><div>${fmt1(totHorasPrev)}</div><div>${fmt1(totHorasReal)} &nbsp; ${diffCell(totHorasPrev,totHorasReal,false)}</div>`;
   const combs = [...new Set([...Object.keys(consPrev), ...Object.keys(consReal)])];
   combs.forEach(c=>{
-    h+=`<div>Consumo ${COMB_LABEL[c]||c} (L)</div><div>${fmt(consPrev[c]||0)}</div><div>${fmt(consReal[c]||0)} &nbsp; ${diffCell(consPrev[c]||0, consReal[c]||0)}</div>`;
+    h+=`<div>Consumo ${COMB_LABEL[c]||c} (L)</div><div>${fmt(consPrev[c]||0)}</div><div>${fmt(consReal[c]||0)} &nbsp; ${diffCell(consPrev[c]||0, consReal[c]||0, false)}</div>`;
   });
-  h+=`<div>Volume navegado (Carregada)</div><div>${fmt(volPrev)}</div><div>${fmt(volReal)} &nbsp; ${diffCell(volPrev, volReal)}</div>`;
+  h+=`<div>Volume navegado (Carregada)</div><div>${fmt(volPrev)}</div><div>${fmt(volReal)} &nbsp; ${diffCell(volPrev, volReal, true)}</div>`;
   h+=`</div>`;
 
   // Tabela detalhada
@@ -2163,13 +2167,21 @@ function renderViagemMetricas(){
     const creal = Object.values(v.consumoRealizado||{}).reduce((a,b)=>a+(b||0),0);
     const vprev = v.condicao==='Carregada' ? (v.volumeCarregada||0) : 0;
     const vreal = v.condicao==='Carregada' ? (v.volumeRealizado||0) : 0;
-    function pct(p,r){ return p>0 ? `<span class="${Math.abs((r-p)/p*100)<3?'diff-neu':(r-p>=0?'diff-pos':'diff-neg')}">${((r-p)/p*100).toFixed(1)}%</span>` : '—'; }
+    function pct(p,r,higherIsBetter){
+      if(!(p>0)) return '—';
+      const delta=(r-p)/p*100;
+      let cls;
+      if(Math.abs(delta)<3) cls='diff-neu';
+      else if(higherIsBetter) cls = delta>=0 ? 'diff-pos' : 'diff-neg';
+      else                    cls = delta<=0 ? 'diff-pos' : 'diff-neg';
+      return `<span class="${cls}">${delta.toFixed(1)}%</span>`;
+    }
     h+=`<tr><td>${parseDate(v.dataSaida).toLocaleDateString('pt-BR')}</td>
       <td>${e?e.nome:'—'}</td><td>${r?r.nome:'—'}</td><td>${v.condicao}</td>
-      <td class="num">${fmt1(tprev)}</td><td class="num">${fmt1(treal)}</td><td class="num">${pct(tprev,treal)}</td>
-      <td class="num">${fmt(cprev)}</td><td class="num">${fmt(creal)}</td><td class="num">${pct(cprev,creal)}</td>
+      <td class="num">${fmt1(tprev)}</td><td class="num">${fmt1(treal)}</td><td class="num">${pct(tprev,treal,false)}</td>
+      <td class="num">${fmt(cprev)}</td><td class="num">${fmt(creal)}</td><td class="num">${pct(cprev,creal,false)}</td>
       <td class="num">${vprev?fmt(vprev):'—'}</td><td class="num">${vreal?fmt(vreal):'—'}</td>
-      <td class="num">${v.condicao==='Carregada'?pct(vprev,vreal):'—'}</td>
+      <td class="num">${v.condicao==='Carregada'?pct(vprev,vreal,true):'—'}</td>
     </tr>`;
   });
   h+=`</table></div>`;
@@ -2287,26 +2299,31 @@ function openFinalizarViagem(vid){
     <div class="hint">A finalização gravará tempo, consumo e volume realizados; estes dados alimentam as métricas e as sugestões de atualização das Médias.</div>`;
   document.getElementById('fvBody').innerHTML=h;
 
-  function diffSpan(prev, real){
+  // Para Tempo e Consumo: realizar menos que o previsto é BOM (verde).
+  // Para Volume Navegado: realizar mais que o previsto é BOM (verde).
+  function diffSpan(prev, real, higherIsBetter){
     if(!prev) return '';
     const d = real-prev;
     const pct = (d/prev*100);
-    const cls = Math.abs(pct)<3 ? 'diff-neu' : (d>=0 ? 'diff-pos' : 'diff-neg');
+    let cls;
+    if(Math.abs(pct)<3) cls='diff-neu';
+    else if(higherIsBetter) cls = d>=0 ? 'diff-pos' : 'diff-neg';
+    else                    cls = d<=0 ? 'diff-pos' : 'diff-neg';
     return `<span class="${cls}">${(d>=0?'+':'')+fmt1(d)} (${(pct>=0?'+':'')+pct.toFixed(1)}%)</span>`;
   }
   function recalcDiffs(){
     const tr = parseFloat(document.getElementById('fvTempoReal').value)||0;
-    document.getElementById('fvTempoDiff').innerHTML = diffSpan(tempoPrev, tr);
+    document.getElementById('fvTempoDiff').innerHTML = diffSpan(tempoPrev, tr, false);
     document.querySelectorAll('[data-fv-cons]').forEach(inp=>{
       const cb=inp.dataset.fvCons;
       const prev=parseFloat(inp.dataset.fvPrev)||0;
       const real=parseFloat(inp.value)||0;
-      document.querySelector(`[data-fv-diff-cons="${cb}"]`).innerHTML=diffSpan(prev,real);
+      document.querySelector(`[data-fv-diff-cons="${cb}"]`).innerHTML=diffSpan(prev,real,false);
     });
     if(isCarregada){
       const vp = v.volumeCarregada||0;
       const vr = parseFloat(document.getElementById('fvVolReal').value)||0;
-      document.getElementById('fvVolDiff').innerHTML = diffSpan(vp, vr);
+      document.getElementById('fvVolDiff').innerHTML = diffSpan(vp, vr, true);
     }
   }
   document.getElementById('fvBody').addEventListener('input', recalcDiffs);

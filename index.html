@@ -147,6 +147,12 @@
   .bar > span{position:absolute;left:0;top:0;bottom:0;border-radius:2px;}
   .pct{font-size:10px;margin-left:4px;}
   .pct.ok{color:var(--ok);} .pct.warn{color:var(--warn);} .pct.bad{color:var(--bad);}
+  td.estoque-cell{cursor:pointer;}
+  td.estoque-cell:hover{outline:1px dashed var(--accent);outline-offset:-2px;}
+  td.estoque-cell.estoque-livre{background:rgba(148,163,184,0.10);}
+  td.estoque-cell.estoque-livre:hover{background:rgba(56,189,248,0.12);}
+  td.estoque-cell.estoque-manual .pct{color:var(--info);font-weight:700;}
+  td.estoque-cell .anchor-mark{font-size:10px;color:var(--info);margin-right:3px;}
   .weekend{background:rgba(255,255,255,0.03);}
   .status-sel{font-size:11px;padding:2px 4px;}
   .stat-Previsto{color:var(--muted);}
@@ -358,14 +364,18 @@
     </div>
 
     <div class="card">
-      <h2>Budget Mensal de Volume por Cidade <span class="sub">— volume previsto (L) por mês/cidade</span></h2>
+      <h2>Budget Mensal de Volume por Cidade <span class="sub">— volume previsto (t) por mês/cidade</span></h2>
       <div class="row">
         <div class="field"><label>Mês de referência</label><input type="month" id="budgetMes"></div>
         <div class="field"><label>Cidade</label><input id="budgetCidade" list="budgetCidadesList" placeholder="Cidade"></div>
         <datalist id="budgetCidadesList"></datalist>
-        <div class="field"><label>Volume previsto (L)</label><input type="number" id="budgetVol" placeholder="0"></div>
+        <div class="field"><label>Volume previsto (t)</label><input type="number" step="any" id="budgetVol" placeholder="0"></div>
         <button class="btn" id="btnAddBudget">Salvar</button>
+        <div class="spacer"></div>
+        <button class="tool-btn" id="btnImportBudget">Importar Excel / CSV</button>
+        <input type="file" id="fileBudget" accept=".csv,.xlsx,.xls" style="display:none">
       </div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Mês, Cidade, Volume (t)</b>. O mês aceita texto (Janeiro, Jan, jan/2026) ou data (01/01/2026); o ano é inferido como o atual quando não informado.</div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblBudget"></table></div>
     </div>
   </section>
@@ -421,7 +431,7 @@
         <button class="tool-btn" id="btnImportHp">Importar Excel / CSV</button>
         <input type="file" id="fileHp" accept=".csv,.xlsx,.xls" style="display:none">
       </div>
-      <div class="hint">Colunas esperadas no arquivo: <b>Data (DD/MM/AAAA), Fornecedor, Combustível, Preço (R$/L)</b>. Cidade é opcional.</div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Data, Fornecedor, Cidade, Combustível, Preço</b>. A data pode estar no formato DD/MM/AAAA e o preço em R$/L (decimal com vírgula).</div>
       <div style="margin-top:12px;overflow:auto;max-height:360px;"><table id="tblHp"></table></div>
     </div>
 
@@ -457,6 +467,7 @@
     <div id="mvCalc" class="hint"></div>
     <div class="modal-actions">
       <button class="btn danger sm" id="mvDelete" style="display:none;">Excluir</button>
+      <button class="btn sm" id="mvFinalizar" style="display:none;background:var(--info);color:#1a103d;">Finalizar Viagem</button>
       <button class="btn secondary" data-close>Cancelar</button>
       <button class="btn" id="mvSave">Salvar</button>
     </div>
@@ -535,7 +546,8 @@ let state = {
   abastecimentos: [],// {id,empId,data,comb,qtd,status,obs,cidade,preco,fornecedorId}
   fornecedores: [],  // {id,nome,cidade}
   historicoPrecos: [],// {id,data,fornecedorId,combustivel,preco}
-  budgetVolume: {},  // {cidade:{'YYYY-MM':litros}}
+  budgetVolume: {},  // {cidade:{'YYYY-MM':toneladas}}
+  estoques: [],      // âncoras manuais: {id,empId,comb,data,valor}
   mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
 };
 
@@ -543,8 +555,96 @@ function ensureState(){
   if(!state.fornecedores) state.fornecedores=[];
   if(!state.historicoPrecos) state.historicoPrecos=[];
   if(!state.budgetVolume) state.budgetVolume={};
+  if(!state.estoques) state.estoques=[];
   state.viagens.forEach(v=>{ if(!v.status) v.status='Previsto'; });
   state.abastecimentos.forEach(a=>{ if(!('cidade' in a)) a.cidade=''; });
+  // Migração: tanques sem data do estoque inicial → assume hoje, para não regredir comportamento existente
+  const today = todayStr();
+  state.empurradores.forEach(e=>{
+    if(!e.tanques) return;
+    Object.values(e.tanques).forEach(t=>{
+      if(!t) return;
+      if(!('estoqueInicialData' in t) || t.estoqueInicialData===undefined || t.estoqueInicialData===null){
+        t.estoqueInicialData = (t.estoqueInicial>0) ? today : '';
+      }
+    });
+  });
+}
+
+/* =========================================================
+   ESTOQUE — âncoras e cálculo diário
+   ========================================================= */
+function getAnchors(empId, comb){
+  // retorna { 'YYYY-MM-DD': valor } combinando estoque inicial (cadastro) + manuais
+  const e = empById(empId);
+  const out = {};
+  const t = e?.tanques?.[comb];
+  if(t && t.estoqueInicialData){
+    out[t.estoqueInicialData] = t.estoqueInicial||0;
+  }
+  state.estoques.forEach(o=>{
+    if(o.empId===empId && o.comb===comb && o.data){
+      out[o.data] = o.valor;
+    }
+  });
+  return out;
+}
+function earliestAnchorDate(empId, comb){
+  const a = getAnchors(empId,comb);
+  const arr = Object.keys(a).sort();
+  return arr.length ? arr[0] : null;
+}
+function hasManualEstoque(empId, comb, dataStr){
+  return state.estoques.some(o=>o.empId===empId && o.comb===comb && o.data===dataStr);
+}
+function setManualEstoque(empId, comb, dataStr, valor){
+  const cur = state.estoques.find(o=>o.empId===empId && o.comb===comb && o.data===dataStr);
+  if(cur){ cur.valor = valor; }
+  else { state.estoques.push({id:uid(), empId, comb, data:dataStr, valor}); }
+}
+function clearManualEstoque(empId, comb, dataStr){
+  state.estoques = state.estoques.filter(o=> !(o.empId===empId && o.comb===comb && o.data===dataStr));
+}
+// Consumo diário (L) de um empurrador/combustível num dado dia
+function dailyConsumption(e, comb, day){
+  const dStr = dateStr(day);
+  const vSaida = viagensDoDia(e.id, dStr);
+  const vAtiva = viagemAtivaNoDia(e.id, day);
+  const vRef = vAtiva || (vSaida.length ? vSaida[0] : null);
+  const cdNav = vRef ? consumoDiaViagem(vRef, day) : {};
+  const horasNav = cdNav.__horas || 0;
+  const horasPorto = Math.max(0, 24 - horasNav);
+  const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
+  let consumoDia = cdNav[comb] || 0;
+  if(comb===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
+  return consumoDia;
+}
+function dailyRefuel(empId, comb, dStr){
+  return state.abastecimentos
+    .filter(a => a.empId===empId && a.data===dStr && a.comb===comb && a.status!=='Cancelado')
+    .reduce((s,a)=> s+(a.qtd||0), 0);
+}
+// Saldo no FINAL do dia anterior a `iniDate` (Date), considerando todas as âncoras anteriores
+function startingBalance(empId, comb, iniDate){
+  const e = empById(empId); if(!e) return 0;
+  const anchors = getAnchors(empId, comb);
+  const anchorDates = Object.keys(anchors).sort();
+  const iniStr = dateStr(iniDate);
+  const startAnchor = anchorDates.filter(d=>d<iniStr).pop();
+  if(!startAnchor) return 0;
+  let running = anchors[startAnchor];
+  let cursor = addDays(parseDate(startAnchor), 1);
+  while(cursor < iniDate){
+    const ds = dateStr(cursor);
+    if(anchors[ds]!==undefined){
+      running = anchors[ds]; // âncora reinicia o saldo
+    }else{
+      running -= dailyConsumption(e, comb, cursor);
+      running += dailyRefuel(empId, comb, ds);
+    }
+    cursor = addDays(cursor, 1);
+  }
+  return running;
 }
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
@@ -661,6 +761,10 @@ function renderEmpTanqueRow(){
     <div class="field">
       <label>${COMB_LABEL[c]} — Estoque inicial (L)</label>
       <input type="number" data-tank-ini="${c}" placeholder="0">
+    </div>
+    <div class="field">
+      <label>${COMB_LABEL[c]} — Data do estoque inicial</label>
+      <input type="date" data-tank-ini-date="${c}">
     </div>`).join('');
 }
 document.querySelectorAll('#empCombs input').forEach(c=>c.addEventListener('change', renderEmpTanqueRow));
@@ -675,7 +779,8 @@ function readEmpForm(){
   combustiveis.forEach(c=>{
     const cap = parseFloat(document.querySelector(`[data-tank-cap="${c}"]`)?.value)||0;
     const ini = parseFloat(document.querySelector(`[data-tank-ini="${c}"]`)?.value)||0;
-    tanques[c] = {capacidade:cap, estoqueInicial:ini};
+    const iniData = document.querySelector(`[data-tank-ini-date="${c}"]`)?.value || '';
+    tanques[c] = {capacidade:cap, estoqueInicial:ini, estoqueInicialData:iniData};
   });
   return {nome,potencia:pot,cor,combustiveis,consumoPorto:porto,tanques};
 }
@@ -716,8 +821,10 @@ function editEmp(id){
   e.combustiveis.forEach(c=>{
     const cap=document.querySelector(`[data-tank-cap="${c}"]`);
     const ini=document.querySelector(`[data-tank-ini="${c}"]`);
+    const iniD=document.querySelector(`[data-tank-ini-date="${c}"]`);
     if(cap) cap.value=e.tanques[c]?.capacidade||0;
     if(ini) ini.value=e.tanques[c]?.estoqueInicial||0;
+    if(iniD) iniD.value=e.tanques[c]?.estoqueInicialData||'';
   });
   document.getElementById('btnAddEmp').textContent='Salvar alterações';
   document.getElementById('btnCancelEmp').style.display='';
@@ -750,7 +857,11 @@ function renderEmp(){
     <th class="num">Consumo Porto (L/h)</th><th>Tanques (cap. / inicial)</th><th>Situação</th><th>Ações</th></tr>`;
   state.empurradores.forEach(e=>{
     const combs = e.combustiveis.map(c=>`<span class="tag ${c}">${COMB_LABEL[c]}</span>`).join(' ');
-    const tanks = e.combustiveis.map(c=>`${COMB_LABEL[c]}: ${fmt(e.tanques[c]?.capacidade)} / ${fmt(e.tanques[c]?.estoqueInicial)} L`).join('<br>');
+    const tanks = e.combustiveis.map(c=>{
+      const t=e.tanques[c]||{};
+      const dt = t.estoqueInicialData ? parseDate(t.estoqueInicialData).toLocaleDateString('pt-BR') : '<span style="color:var(--bad)">data não informada</span>';
+      return `${COMB_LABEL[c]}: ${fmt(t.capacidade)} / ${fmt(t.estoqueInicial)} L (em ${dt})`;
+    }).join('<br>');
     const at = ativo(e);
     const cor = getEmpCor(e);
     h += `<tr class="${at?'':'inativo'}">
@@ -1088,7 +1199,7 @@ function processMedRows(rows){
     if(!emp.tanques) emp.tanques={};
     if(!emp.combustiveis.includes(comb)){
       emp.combustiveis.push(comb);
-      if(!emp.tanques[comb]) emp.tanques[comb]={capacidade:0, estoqueInicial:0};
+      if(!emp.tanques[comb]) emp.tanques[comb]={capacidade:0, estoqueInicial:0, estoqueInicialData:''};
       empsAtualizados++;
     }
 
@@ -1245,11 +1356,17 @@ function renderMapa(){
   const dias=[];
   for(let d=new Date(ini); d<=fim; d=addDays(d,1)) dias.push(new Date(d));
 
-  // estoque corrente por empurrador/combustível
+  // saldo corrente por empurrador/combustível — começa no FINAL do dia anterior a "ini",
+  // calculado a partir das âncoras (estoque inicial da Premissa + estoques manuais).
   const estoque={};
+  const anchorsCache={};
   emps.forEach(e=>{
     estoque[e.id]={};
-    e.combustiveis.forEach(c=> estoque[e.id][c]= e.tanques[c]?.estoqueInicial||0);
+    anchorsCache[e.id]={};
+    e.combustiveis.forEach(c=>{
+      anchorsCache[e.id][c] = getAnchors(e.id, c);
+      estoque[e.id][c] = startingBalance(e.id, c, ini);
+    });
   });
 
   // cabeçalho
@@ -1324,8 +1441,23 @@ function renderMapa(){
         const aid = absAll.length ? absAll[0].id : '';
         const chipStatus = absAll.length ? absAll[0].status : '';
         const chipQtd = abast || absAll.reduce((s,a)=>s+(a.qtd||0),0);
-        // atualizar estoque
-        estoque[e.id][c] = estoque[e.id][c] - consumoDia + abast;
+
+        // ----- saldo do dia, respeitando âncoras e "antes do estoque inicial" -----
+        const anchors = anchorsCache[e.id][c];
+        const earliest = Object.keys(anchors).sort()[0] || null;
+        const isAnchorDay = anchors[dStr]!==undefined;
+        const manualDay = hasManualEstoque(e.id, c, dStr);
+        const beforeAnchors = !earliest || dStr < earliest;
+        if(isAnchorDay){
+          // âncora reinicia o saldo (representa o estoque OBSERVADO no FINAL do dia)
+          estoque[e.id][c] = anchors[dStr];
+        }else if(beforeAnchors){
+          // antes de qualquer âncora: o estoque ainda não foi informado → fica zerado
+          estoque[e.id][c] = 0;
+        }else{
+          // projeção normal
+          estoque[e.id][c] = estoque[e.id][c] - consumoDia + abast;
+        }
         const cap = e.tanques[c]?.capacidade||0;
         const pct = cap>0 ? estoque[e.id][c]/cap*100 : 0;
         const pctCls = pct<15?'bad':pct<30?'warn':'ok';
@@ -1334,10 +1466,26 @@ function renderMapa(){
         const abastChip = absAll.length
           ? `<span class="abast-chip st-${chipStatus}${atras?' abast-late':''}" draggable="true" data-aid="${aid}" title="${chipStatus}${atras?' — atrasado!':''}">${atras?'⚠ ':''}${fmt(chipQtd)}</span>`
           : '';
+        // classes da célula de estoque
+        const livre = beforeAnchors && !manualDay && !isAnchorDay;
+        const cellClasses = ['estoque-cell'];
+        if(last) cellClasses.push('emp-sep');
+        if(livre) cellClasses.push('estoque-livre');
+        if(manualDay) cellClasses.push('estoque-manual');
+        const tipCell = livre
+          ? 'Sem estoque informado — clique para informar (sem senha)'
+          : (manualDay
+              ? 'Estoque informado manualmente — clique para editar (exige senha)'
+              : 'Estoque projetado — clique para sobrescrever (exige senha)');
+        const anchorMark = (manualDay?'<span class="anchor-mark" title="Estoque informado">📍</span>':(isAnchorDay?'<span class="anchor-mark" title="Estoque inicial">⚓</span>':''));
+        const stockTxt = beforeAnchors && !isAnchorDay ? `<span class="pct ${pctCls}">— L</span>`
+                       : `<span class="pct ${pctCls}">${fmt(estoque[e.id][c])} L · ${pct.toFixed(0)}%</span>`;
+        const barWidth = beforeAnchors && !isAnchorDay ? 0 : Math.max(0,Math.min(100,pct));
         h+=`<td class="num">${consumoDia?fmt(consumoDia):''}</td>
             <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abastChip}</td>
-            <td class="${last?'emp-sep':''}"><div class="bar"><span style="width:${Math.max(0,Math.min(100,pct)).toFixed(0)}%;background:${barColor}"></span></div>
-                <span class="pct ${pctCls}">${fmt(estoque[e.id][c])} L · ${pct.toFixed(0)}%</span></td>`;
+            <td class="${cellClasses.join(' ')}" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" title="${tipCell}">
+              ${anchorMark}<div class="bar"><span style="width:${barWidth.toFixed(0)}%;background:${barColor}"></span></div>
+              ${stockTxt}</td>`;
       });
     });
     h+='</tr>';
@@ -1350,6 +1498,12 @@ function renderMapa(){
     td.addEventListener('click', ev=>{
       if(ev.target.classList.contains('trip-chip')) return;
       openViagemModal(null, td.dataset.emp, td.dataset.date);
+    });
+  });
+  // click em célula de estoque/tanque: informar estoque manual
+  wrap.querySelectorAll('.estoque-cell').forEach(td=>{
+    td.addEventListener('click', ()=>{
+      onStockCellClick(td.dataset.emp, td.dataset.comb, td.dataset.date);
     });
   });
   // click na coluna Abastecimento: novo abastecimento programado ou editar existente
@@ -1427,6 +1581,47 @@ function renderMapa(){
   });
 }
 
+/* ---- Click em célula de estoque ---- */
+const STOCK_PWD = '1234';
+function onStockCellClick(empId, comb, dStr){
+  const e = empById(empId); if(!e) return;
+  const anchors = getAnchors(empId, comb);
+  const anchorDates = Object.keys(anchors).sort();
+  const earliest = anchorDates[0] || null;
+  const isAnchorDay = anchors[dStr] !== undefined;
+  const manualDay = hasManualEstoque(empId, comb, dStr);
+  const beforeAnchors = !earliest || dStr < earliest;
+  // Liberado sem senha apenas se não há âncora nesse dia E é anterior à primeira âncora E não existe manual nesse dia
+  const free = beforeAnchors && !manualDay && !isAnchorDay;
+  if(!free){
+    const pwd = prompt('Esta data já possui estoque projetado/informado.\nDigite a senha para sobrescrever:');
+    if(pwd===null) return;
+    if(pwd !== STOCK_PWD){ alert('Senha incorreta.'); return; }
+  }
+  const cur = state.estoques.find(o=>o.empId===empId && o.comb===comb && o.data===dStr);
+  const tankIni = (e.tanques?.[comb]?.estoqueInicialData===dStr) ? (e.tanques[comb].estoqueInicial||0) : null;
+  const def = cur ? cur.valor : (tankIni!==null ? tankIni : '');
+  const v = prompt(
+    `Estoque (L) de ${COMB_LABEL[comb]||comb} para ${parseDate(dStr).toLocaleDateString('pt-BR')} — ${e.nome}.\n`+
+    `Deixe em branco para limpar o estoque manual desta data.`,
+    def===''?'':String(def)
+  );
+  if(v===null) return;
+  const trimmed = String(v).trim();
+  if(trimmed===''){
+    // limpa apenas a âncora manual; estoque inicial da Premissa permanece intacto
+    if(manualDay){
+      clearManualEstoque(empId, comb, dStr);
+      save(); renderMapa();
+    }
+    return;
+  }
+  const val = parseFloat(trimmed.replace(',','.'));
+  if(isNaN(val) || val < 0){ alert('Valor inválido.'); return; }
+  setManualEstoque(empId, comb, dStr, val);
+  save(); renderMapa();
+}
+
 /* ---- Modal Viagem ---- */
 let editViagemId=null;
 function getMvRotaId(){
@@ -1468,6 +1663,9 @@ function openViagemModal(vid, empId, dateStr_){
     document.getElementById('mvHora').value=v.horaSaida||'08:00';
     document.getElementById('mvVol').value=v.volumeCarregada||'';
     document.getElementById('mvDelete').style.display='';
+    const btnFin=document.getElementById('mvFinalizar');
+    btnFin.style.display='';
+    btnFin.textContent = (v.status==='Finalizada') ? 'Ver Finalização' : 'Finalizar Viagem';
   }else{
     document.getElementById('mvTitle').textContent='Nova Viagem';
     if(empId) mEmp.value=empId;
@@ -1477,6 +1675,7 @@ function openViagemModal(vid, empId, dateStr_){
     document.getElementById('mvHora').value='08:00';
     document.getElementById('mvVol').value='';
     document.getElementById('mvDelete').style.display='none';
+    document.getElementById('mvFinalizar').style.display='none';
   }
   updateMvVolVisibility();
   updateMvCalc();
@@ -1543,6 +1742,12 @@ document.getElementById('mvDelete').addEventListener('click', ()=>{
   state.viagens=state.viagens.filter(v=>v.id!==editViagemId);
   save(); closeModals(); renderMapa();
   if(document.getElementById('view-viagens').classList.contains('active')) renderViagens();
+});
+document.getElementById('mvFinalizar').addEventListener('click', ()=>{
+  if(!editViagemId) return;
+  const vid=editViagemId;
+  closeModals();
+  openFinalizarViagem(vid);
 });
 
 /* =========================================================
@@ -1931,20 +2136,24 @@ function renderViagemMetricas(){
       volReal += v.volumeRealizado||0;
     }
   });
-  function diffCell(prev, real){
+  // Tempo e Consumo: realizar menos é melhor (verde). Volume: realizar mais é melhor.
+  function diffCell(prev, real, higherIsBetter){
     const d = real - prev;
     const pct = prev>0 ? (d/prev*100) : null;
-    const cls = Math.abs(pct||0)<3 ? 'diff-neu' : (d>=0 ? 'diff-pos' : 'diff-neg');
+    let cls;
+    if(Math.abs(pct||0)<3) cls='diff-neu';
+    else if(higherIsBetter) cls = d>=0 ? 'diff-pos' : 'diff-neg';
+    else                    cls = d<=0 ? 'diff-pos' : 'diff-neg';
     return `<span class="${cls}">${(d>=0?'+':'')+fmt1(d)} ${pct!==null?`(${(pct>=0?'+':'')+pct.toFixed(1)}%)`:''}</span>`;
   }
   let h=`<div class="grid-3" style="margin-bottom:12px;">
     <div></div><div class="hd">Previsto</div><div class="hd">Realizado / Δ</div>
-    <div>Tempo total (h)</div><div>${fmt1(totHorasPrev)}</div><div>${fmt1(totHorasReal)} &nbsp; ${diffCell(totHorasPrev,totHorasReal)}</div>`;
+    <div>Tempo total (h)</div><div>${fmt1(totHorasPrev)}</div><div>${fmt1(totHorasReal)} &nbsp; ${diffCell(totHorasPrev,totHorasReal,false)}</div>`;
   const combs = [...new Set([...Object.keys(consPrev), ...Object.keys(consReal)])];
   combs.forEach(c=>{
-    h+=`<div>Consumo ${COMB_LABEL[c]||c} (L)</div><div>${fmt(consPrev[c]||0)}</div><div>${fmt(consReal[c]||0)} &nbsp; ${diffCell(consPrev[c]||0, consReal[c]||0)}</div>`;
+    h+=`<div>Consumo ${COMB_LABEL[c]||c} (L)</div><div>${fmt(consPrev[c]||0)}</div><div>${fmt(consReal[c]||0)} &nbsp; ${diffCell(consPrev[c]||0, consReal[c]||0, false)}</div>`;
   });
-  h+=`<div>Volume navegado (Carregada)</div><div>${fmt(volPrev)}</div><div>${fmt(volReal)} &nbsp; ${diffCell(volPrev, volReal)}</div>`;
+  h+=`<div>Volume navegado (Carregada)</div><div>${fmt(volPrev)}</div><div>${fmt(volReal)} &nbsp; ${diffCell(volPrev, volReal, true)}</div>`;
   h+=`</div>`;
 
   // Tabela detalhada
@@ -1962,13 +2171,21 @@ function renderViagemMetricas(){
     const creal = Object.values(v.consumoRealizado||{}).reduce((a,b)=>a+(b||0),0);
     const vprev = v.condicao==='Carregada' ? (v.volumeCarregada||0) : 0;
     const vreal = v.condicao==='Carregada' ? (v.volumeRealizado||0) : 0;
-    function pct(p,r){ return p>0 ? `<span class="${Math.abs((r-p)/p*100)<3?'diff-neu':(r-p>=0?'diff-pos':'diff-neg')}">${((r-p)/p*100).toFixed(1)}%</span>` : '—'; }
+    function pct(p,r,higherIsBetter){
+      if(!(p>0)) return '—';
+      const delta=(r-p)/p*100;
+      let cls;
+      if(Math.abs(delta)<3) cls='diff-neu';
+      else if(higherIsBetter) cls = delta>=0 ? 'diff-pos' : 'diff-neg';
+      else                    cls = delta<=0 ? 'diff-pos' : 'diff-neg';
+      return `<span class="${cls}">${delta.toFixed(1)}%</span>`;
+    }
     h+=`<tr><td>${parseDate(v.dataSaida).toLocaleDateString('pt-BR')}</td>
       <td>${e?e.nome:'—'}</td><td>${r?r.nome:'—'}</td><td>${v.condicao}</td>
-      <td class="num">${fmt1(tprev)}</td><td class="num">${fmt1(treal)}</td><td class="num">${pct(tprev,treal)}</td>
-      <td class="num">${fmt(cprev)}</td><td class="num">${fmt(creal)}</td><td class="num">${pct(cprev,creal)}</td>
+      <td class="num">${fmt1(tprev)}</td><td class="num">${fmt1(treal)}</td><td class="num">${pct(tprev,treal,false)}</td>
+      <td class="num">${fmt(cprev)}</td><td class="num">${fmt(creal)}</td><td class="num">${pct(cprev,creal,false)}</td>
       <td class="num">${vprev?fmt(vprev):'—'}</td><td class="num">${vreal?fmt(vreal):'—'}</td>
-      <td class="num">${v.condicao==='Carregada'?pct(vprev,vreal):'—'}</td>
+      <td class="num">${v.condicao==='Carregada'?pct(vprev,vreal,true):'—'}</td>
     </tr>`;
   });
   h+=`</table></div>`;
@@ -2086,26 +2303,31 @@ function openFinalizarViagem(vid){
     <div class="hint">A finalização gravará tempo, consumo e volume realizados; estes dados alimentam as métricas e as sugestões de atualização das Médias.</div>`;
   document.getElementById('fvBody').innerHTML=h;
 
-  function diffSpan(prev, real){
+  // Para Tempo e Consumo: realizar menos que o previsto é BOM (verde).
+  // Para Volume Navegado: realizar mais que o previsto é BOM (verde).
+  function diffSpan(prev, real, higherIsBetter){
     if(!prev) return '';
     const d = real-prev;
     const pct = (d/prev*100);
-    const cls = Math.abs(pct)<3 ? 'diff-neu' : (d>=0 ? 'diff-pos' : 'diff-neg');
+    let cls;
+    if(Math.abs(pct)<3) cls='diff-neu';
+    else if(higherIsBetter) cls = d>=0 ? 'diff-pos' : 'diff-neg';
+    else                    cls = d<=0 ? 'diff-pos' : 'diff-neg';
     return `<span class="${cls}">${(d>=0?'+':'')+fmt1(d)} (${(pct>=0?'+':'')+pct.toFixed(1)}%)</span>`;
   }
   function recalcDiffs(){
     const tr = parseFloat(document.getElementById('fvTempoReal').value)||0;
-    document.getElementById('fvTempoDiff').innerHTML = diffSpan(tempoPrev, tr);
+    document.getElementById('fvTempoDiff').innerHTML = diffSpan(tempoPrev, tr, false);
     document.querySelectorAll('[data-fv-cons]').forEach(inp=>{
       const cb=inp.dataset.fvCons;
       const prev=parseFloat(inp.dataset.fvPrev)||0;
       const real=parseFloat(inp.value)||0;
-      document.querySelector(`[data-fv-diff-cons="${cb}"]`).innerHTML=diffSpan(prev,real);
+      document.querySelector(`[data-fv-diff-cons="${cb}"]`).innerHTML=diffSpan(prev,real,false);
     });
     if(isCarregada){
       const vp = v.volumeCarregada||0;
       const vr = parseFloat(document.getElementById('fvVolReal').value)||0;
-      document.getElementById('fvVolDiff').innerHTML = diffSpan(vp, vr);
+      document.getElementById('fvVolDiff').innerHTML = diffSpan(vp, vr, true);
     }
   }
   document.getElementById('fvBody').addEventListener('input', recalcDiffs);
@@ -2179,6 +2401,128 @@ window.delBudget=function(cidade){
   save(); renderBudget();
 };
 
+// Converte uma célula de "Mês" em string 'YYYY-MM'. Aceita:
+//  - Date / serial Excel
+//  - 'YYYY-MM' / 'YYYY-MM-DD' / ISO
+//  - 'DD/MM/AAAA' (e variações com '-')
+//  - Nomes/abreviações em PT/EN ('Janeiro','jan','jan/26','Jan 2026','janeiro de 2026', ...)
+//  - Só o número do mês (1..12) → assume ano atual
+function parseMesBR(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(v instanceof Date && !isNaN(v)) return ymStr(v);
+  if(typeof v==='number'){
+    // serial do Excel
+    const base = new Date(Date.UTC(1899,11,30));
+    const d = new Date(base.getTime()+v*86400000);
+    return ymStr(d);
+  }
+  let s = String(v).trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,''); // tira acentos
+  if(!s) return '';
+  // 'YYYY-MM' ou 'YYYY-MM-DD'
+  let m = s.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/);
+  if(m) return `${m[1]}-${String(+m[2]).padStart(2,'0')}`;
+  // 'DD/MM/AAAA' ou 'DD-MM-AAAA' ou 'MM/AAAA' ou 'MM-AAAA'
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    let yy=+m[3]; if(yy<100) yy+=2000;
+    return `${yy}-${String(+m[2]).padStart(2,'0')}`;
+  }
+  m = s.match(/^(\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    let yy=+m[2]; if(yy<100) yy+=2000;
+    return `${yy}-${String(+m[1]).padStart(2,'0')}`;
+  }
+  const meses = {
+    janeiro:1,jan:1,january:1,
+    fevereiro:2,fev:2,february:2,feb:2,
+    marco:3,mar:3,march:3,
+    abril:4,abr:4,april:4,apr:4,
+    maio:5,mai:5,may:5,
+    junho:6,jun:6,june:6,
+    julho:7,jul:7,july:7,
+    agosto:8,ago:8,august:8,aug:8,
+    setembro:9,set:9,sep:9,sept:9,september:9,
+    outubro:10,out:10,october:10,oct:10,
+    novembro:11,nov:11,november:11,
+    dezembro:12,dez:12,december:12,dec:12
+  };
+  // 'janeiro 2026', 'jan/26', 'janeiro de 2026', 'jan-2026'
+  m = s.match(/^([a-z]+)\s*(?:de\s*)?[\/\-\s]?\s*(\d{2,4})?$/);
+  if(m){
+    const mm = meses[m[1]];
+    if(mm){
+      let yy = m[2] ? +m[2] : new Date().getFullYear();
+      if(yy<100) yy+=2000;
+      return `${yy}-${String(mm).padStart(2,'0')}`;
+    }
+  }
+  // ano antes do nome: '2026 janeiro' ou '2026/jan'
+  m = s.match(/^(\d{2,4})\s*[\/\-\s]\s*([a-z]+)$/);
+  if(m){
+    const mm = meses[m[2]];
+    if(mm){
+      let yy = +m[1]; if(yy<100) yy+=2000;
+      return `${yy}-${String(mm).padStart(2,'0')}`;
+    }
+  }
+  // só número do mês
+  m = s.match(/^(\d{1,2})$/);
+  if(m){
+    const mm=+m[1];
+    if(mm>=1 && mm<=12){
+      return `${new Date().getFullYear()}-${String(mm).padStart(2,'0')}`;
+    }
+  }
+  return '';
+}
+
+document.getElementById('btnImportBudget').addEventListener('click', ()=>document.getElementById('fileBudget').click());
+document.getElementById('fileBudget').addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  const isCsv=/\.csv$/i.test(file.name);
+  reader.onload = ev=>{
+    let rows=[];
+    try{
+      if(isCsv){ rows=parseCSV(ev.target.result); }
+      else{
+        const wb=XLSX.read(ev.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      }
+      processBudgetRows(rows);
+    }catch(err){ alert('Falha ao ler arquivo: '+err.message); }
+    e.target.value='';
+  };
+  if(isCsv) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
+});
+function processBudgetRows(rows){
+  if(!rows.length){ alert('Arquivo vazio.'); return; }
+  const header = rows[0].map(norm);
+  const idx = {
+    mes:    header.findIndex(h=>h.includes('mes') || h.includes('mês') || h.includes('month')),
+    cidade: header.findIndex(h=>h.includes('cidade') || h.includes('city')),
+    vol:    header.findIndex(h=>h.includes('volume') || h.includes('vol') || h.includes('ton')),
+  };
+  if(idx.mes<0||idx.cidade<0||idx.vol<0){
+    alert('Cabeçalho inválido. Esperado: Mês, Cidade, Volume (t).'); return;
+  }
+  let ok=0, skip=0;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const mes = parseMesBR(r[idx.mes]);
+    const cidade = String(r[idx.cidade]||'').trim();
+    const vol = parseNum(r[idx.vol]);
+    if(!mes||!cidade||isNaN(vol)){ skip++; continue; }
+    state.budgetVolume[cidade] = state.budgetVolume[cidade] || {};
+    state.budgetVolume[cidade][mes] = vol;
+    ok++;
+  }
+  save(); renderBudget();
+  alert(`Importação concluída.\nRegistros aplicados: ${ok}\nIgnorados: ${skip}`);
+}
+
 /* =========================================================
    PREÇOS E DESEMPENHO
    ========================================================= */
@@ -2199,7 +2543,7 @@ document.getElementById('btnAddHp').addEventListener('click', ()=>{
   const cidade=document.getElementById('hpCidade').value.trim();
   const comb=document.getElementById('hpComb').value;
   const preco=parseFloat(document.getElementById('hpPreco').value)||0;
-  if(!d||!nome||!preco){ alert('Informe data, fornecedor e preço.'); return; }
+  if(!d||!nome||!cidade||!preco){ alert('Informe data, fornecedor, cidade e preço.'); return; }
   const f = getOrCreateFornecedor(nome, cidade);
   state.historicoPrecos.push({id:uid(), data:d, fornecedorId:f.id, combustivel:comb, preco});
   document.getElementById('hpData').value='';
@@ -2259,8 +2603,8 @@ function processHpRows(rows){
     comb:   header.findIndex(h=>h.includes('combust')),
     preco:  header.findIndex(h=>h.includes('pre')||h.includes('valor')||h.includes('r$')),
   };
-  if(idx.data<0||idx.forn<0||idx.comb<0||idx.preco<0){
-    alert('Cabeçalho inválido. Esperado: Data, Fornecedor, Combustível, Preço (R$/L). Cidade é opcional.'); return;
+  if(idx.data<0||idx.forn<0||idx.cidade<0||idx.comb<0||idx.preco<0){
+    alert('Cabeçalho inválido. Esperado: Data, Fornecedor, Cidade, Combustível, Preço.'); return;
   }
   const combMap={mgo:'MGO',hfo:'HFO',diesel:'Diesel','diesel terceiro':'Diesel','óleo diesel':'Diesel','oleo diesel':'Diesel'};
   let ok=0, skip=0;
@@ -2268,11 +2612,11 @@ function processHpRows(rows){
     const r=rows[i]; if(!r||!r.length) continue;
     const dt=parseDataBR(r[idx.data]);
     const nome=String(r[idx.forn]||'').trim();
-    const cidade=idx.cidade>=0?String(r[idx.cidade]||'').trim():'';
+    const cidade=String(r[idx.cidade]||'').trim();
     const combRaw=norm(r[idx.comb]);
     const comb=combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
     const preco=parseNum(r[idx.preco]);
-    if(!dt||!nome||!comb||isNaN(preco)){ skip++; continue; }
+    if(!dt||!nome||!cidade||!comb||isNaN(preco)){ skip++; continue; }
     const f=getOrCreateFornecedor(nome, cidade);
     state.historicoPrecos.push({id:uid(), data:dt, fornecedorId:f.id, combustivel:comb, preco});
     ok++;
@@ -2599,7 +2943,7 @@ document.getElementById('fileImportData').addEventListener('change', e=>{
   r.onload=ev=>{
     try{
       const data=JSON.parse(ev.target.result);
-      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],historicoPrecos:[],budgetVolume:{}}, data);
+      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],historicoPrecos:[],budgetVolume:{},estoques:[]}, data);
       ensureState();
       save(); renderView(document.querySelector('nav button.active').dataset.view);
       alert('Dados importados.');
@@ -2614,10 +2958,12 @@ document.getElementById('btnSeed').addEventListener('click', ()=>{
   renderView(document.querySelector('nav button.active').dataset.view);
 });
 function seedData(){
+  const tToday = todayStr();
   const e1={id:uid(),nome:'Empurrador Alfa',potencia:2400,cor:'#0ea5e9',combustiveis:['Diesel','HFO'],consumoPorto:60,
-    tanques:{Diesel:{capacidade:150000,estoqueInicial:120000},HFO:{capacidade:600000,estoqueInicial:480000}}};
+    tanques:{Diesel:{capacidade:150000,estoqueInicial:120000,estoqueInicialData:tToday},HFO:{capacidade:600000,estoqueInicial:480000,estoqueInicialData:tToday}}};
   const e2={id:uid(),nome:'Empurrador Bravo',potencia:1800,cor:'#f59e0b',combustiveis:['MGO'],consumoPorto:40,
-    tanques:{MGO:{capacidade:90000,estoqueInicial:70000}}};
+    tanques:{MGO:{capacidade:90000,estoqueInicial:70000,estoqueInicialData:tToday}}};
+  state.estoques=[];
   const r1={id:uid(),nome:'ORI x DST',origem:'Cidade A',destino:'Cidade B',distancia:1200};
   const r2={id:uid(),nome:'DST x ORI',origem:'Cidade B',destino:'Cidade A',distancia:1200};
   state.empurradores=[e1,e2];
@@ -2670,7 +3016,7 @@ function seedData(){
   }
   // Budget exemplo
   const cMes = ymStr(new Date());
-  state.budgetVolume={'Cidade A':{[cMes]:50000},'Cidade B':{[cMes]:300000}};
+  state.budgetVolume={'Cidade A':{[cMes]:50},'Cidade B':{[cMes]:300}};
 }
 
 /* =========================================================
@@ -2741,7 +3087,7 @@ async function loadFromFile(silent){
     const txt=await f.text();
     if(txt.trim()){
       const data=JSON.parse(txt);
-      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],historicoPrecos:[],budgetVolume:{}}, data);
+      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],historicoPrecos:[],budgetVolume:{},estoques:[]}, data);
       ensureState();
       save();
       renderView(document.querySelector('nav button.active').dataset.view);

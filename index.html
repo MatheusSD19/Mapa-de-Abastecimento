@@ -364,14 +364,18 @@
     </div>
 
     <div class="card">
-      <h2>Budget Mensal de Volume por Cidade <span class="sub">— volume previsto (L) por mês/cidade</span></h2>
+      <h2>Budget Mensal de Volume por Cidade <span class="sub">— volume previsto (t) por mês/cidade</span></h2>
       <div class="row">
         <div class="field"><label>Mês de referência</label><input type="month" id="budgetMes"></div>
         <div class="field"><label>Cidade</label><input id="budgetCidade" list="budgetCidadesList" placeholder="Cidade"></div>
         <datalist id="budgetCidadesList"></datalist>
-        <div class="field"><label>Volume previsto (L)</label><input type="number" id="budgetVol" placeholder="0"></div>
+        <div class="field"><label>Volume previsto (t)</label><input type="number" step="any" id="budgetVol" placeholder="0"></div>
         <button class="btn" id="btnAddBudget">Salvar</button>
+        <div class="spacer"></div>
+        <button class="tool-btn" id="btnImportBudget">Importar Excel / CSV</button>
+        <input type="file" id="fileBudget" accept=".csv,.xlsx,.xls" style="display:none">
       </div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Mês, Cidade, Volume (t)</b>. O mês aceita texto (Janeiro, Jan, jan/2026) ou data (01/01/2026); o ano é inferido como o atual quando não informado.</div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblBudget"></table></div>
     </div>
   </section>
@@ -542,7 +546,7 @@ let state = {
   abastecimentos: [],// {id,empId,data,comb,qtd,status,obs,cidade,preco,fornecedorId}
   fornecedores: [],  // {id,nome,cidade}
   historicoPrecos: [],// {id,data,fornecedorId,combustivel,preco}
-  budgetVolume: {},  // {cidade:{'YYYY-MM':litros}}
+  budgetVolume: {},  // {cidade:{'YYYY-MM':toneladas}}
   estoques: [],      // âncoras manuais: {id,empId,comb,data,valor}
   mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
 };
@@ -2397,6 +2401,128 @@ window.delBudget=function(cidade){
   save(); renderBudget();
 };
 
+// Converte uma célula de "Mês" em string 'YYYY-MM'. Aceita:
+//  - Date / serial Excel
+//  - 'YYYY-MM' / 'YYYY-MM-DD' / ISO
+//  - 'DD/MM/AAAA' (e variações com '-')
+//  - Nomes/abreviações em PT/EN ('Janeiro','jan','jan/26','Jan 2026','janeiro de 2026', ...)
+//  - Só o número do mês (1..12) → assume ano atual
+function parseMesBR(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(v instanceof Date && !isNaN(v)) return ymStr(v);
+  if(typeof v==='number'){
+    // serial do Excel
+    const base = new Date(Date.UTC(1899,11,30));
+    const d = new Date(base.getTime()+v*86400000);
+    return ymStr(d);
+  }
+  let s = String(v).trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,''); // tira acentos
+  if(!s) return '';
+  // 'YYYY-MM' ou 'YYYY-MM-DD'
+  let m = s.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/);
+  if(m) return `${m[1]}-${String(+m[2]).padStart(2,'0')}`;
+  // 'DD/MM/AAAA' ou 'DD-MM-AAAA' ou 'MM/AAAA' ou 'MM-AAAA'
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    let yy=+m[3]; if(yy<100) yy+=2000;
+    return `${yy}-${String(+m[2]).padStart(2,'0')}`;
+  }
+  m = s.match(/^(\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    let yy=+m[2]; if(yy<100) yy+=2000;
+    return `${yy}-${String(+m[1]).padStart(2,'0')}`;
+  }
+  const meses = {
+    janeiro:1,jan:1,january:1,
+    fevereiro:2,fev:2,february:2,feb:2,
+    marco:3,mar:3,march:3,
+    abril:4,abr:4,april:4,apr:4,
+    maio:5,mai:5,may:5,
+    junho:6,jun:6,june:6,
+    julho:7,jul:7,july:7,
+    agosto:8,ago:8,august:8,aug:8,
+    setembro:9,set:9,sep:9,sept:9,september:9,
+    outubro:10,out:10,october:10,oct:10,
+    novembro:11,nov:11,november:11,
+    dezembro:12,dez:12,december:12,dec:12
+  };
+  // 'janeiro 2026', 'jan/26', 'janeiro de 2026', 'jan-2026'
+  m = s.match(/^([a-z]+)\s*(?:de\s*)?[\/\-\s]?\s*(\d{2,4})?$/);
+  if(m){
+    const mm = meses[m[1]];
+    if(mm){
+      let yy = m[2] ? +m[2] : new Date().getFullYear();
+      if(yy<100) yy+=2000;
+      return `${yy}-${String(mm).padStart(2,'0')}`;
+    }
+  }
+  // ano antes do nome: '2026 janeiro' ou '2026/jan'
+  m = s.match(/^(\d{2,4})\s*[\/\-\s]\s*([a-z]+)$/);
+  if(m){
+    const mm = meses[m[2]];
+    if(mm){
+      let yy = +m[1]; if(yy<100) yy+=2000;
+      return `${yy}-${String(mm).padStart(2,'0')}`;
+    }
+  }
+  // só número do mês
+  m = s.match(/^(\d{1,2})$/);
+  if(m){
+    const mm=+m[1];
+    if(mm>=1 && mm<=12){
+      return `${new Date().getFullYear()}-${String(mm).padStart(2,'0')}`;
+    }
+  }
+  return '';
+}
+
+document.getElementById('btnImportBudget').addEventListener('click', ()=>document.getElementById('fileBudget').click());
+document.getElementById('fileBudget').addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  const isCsv=/\.csv$/i.test(file.name);
+  reader.onload = ev=>{
+    let rows=[];
+    try{
+      if(isCsv){ rows=parseCSV(ev.target.result); }
+      else{
+        const wb=XLSX.read(ev.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      }
+      processBudgetRows(rows);
+    }catch(err){ alert('Falha ao ler arquivo: '+err.message); }
+    e.target.value='';
+  };
+  if(isCsv) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
+});
+function processBudgetRows(rows){
+  if(!rows.length){ alert('Arquivo vazio.'); return; }
+  const header = rows[0].map(norm);
+  const idx = {
+    mes:    header.findIndex(h=>h.includes('mes') || h.includes('mês') || h.includes('month')),
+    cidade: header.findIndex(h=>h.includes('cidade') || h.includes('city')),
+    vol:    header.findIndex(h=>h.includes('volume') || h.includes('vol') || h.includes('ton')),
+  };
+  if(idx.mes<0||idx.cidade<0||idx.vol<0){
+    alert('Cabeçalho inválido. Esperado: Mês, Cidade, Volume (t).'); return;
+  }
+  let ok=0, skip=0;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const mes = parseMesBR(r[idx.mes]);
+    const cidade = String(r[idx.cidade]||'').trim();
+    const vol = parseNum(r[idx.vol]);
+    if(!mes||!cidade||isNaN(vol)){ skip++; continue; }
+    state.budgetVolume[cidade] = state.budgetVolume[cidade] || {};
+    state.budgetVolume[cidade][mes] = vol;
+    ok++;
+  }
+  save(); renderBudget();
+  alert(`Importação concluída.\nRegistros aplicados: ${ok}\nIgnorados: ${skip}`);
+}
+
 /* =========================================================
    PREÇOS E DESEMPENHO
    ========================================================= */
@@ -2890,7 +3016,7 @@ function seedData(){
   }
   // Budget exemplo
   const cMes = ymStr(new Date());
-  state.budgetVolume={'Cidade A':{[cMes]:50000},'Cidade B':{[cMes]:300000}};
+  state.budgetVolume={'Cidade A':{[cMes]:50},'Cidade B':{[cMes]:300}};
 }
 
 /* =========================================================

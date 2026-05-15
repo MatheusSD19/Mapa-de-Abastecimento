@@ -427,7 +427,7 @@
         <button class="tool-btn" id="btnImportHp">Importar Excel / CSV</button>
         <input type="file" id="fileHp" accept=".csv,.xlsx,.xls" style="display:none">
       </div>
-      <div class="hint">Colunas esperadas no arquivo: <b>Data (DD/MM/AAAA), Fornecedor, Combustível, Preço (R$/L)</b>. Cidade é opcional.</div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Data, Fornecedor, Cidade, Combustível, Preço</b>. A data pode estar no formato DD/MM/AAAA e o preço em R$/L (decimal com vírgula).</div>
       <div style="margin-top:12px;overflow:auto;max-height:360px;"><table id="tblHp"></table></div>
     </div>
 
@@ -2400,7 +2400,7 @@ document.getElementById('btnAddHp').addEventListener('click', ()=>{
   const cidade=document.getElementById('hpCidade').value.trim();
   const comb=document.getElementById('hpComb').value;
   const preco=parseFloat(document.getElementById('hpPreco').value)||0;
-  if(!d||!nome||!preco){ alert('Informe data, fornecedor e preço.'); return; }
+  if(!d||!nome||!cidade||!preco){ alert('Informe data, fornecedor, cidade e preço.'); return; }
   const f = getOrCreateFornecedor(nome, cidade);
   state.historicoPrecos.push({id:uid(), data:d, fornecedorId:f.id, combustivel:comb, preco});
   document.getElementById('hpData').value='';
@@ -2460,8 +2460,8 @@ function processHpRows(rows){
     comb:   header.findIndex(h=>h.includes('combust')),
     preco:  header.findIndex(h=>h.includes('pre')||h.includes('valor')||h.includes('r$')),
   };
-  if(idx.data<0||idx.forn<0||idx.comb<0||idx.preco<0){
-    alert('Cabeçalho inválido. Esperado: Data, Fornecedor, Combustível, Preço (R$/L). Cidade é opcional.'); return;
+  if(idx.data<0||idx.forn<0||idx.cidade<0||idx.comb<0||idx.preco<0){
+    alert('Cabeçalho inválido. Esperado: Data, Fornecedor, Cidade, Combustível, Preço.'); return;
   }
   const combMap={mgo:'MGO',hfo:'HFO',diesel:'Diesel','diesel terceiro':'Diesel','óleo diesel':'Diesel','oleo diesel':'Diesel'};
   let ok=0, skip=0;
@@ -2469,11 +2469,11 @@ function processHpRows(rows){
     const r=rows[i]; if(!r||!r.length) continue;
     const dt=parseDataBR(r[idx.data]);
     const nome=String(r[idx.forn]||'').trim();
-    const cidade=idx.cidade>=0?String(r[idx.cidade]||'').trim():'';
+    const cidade=String(r[idx.cidade]||'').trim();
     const combRaw=norm(r[idx.comb]);
     const comb=combMap[combRaw] || COMBS.find(c=>norm(c)===combRaw) || null;
     const preco=parseNum(r[idx.preco]);
-    if(!dt||!nome||!comb||isNaN(preco)){ skip++; continue; }
+    if(!dt||!nome||!cidade||!comb||isNaN(preco)){ skip++; continue; }
     const f=getOrCreateFornecedor(nome, cidade);
     state.historicoPrecos.push({id:uid(), data:dt, fornecedorId:f.id, combustivel:comb, preco});
     ok++;

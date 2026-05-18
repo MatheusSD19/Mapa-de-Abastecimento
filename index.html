@@ -194,6 +194,13 @@
   .chart-tooltip .sub{color:#94a3b8;font-size:10px;margin-top:2px;}
   .chart-hover-zone{fill:transparent;cursor:crosshair;}
   .chart-hover-zone:hover{fill:currentColor;fill-opacity:0.04;}
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px;}
+  @media (max-width:1180px){ .charts-grid{grid-template-columns:1fr;} }
+  .chart-card{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--panel);}
+  .chart-card-header{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;}
+  .chart-card .chart-wrap{margin-top:0;}
+  .chart-card .chart-svg{height:300px;}
+  .chart-card .pr-stats{margin-top:0;}
   .pr-stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
   .pr-stats .grp{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;}
   .pr-stats .grp .ttl{display:flex;align-items:center;gap:6px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding-right:6px;border-right:1px solid var(--line);margin-right:2px;}
@@ -409,12 +416,6 @@
       <div class="row">
         <div class="field"><label>De</label><input type="date" id="prFiltroIni"></div>
         <div class="field"><label>Até</label><input type="date" id="prFiltroFim"></div>
-        <div class="field"><label>Combustível</label>
-          <select id="prFiltroComb">
-            <option value="">Todos</option>
-            <option>MGO</option><option>HFO</option><option>Diesel</option>
-          </select>
-        </div>
         <div class="field"><label>Forecast até</label>
           <select id="prForecast">
             <option value="0">Sem forecast</option>
@@ -428,14 +429,46 @@
           </select>
         </div>
         <button class="btn secondary" id="btnPrFilterReset">YTD</button>
-        <div class="spacer"></div>
-        <button class="btn secondary" id="btnPrChartStyle" data-style="line" title="Alternar estilo do gráfico">Visualização: Linha</button>
       </div>
-      <div id="prStats" class="pr-stats"></div>
-      <div class="chart-wrap">
-        <svg id="prChart" class="chart-svg" preserveAspectRatio="none"></svg>
-        <div id="prTooltip" class="chart-tooltip" style="display:none;"></div>
-        <div id="prLegend" class="chart-legend"></div>
+      <div class="charts-grid">
+        <div class="chart-card" data-chart="1">
+          <div class="chart-card-header">
+            <div class="field"><label>Combustível</label>
+              <select class="prChartCombSel" data-chart="1">
+                <option value="MGO" selected>MGO</option>
+                <option value="HFO">HFO</option>
+                <option value="Diesel">Diesel Terceiro</option>
+              </select>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn secondary prChartStyleBtn" data-chart="1" data-style="line" title="Alternar estilo">Visualização: Linha</button>
+          </div>
+          <div id="prStats1" class="pr-stats"></div>
+          <div class="chart-wrap">
+            <svg id="prChart1" class="chart-svg" preserveAspectRatio="none"></svg>
+            <div id="prTooltip1" class="chart-tooltip" style="display:none;"></div>
+            <div id="prLegend1" class="chart-legend"></div>
+          </div>
+        </div>
+        <div class="chart-card" data-chart="2">
+          <div class="chart-card-header">
+            <div class="field"><label>Combustível</label>
+              <select class="prChartCombSel" data-chart="2">
+                <option value="MGO">MGO</option>
+                <option value="HFO" selected>HFO</option>
+                <option value="Diesel">Diesel Terceiro</option>
+              </select>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn secondary prChartStyleBtn" data-chart="2" data-style="line" title="Alternar estilo">Visualização: Linha</button>
+          </div>
+          <div id="prStats2" class="pr-stats"></div>
+          <div class="chart-wrap">
+            <svg id="prChart2" class="chart-svg" preserveAspectRatio="none"></svg>
+            <div id="prTooltip2" class="chart-tooltip" style="display:none;"></div>
+            <div id="prLegend2" class="chart-legend"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2556,22 +2589,36 @@ function processBudgetRows(rows){
 /* =========================================================
    PREÇOS E DESEMPENHO
    ========================================================= */
-let prChartStyle = 'line'; // 'line' | 'bars'
-['prFiltroIni','prFiltroFim','prFiltroComb','prForecast','prGran'].forEach(id=>{
+// Estado por card de gráfico (combustível + estilo de visualização)
+const prChartCombs  = {1:'MGO', 2:'HFO'};
+const prChartStyles = {1:'line', 2:'line'};
+
+['prFiltroIni','prFiltroFim','prForecast','prGran'].forEach(id=>{
   document.getElementById(id).addEventListener('change', renderPrecos);
 });
 document.getElementById('btnPrFilterReset').addEventListener('click', ()=>{
-  document.getElementById('prFiltroComb').value='';
   const now=new Date();
   document.getElementById('prFiltroIni').value=dateStr(new Date(now.getFullYear(),0,1));
   document.getElementById('prFiltroFim').value=dateStr(now);
   renderPrecos();
 });
-document.getElementById('btnPrChartStyle').addEventListener('click', (e)=>{
-  prChartStyle = prChartStyle==='line' ? 'bars' : 'line';
-  e.currentTarget.dataset.style = prChartStyle;
-  e.currentTarget.textContent = prChartStyle==='line' ? 'Visualização: Linha' : 'Visualização: Barras + Variação %';
-  renderPrecos();
+document.querySelectorAll('.prChartCombSel').forEach(sel=>{
+  sel.addEventListener('change', e=>{
+    const id = e.currentTarget.dataset.chart;
+    prChartCombs[id] = e.currentTarget.value;
+    renderPrecos();
+  });
+});
+document.querySelectorAll('.prChartStyleBtn').forEach(btn=>{
+  btn.addEventListener('click', e=>{
+    const id = e.currentTarget.dataset.chart;
+    prChartStyles[id] = prChartStyles[id]==='line' ? 'bars' : 'line';
+    e.currentTarget.dataset.style = prChartStyles[id];
+    e.currentTarget.textContent = prChartStyles[id]==='line'
+      ? 'Visualização: Linha'
+      : 'Visualização: Barras + Variação %';
+    renderPrecos();
+  });
 });
 
 document.getElementById('btnAddHp').addEventListener('click', ()=>{
@@ -2682,14 +2729,12 @@ function renderPrecos(){
 
   const ini=document.getElementById('prFiltroIni').value;
   const fim=document.getElementById('prFiltroFim').value;
-  const cbF=document.getElementById('prFiltroComb').value;
 
   // Abastecimentos Realizados no período → litros, R$
   const absReal = state.abastecimentos.filter(a=>{
     if(a.status!=='Realizado') return false;
     if(ini && a.data<ini) return false;
     if(fim && a.data>fim) return false;
-    if(cbF && a.comb!==cbF) return false;
     return true;
   });
   const totalLitros = absReal.reduce((s,a)=>s+(a.qtd||0),0);
@@ -2726,7 +2771,8 @@ function renderPrecos(){
     <div class="kpi"><div class="v">${finPeriodo.length}</div><div class="l">Viagens finalizadas</div></div>
   `;
 
-  renderPrecosChart(ini, fim, cbF);
+  renderPrecosChart({chartId:1, comb:prChartCombs[1], style:prChartStyles[1], ini, fim});
+  renderPrecosChart({chartId:2, comb:prChartCombs[2], style:prChartStyles[2], ini, fim});
   renderMediasPorEmpurrador(ini, fim);
   renderHpTable();
   renderFornTable();
@@ -2887,8 +2933,7 @@ function pickSignificantVarIdx(varPct, thresholdPct){
   varPct.forEach((v,i)=>{ if(v!=null && Math.abs(v)>=thresholdPct) idx.add(i); });
   return idx;
 }
-function renderPrecosStats(series, buckets, gran){
-  const el=document.getElementById('prStats');
+function renderPrecosStats(el, series, buckets, gran){
   if(!series.length){ el.innerHTML=''; return; }
   const sign = v => (v>0?'+':'')+fmt2(v)+'%';
   const cls  = v => v>0?'up':(v<0?'down':'');
@@ -2927,31 +2972,30 @@ function renderPrecosStats(series, buckets, gran){
   }).join('');
 }
 
-function renderPrecosChart(ini, fim, cbF){
-  const svg=document.getElementById('prChart');
-  const legend=document.getElementById('prLegend');
-  const tooltip=document.getElementById('prTooltip');
-  const statsEl=document.getElementById('prStats');
+function renderPrecosChart(opts){
+  const {chartId, comb: cbF, style, ini, fim} = opts;
+  const svg=document.getElementById('prChart'+chartId);
+  const legend=document.getElementById('prLegend'+chartId);
+  const tooltip=document.getElementById('prTooltip'+chartId);
+  const statsEl=document.getElementById('prStats'+chartId);
   const gran=document.getElementById('prGran').value || 'month';
-  const style=prChartStyle;
   const forecast=document.getElementById('prForecast').value==='1';
 
   const filtered = state.historicoPrecos.filter(p=>{
     if(ini && p.data<ini) return false;
     if(fim && p.data>fim) return false;
-    if(cbF && p.combustivel!==cbF) return false;
+    if(p.combustivel!==cbF) return false;
     return true;
   }).sort((a,b)=>a.data.localeCompare(b.data));
 
   if(!filtered.length){
     svg.innerHTML=''; statsEl.innerHTML='';
     tooltip.style.display='none';
-    legend.innerHTML='<div class="empty">Sem dados de preços para o filtro atual.</div>';
+    legend.innerHTML=`<div class="empty">Sem leituras de ${COMB_LABEL[cbF]||cbF} no período.</div>`;
     return;
   }
 
-  let combs = cbF ? [cbF] : [...new Set(filtered.map(p=>p.combustivel))];
-  if(style==='bars' && combs.length>1){ combs=[combs[0]]; }
+  const combs = [cbF];
 
   const keys = filtered.map(p=>bucketKeyOf(p.data, gran)).sort();
   const minK = keys[0], maxK = keys[keys.length-1];
@@ -3013,7 +3057,7 @@ function renderPrecosChart(ini, fim, cbF){
   });
 
   // KPIs acima do gráfico
-  renderPrecosStats(series, buckets, gran);
+  renderPrecosStats(statsEl, series, buckets, gran);
 
   // Dimensões
   const W=svg.clientWidth||800, H=360, padL=52, padR=(style==='bars'?54:14), padT=18, padB=42;
@@ -3215,8 +3259,8 @@ function renderPrecosChart(ini, fim, cbF){
     });
   }
 
-  // Crosshair (oculto até hover)
-  svgH += `<line id="prCrosshair" x1="0" y1="${padT}" x2="0" y2="${H-padB}" stroke="currentColor" stroke-opacity="0.35" stroke-dasharray="2 3" style="display:none;pointer-events:none;"/>`;
+  // Crosshair (oculto até hover) — classe escopada para não colidir entre cards
+  svgH += `<line class="prCrosshair" x1="0" y1="${padT}" x2="0" y2="${H-padB}" stroke="currentColor" stroke-opacity="0.35" stroke-dasharray="2 3" style="display:none;pointer-events:none;"/>`;
 
   // Zonas de hover
   buckets.forEach((b,i)=>{
@@ -3241,12 +3285,11 @@ function renderPrecosChart(ini, fim, cbF){
       `<span><span class="sw" style="background:${s.color}"></span>${COMB_LABEL[s.cb]||s.cb} — Preço (R$/L)</span>` +
       `<span><span class="sw" style="background:#ea580c"></span>Variação % vs bucket anterior</span>` +
       `<span><span class="sw" style="background:#22c55e"></span>melhor preço</span>` +
-      `<span><span class="sw" style="background:#ef4444"></span>pior preço</span>` +
-      (cbF? '' : '<span style="margin-left:8px;color:var(--muted);">— modo barras mostra um combustível por vez (use o filtro)</span>');
+      `<span><span class="sw" style="background:#ef4444"></span>pior preço</span>`;
   }
 
   // Tooltip / crosshair
-  const crosshair = svg.querySelector('#prCrosshair');
+  const crosshair = svg.querySelector('.prCrosshair');
   const showTooltip = (idx)=>{
     const rect = svg.getBoundingClientRect();
     const wrapRect = svg.parentElement.getBoundingClientRect();

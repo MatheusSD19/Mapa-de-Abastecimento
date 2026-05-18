@@ -180,10 +180,19 @@
   .diff-pos{color:var(--ok);font-weight:600;}
   .diff-neg{color:var(--bad);font-weight:600;}
   .diff-neu{color:var(--muted);}
-  .chart-wrap{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:10px;}
+  .chart-wrap{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:10px;position:relative;}
   .chart-svg{width:100%;height:320px;display:block;}
   .chart-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted);margin-top:6px;}
   .chart-legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle;}
+  .chart-tooltip{position:absolute;pointer-events:none;background:rgba(15,23,42,0.94);color:#fff;font-size:11px;padding:6px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 14px rgba(0,0,0,0.35);z-index:10;line-height:1.45;white-space:nowrap;transform:translate(-50%, calc(-100% - 10px));transition:opacity .08s ease;}
+  .chart-tooltip .ttl{font-weight:600;margin-bottom:3px;color:#e2e8f0;}
+  .chart-tooltip .lin{display:flex;align-items:center;gap:6px;}
+  .chart-tooltip .sw{display:inline-block;width:9px;height:9px;border-radius:2px;}
+  .chart-tooltip .pos{color:#22c55e;}
+  .chart-tooltip .neg{color:#ef4444;}
+  .chart-tooltip .neu{color:#94a3b8;}
+  .chart-hover-zone{fill:transparent;cursor:crosshair;}
+  .chart-hover-zone:hover{fill:currentColor;fill-opacity:0.04;}
   .grid-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
   .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:center;}
   .grid-3 .hd{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
@@ -401,10 +410,19 @@
             <option value="1" selected>Final do ano</option>
           </select>
         </div>
+        <div class="field"><label>Granularidade</label>
+          <select id="prGran">
+            <option value="month" selected>Mês</option>
+            <option value="day">Dia</option>
+          </select>
+        </div>
         <button class="btn secondary" id="btnPrFilterReset">YTD</button>
+        <div class="spacer"></div>
+        <button class="btn secondary" id="btnPrChartStyle" data-style="line" title="Alternar estilo do gráfico">Visualização: Linha</button>
       </div>
       <div class="chart-wrap">
         <svg id="prChart" class="chart-svg" preserveAspectRatio="none"></svg>
+        <div id="prTooltip" class="chart-tooltip" style="display:none;"></div>
         <div id="prLegend" class="chart-legend"></div>
       </div>
     </div>
@@ -2526,7 +2544,8 @@ function processBudgetRows(rows){
 /* =========================================================
    PREÇOS E DESEMPENHO
    ========================================================= */
-['prFiltroIni','prFiltroFim','prFiltroComb','prForecast'].forEach(id=>{
+let prChartStyle = 'line'; // 'line' | 'bars'
+['prFiltroIni','prFiltroFim','prFiltroComb','prForecast','prGran'].forEach(id=>{
   document.getElementById(id).addEventListener('change', renderPrecos);
 });
 document.getElementById('btnPrFilterReset').addEventListener('click', ()=>{
@@ -2534,6 +2553,12 @@ document.getElementById('btnPrFilterReset').addEventListener('click', ()=>{
   const now=new Date();
   document.getElementById('prFiltroIni').value=dateStr(new Date(now.getFullYear(),0,1));
   document.getElementById('prFiltroFim').value=dateStr(now);
+  renderPrecos();
+});
+document.getElementById('btnPrChartStyle').addEventListener('click', (e)=>{
+  prChartStyle = prChartStyle==='line' ? 'bars' : 'line';
+  e.currentTarget.dataset.style = prChartStyle;
+  e.currentTarget.textContent = prChartStyle==='line' ? 'Visualização: Linha' : 'Visualização: Barras + Variação %';
   renderPrecos();
 });
 
@@ -2797,53 +2822,102 @@ function renderMediasPorEmpurrador(ini, fim){
 }
 
 /* ---- Gráfico de Preços ---- */
+const MONTHS_BR_SHORT=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MONTHS_BR_LONG =['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function bucketKeyOf(dataStr, gran){ return gran==='day' ? dataStr : dataStr.slice(0,7); }
+function bucketShortLabel(key, gran){
+  if(gran==='day'){ const [y,m,d]=key.split('-'); return `${d}/${m}`; }
+  const [y,m]=key.split('-'); return `${MONTHS_BR_SHORT[parseInt(m,10)-1]}/${y.slice(2)}`;
+}
+function bucketLongLabel(key, gran){
+  if(gran==='day'){ const [y,m,d]=key.split('-'); return `${d}/${m}/${y}`; }
+  const [y,m]=key.split('-'); return `${MONTHS_BR_LONG[parseInt(m,10)-1]} de ${y}`;
+}
+function nextBucketKey(key, gran){
+  if(gran==='day'){
+    const d=new Date(key+'T00:00:00'); d.setDate(d.getDate()+1);
+    return d.toISOString().slice(0,10);
+  }
+  const d=new Date(key+'-01T00:00:00'); d.setMonth(d.getMonth()+1);
+  return ymStr(d);
+}
+
 function renderPrecosChart(ini, fim, cbF){
   const svg=document.getElementById('prChart');
   const legend=document.getElementById('prLegend');
-  // Agrupar histórico por mês × combustível
+  const tooltip=document.getElementById('prTooltip');
+  const gran=document.getElementById('prGran').value || 'month';
+  const style=prChartStyle;
+  const forecast=document.getElementById('prForecast').value==='1';
+
+  // Filtra histórico
   const filtered = state.historicoPrecos.filter(p=>{
     if(ini && p.data<ini) return false;
     if(fim && p.data>fim) return false;
     if(cbF && p.combustivel!==cbF) return false;
     return true;
-  });
+  }).sort((a,b)=>a.data.localeCompare(b.data));
+
   if(!filtered.length){
     svg.innerHTML='';
+    tooltip.style.display='none';
     legend.innerHTML='<div class="empty">Sem dados de preços para o filtro atual.</div>';
     return;
   }
-  // bucket mensal
-  const combs = cbF ? [cbF] : [...new Set(filtered.map(p=>p.combustivel))];
-  const monthSet = new Set(filtered.map(p=>p.data.slice(0,7)));
-  // gera lista de meses ordenados entre min e max
-  const minM=[...monthSet].sort()[0];
-  const maxM=[...monthSet].sort().reverse()[0];
-  const months=[];
-  let cur = new Date(minM+'-01T00:00:00');
-  const end = new Date(maxM+'-01T00:00:00');
-  while(cur<=end){
-    months.push(ymStr(cur));
-    cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+
+  // Combustíveis e buckets
+  let combs = cbF ? [cbF] : [...new Set(filtered.map(p=>p.combustivel))];
+  if(style==='bars' && combs.length>1){
+    // Em barras+variação focamos em um único combustível para clareza
+    combs = [combs[0]];
   }
-  // séries com forecast
-  const forecast = document.getElementById('prForecast').value==='1';
-  if(forecast){
+
+  const keys = filtered.map(p=>bucketKeyOf(p.data, gran)).sort();
+  const minK = keys[0];
+  const maxK = keys[keys.length-1];
+  const buckets=[];
+  let cur=minK;
+  // sanity-cap para evitar listas absurdas
+  const MAX_BUCKETS = 1200;
+  while(cur<=maxK && buckets.length<MAX_BUCKETS){
+    buckets.push(cur);
+    cur=nextBucketKey(cur, gran);
+  }
+  const dataEndIdx = buckets.length-1; // último índice com dado real
+
+  // Extensão para forecast (apenas no modo linha)
+  if(forecast && style==='line'){
     const now=new Date();
-    const endYear=new Date(now.getFullYear(),11,1);
-    let lastM=new Date(maxM+'-01T00:00:00');
-    while(lastM<endYear){
-      lastM=new Date(lastM.getFullYear(), lastM.getMonth()+1, 1);
-      months.push(ymStr(lastM));
+    const endYear=now.getFullYear()+'-12-31';
+    let k=maxK;
+    while(buckets.length<MAX_BUCKETS){
+      const nk=nextBucketKey(k, gran);
+      if(nk>endYear) break;
+      buckets.push(nk);
+      k=nk;
     }
   }
+
+  // Séries
   const series = combs.map((cb,i)=>{
-    const pts = months.map(m=>{
-      const arr = filtered.filter(p=>p.combustivel===cb && p.data.slice(0,7)===m).map(p=>p.preco);
-      return arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
+    const byKey={};
+    filtered.forEach(p=>{
+      if(p.combustivel!==cb) return;
+      const k=bucketKeyOf(p.data, gran);
+      (byKey[k]=byKey[k]||[]).push(p.preco);
     });
-    // forecast: regressão linear simples sobre os meses que TÊM dado
+    const pts = buckets.map(k=>{
+      const a=byKey[k]; return a && a.length ? a.reduce((s,x)=>s+x,0)/a.length : null;
+    });
+    // variação % vs ponto anterior não-nulo
+    const varPct = pts.map((v,j)=>{
+      if(v==null) return null;
+      for(let k=j-1;k>=0;k--){ if(pts[k]!=null){ return pts[k]!==0 ? (v-pts[k])/pts[k]*100 : null; } }
+      return null;
+    });
+    // forecast: regressão linear
     let trend=null;
-    if(forecast){
+    if(forecast && style==='line'){
       const xy=pts.map((y,j)=>[j,y]).filter(([,y])=>y!=null);
       if(xy.length>=2){
         const n=xy.length;
@@ -2853,65 +2927,194 @@ function renderPrecosChart(ini, fim, cbF){
         const sxy=xy.reduce((s,[x,y])=>s+x*y,0);
         const slope=(n*sxy - sx*sy)/(n*sxx - sx*sx || 1);
         const intercept=(sy - slope*sx)/n;
-        trend = months.map((_,j)=>intercept+slope*j);
+        trend = buckets.map((_,j)=>intercept+slope*j);
       }
     }
-    return {cb, pts, trend, color:cbColor(cb,i)};
+    return {cb, pts, varPct, trend, color:cbColor(cb,i)};
   });
 
-  // Render
-  const W=svg.clientWidth||800, H=320, padL=46, padR=14, padT=14, padB=36;
-  const xs = months.length>1 ? (W-padL-padR)/(months.length-1) : 0;
+  // Dimensões
+  const W=svg.clientWidth||800, H=320, padL=46, padR= style==='bars' ? 46 : 14, padT=14, padB=36;
+  const innerW=W-padL-padR;
+  const xs = buckets.length>1 ? innerW/(buckets.length-1) : 0;
+
   const allY = series.flatMap(s=>[...(s.pts.filter(v=>v!=null)),...((s.trend||[]))]);
-  const minY = Math.min(...allY)*0.95, maxY = Math.max(...allY)*1.05;
+  let minY = Math.min(...allY), maxY = Math.max(...allY);
+  if(minY===maxY){ minY=minY*0.9; maxY=maxY*1.1; }
+  else { const pad=(maxY-minY)*0.08; minY=Math.max(0, minY-pad); maxY=maxY+pad; }
   const y = v=> H - padB - (v-minY)/(maxY-minY||1)*(H-padT-padB);
   const x = i=> padL + i*xs;
-  let svgH = '';
-  // axes
+
+  // Para o eixo Y direito (variação %), no modo barras
+  let varMin=0, varMax=0;
+  if(style==='bars'){
+    const vs = series.flatMap(s=>s.varPct.filter(v=>v!=null));
+    if(vs.length){
+      varMin = Math.min(0, ...vs);
+      varMax = Math.max(0, ...vs);
+      const span = (varMax - varMin) || 1;
+      varMin -= span*0.1; varMax += span*0.15;
+    } else { varMin=-10; varMax=10; }
+  }
+  const yVar = v => H - padB - (v-varMin)/(varMax-varMin||1)*(H-padT-padB);
+
+  let svgH='';
+
+  // Gridlines + eixo Y esquerdo
   for(let g=0;g<=4;g++){
     const yv = minY + (maxY-minY)*g/4;
     const yy = y(yv);
     svgH += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="currentColor" stroke-opacity="0.12"/>`;
     svgH += `<text x="${padL-4}" y="${yy+3}" font-size="10" text-anchor="end" fill="currentColor" opacity="0.6">${fmt2(yv)}</text>`;
   }
-  // x labels (sample)
-  const step = Math.max(1, Math.ceil(months.length/12));
-  months.forEach((m,i)=>{
-    if(i%step!==0 && i!==months.length-1) return;
-    svgH += `<text x="${x(i)}" y="${H-padB+14}" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">${m}</text>`;
-  });
-  // forecast cutoff line
-  if(forecast){
-    const idxCut = months.indexOf(maxM);
-    if(idxCut>=0){
-      svgH += `<line x1="${x(idxCut)}" y1="${padT}" x2="${x(idxCut)}" y2="${H-padB}" stroke="currentColor" stroke-opacity="0.3" stroke-dasharray="3 3"/>`;
-      svgH += `<text x="${x(idxCut)+4}" y="${padT+10}" font-size="10" fill="currentColor" opacity="0.5">forecast →</text>`;
+
+  // Eixo Y direito (variação %) em modo barras
+  if(style==='bars'){
+    for(let g=0;g<=4;g++){
+      const vv = varMin + (varMax-varMin)*g/4;
+      const yy = yVar(vv);
+      svgH += `<text x="${W-padR+4}" y="${yy+3}" font-size="10" text-anchor="start" fill="currentColor" opacity="0.6">${fmt2(vv)}%</text>`;
+    }
+    // linha do zero
+    const y0 = yVar(0);
+    if(y0>padT && y0<H-padB){
+      svgH += `<line x1="${padL}" y1="${y0}" x2="${W-padR}" y2="${y0}" stroke="currentColor" stroke-opacity="0.25" stroke-dasharray="2 2"/>`;
     }
   }
-  // series
-  series.forEach(s=>{
-    // pontos reais — linha sólida
-    let path='', started=false;
-    s.pts.forEach((v,i)=>{
-      if(v==null){ started=false; return; }
-      path += (started?' L ':'M ')+x(i)+' '+y(v);
-      started=true;
+
+  // Labels do eixo X (amostragem)
+  const step = Math.max(1, Math.ceil(buckets.length/12));
+  buckets.forEach((b,i)=>{
+    if(i%step!==0 && i!==buckets.length-1) return;
+    svgH += `<text x="${x(i)}" y="${H-padB+14}" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">${bucketShortLabel(b, gran)}</text>`;
+  });
+
+  // Linha vertical de corte do forecast
+  if(forecast && style==='line' && dataEndIdx>=0 && dataEndIdx<buckets.length-1){
+    svgH += `<line x1="${x(dataEndIdx)}" y1="${padT}" x2="${x(dataEndIdx)}" y2="${H-padB}" stroke="currentColor" stroke-opacity="0.3" stroke-dasharray="3 3"/>`;
+    svgH += `<text x="${x(dataEndIdx)+4}" y="${padT+10}" font-size="10" fill="currentColor" opacity="0.5">forecast →</text>`;
+  }
+
+  if(style==='line'){
+    // séries em linha
+    series.forEach(s=>{
+      let path='', started=false;
+      s.pts.forEach((v,i)=>{
+        if(v==null){ started=false; return; }
+        path += (started?' L ':'M ')+x(i)+' '+y(v);
+        started=true;
+      });
+      svgH += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+      s.pts.forEach((v,i)=>{
+        if(v==null) return;
+        svgH += `<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${s.color}"/>`;
+      });
+      if(s.trend){
+        const tp = s.trend.map((v,i)=>`${i===0?'M':'L'} ${x(i)} ${y(v)}`).join(' ');
+        svgH += `<path d="${tp}" fill="none" stroke="${s.color}" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.7"/>`;
+      }
     });
-    svgH += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+  } else {
+    // Barras (um combustível) com sobreposição de linha de variação %
+    const s = series[0];
+    const barSlot = xs>0 ? xs : innerW;
+    const barW = Math.min(40, Math.max(4, barSlot*0.6));
+    // baseY: piso do gráfico
+    const baseY = H - padB;
     s.pts.forEach((v,i)=>{
       if(v==null) return;
-      svgH += `<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${s.color}"><title>${s.cb} · ${months[i]} · R$ ${fmt2(v)}</title></circle>`;
+      const cx = x(i);
+      const yy = y(v);
+      svgH += `<rect x="${cx-barW/2}" y="${yy}" width="${barW}" height="${baseY-yy}" fill="${s.color}" rx="2"/>`;
+      // valor dentro/cima da barra
+      const valLabel = fmt2(v);
+      if(baseY - yy > 30){
+        svgH += `<text x="${cx}" y="${baseY-6}" font-size="10" text-anchor="middle" fill="#fff" opacity="0.95">${valLabel}</text>`;
+      } else {
+        svgH += `<text x="${cx}" y="${yy-4}" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.85">${valLabel}</text>`;
+      }
     });
-    // tendência — linha tracejada
-    if(s.trend){
-      const tp = s.trend.map((v,i)=>`${i===0?'M':'L'} ${x(i)} ${y(v)}`).join(' ');
-      svgH += `<path d="${tp}" fill="none" stroke="${s.color}" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.7"/>`;
-    }
+    // Linha de variação % (laranja, sobreposta no eixo direito)
+    const varColor = '#ea580c';
+    let path='', started=false;
+    s.varPct.forEach((v,i)=>{
+      if(v==null){ started=false; return; }
+      path += (started?' L ':'M ')+x(i)+' '+yVar(v);
+      started=true;
+    });
+    svgH += `<path d="${path}" fill="none" stroke="${varColor}" stroke-width="2"/>`;
+    s.varPct.forEach((v,i)=>{
+      if(v==null) return;
+      const cx=x(i), cy=yVar(v);
+      svgH += `<circle cx="${cx}" cy="${cy}" r="3.5" fill="#fff" stroke="${varColor}" stroke-width="2"/>`;
+      const lbl = (v>=0?'':'')+fmt2(v)+'%';
+      svgH += `<text x="${cx}" y="${cy-8}" font-size="10" text-anchor="middle" fill="${varColor}" font-weight="600">${lbl}</text>`;
+    });
+  }
+
+  // Zonas de hover para tooltip (uma por bucket)
+  buckets.forEach((b,i)=>{
+    const zw = xs>0 ? xs : (W-padL-padR);
+    svgH += `<rect class="chart-hover-zone" x="${x(i)-zw/2}" y="${padT}" width="${zw}" height="${H-padT-padB}" data-idx="${i}"/>`;
   });
+
   svg.innerHTML = svgH;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  legend.innerHTML = series.map(s=>`<span><span class="sw" style="background:${s.color}"></span>${COMB_LABEL[s.cb]||s.cb}</span>`).join('') +
-    (forecast?'<span style="margin-left:8px;">— linha tracejada: tendência (regressão linear)</span>':'');
+
+  // Legenda
+  if(style==='line'){
+    legend.innerHTML = series.map(s=>`<span><span class="sw" style="background:${s.color}"></span>${COMB_LABEL[s.cb]||s.cb}</span>`).join('') +
+      (forecast?'<span style="margin-left:8px;">— linha tracejada: tendência (regressão linear)</span>':'');
+  } else {
+    const s = series[0];
+    legend.innerHTML =
+      `<span><span class="sw" style="background:${s.color}"></span>${COMB_LABEL[s.cb]||s.cb} — Preço (R$/L)</span>` +
+      `<span><span class="sw" style="background:#ea580c"></span>Variação % vs ponto anterior</span>` +
+      (cbF? '' : '<span style="margin-left:8px;color:var(--muted);">— modo barras mostra um combustível por vez (filtre para alternar)</span>');
+  }
+
+  // Eventos de tooltip
+  const showTooltip = (idx, evt)=>{
+    const rect = svg.getBoundingClientRect();
+    const wrapRect = svg.parentElement.getBoundingClientRect();
+    const cx = x(idx);
+    // converte coordenada SVG -> px (svg está em viewBox W×H, mas o elemento real pode estar escalado em largura)
+    const scaleX = rect.width / W;
+    const left = (cx * scaleX) + (rect.left - wrapRect.left);
+    // topo: usa o ponto mais alto entre as séries; fallback para meio
+    let topY = padT+20;
+    series.forEach(s=>{
+      const v = s.pts[idx];
+      if(v!=null){ topY = Math.min(topY, y(v)); }
+    });
+    const scaleY = rect.height / H;
+    const top = (topY * scaleY) + (rect.top - wrapRect.top);
+
+    let html = `<div class="ttl">${bucketLongLabel(buckets[idx], gran)}</div>`;
+    series.forEach(s=>{
+      const v=s.pts[idx], vp=s.varPct[idx];
+      if(v==null){
+        html += `<div class="lin"><span class="sw" style="background:${s.color}"></span><span>${COMB_LABEL[s.cb]||s.cb}: <span class="neu">sem dado</span></span></div>`;
+      } else {
+        const varTxt = vp==null ? '' : ` <span class="${vp>0?'pos':(vp<0?'neg':'neu')}">(${vp>0?'+':''}${fmt2(vp)}%)</span>`;
+        html += `<div class="lin"><span class="sw" style="background:${s.color}"></span><span>${COMB_LABEL[s.cb]||s.cb}: R$ ${fmt2(v)}${varTxt}</span></div>`;
+      }
+      if(s.trend && s.trend[idx]!=null && idx>dataEndIdx){
+        html += `<div class="lin"><span class="sw" style="background:${s.color};opacity:.5"></span><span>tendência: R$ ${fmt2(s.trend[idx])}</span></div>`;
+      }
+    });
+    tooltip.innerHTML = html;
+    tooltip.style.display='block';
+    tooltip.style.left = left+'px';
+    tooltip.style.top = top+'px';
+  };
+  const hideTooltip = ()=>{ tooltip.style.display='none'; };
+
+  svg.querySelectorAll('.chart-hover-zone').forEach(z=>{
+    z.addEventListener('mouseenter', e=> showTooltip(parseInt(e.currentTarget.dataset.idx,10), e));
+    z.addEventListener('mousemove',  e=> showTooltip(parseInt(e.currentTarget.dataset.idx,10), e));
+  });
+  svg.addEventListener('mouseleave', hideTooltip);
 }
 function cbColor(cb,i){
   const map={MGO:'#1d4ed8', HFO:'#b45309', Diesel:'#15803d'};

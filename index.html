@@ -473,6 +473,13 @@
     </div>
 
     <div class="card">
+      <h2>Saving de Compras <span class="sub">— preço evitado em negociações, compras antecipadas, etc. — período filtrado</span></h2>
+      <div class="kpi-row" id="savingKpis" style="margin-bottom:10px;"></div>
+      <div id="savingBreakdown"></div>
+      <div style="overflow:auto;margin-top:14px;"><table id="tblSaving"></table></div>
+    </div>
+
+    <div class="card">
       <h2>Médias por Empurrador <span class="sub">— L/h (consumo) e L/Ton (volume) — período filtrado</span></h2>
       <div style="overflow:auto;"><table id="tblMediasEmp"></table></div>
     </div>
@@ -565,8 +572,23 @@
           <datalist id="maFornList"></datalist>
         </div>
         <div class="field"><label>Preço (R$/L)</label><input type="number" step="0.0001" id="maPreco" placeholder="0,00"></div>
+        <div class="field"><label>Número da NF</label><input id="maNF" placeholder="Opcional" style="width:150px;"></div>
       </div>
       <div class="hint" id="maRealizadoHint"></div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:12px;cursor:pointer;">
+        <input type="checkbox" id="maSavingFlag" style="width:auto;"> <b>Registrar Saving?</b>
+        <span class="muted" style="font-size:11px;font-weight:400;">— preço evitado em negociação, compra antecipada, etc.</span>
+      </label>
+      <div id="maSavingBox" style="display:none;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:10px;margin-top:8px;">
+        <div class="row">
+          <div class="field"><label>Preço Evitado (R$/L)</label><input type="number" step="0.0001" id="maPrecoEvitado" placeholder="0,00"></div>
+          <div class="field" style="flex:1;"><label>Justificativa do Saving</label>
+            <input id="maJustif" list="maJustifList" placeholder="Ex.: Negociação direta, compra antecipada..." style="width:100%">
+            <datalist id="maJustifList"></datalist>
+          </div>
+        </div>
+        <div class="hint" id="maSavingHint"></div>
+      </div>
     </div>
     <div class="row"><div class="field" style="flex:1;"><label>Observação</label><input id="maObs" style="width:100%" placeholder="Opcional"></div></div>
     <div class="modal-actions">
@@ -606,8 +628,9 @@ let state = {
   rotas: [],
   medias: {},        // medias[rotaId][empId][condicao] = {tempo, consumo:{MGO,HFO,Diesel}}
   viagens: [],       // {id,empId,rotaId,condicao,dataSaida,horaSaida,status,volumeCarregada,tempoRealizado,consumoRealizado:{},volumeRealizado}
-  abastecimentos: [],// {id,empId,data,comb,qtd,status,obs,cidade,preco,fornecedorId}
+  abastecimentos: [],// {id,empId,data,comb,qtd,status,obs,cidade,preco,fornecedorId,nf,saving,precoEvitado,justificativaId}
   fornecedores: [],  // {id,nome,cidade}
+  justificativas: [],// {id,descricao} — cadastro silencioso de justificativas de saving
   historicoPrecos: [],// {id,data,fornecedorId,combustivel,preco}
   budgetVolume: {},  // {cidade:{'YYYY-MM':toneladas}}
   estoques: [],      // âncoras manuais: {id,empId,comb,data,valor}
@@ -616,11 +639,18 @@ let state = {
 
 function ensureState(){
   if(!state.fornecedores) state.fornecedores=[];
+  if(!state.justificativas) state.justificativas=[];
   if(!state.historicoPrecos) state.historicoPrecos=[];
   if(!state.budgetVolume) state.budgetVolume={};
   if(!state.estoques) state.estoques=[];
   state.viagens.forEach(v=>{ if(!v.status) v.status='Previsto'; });
-  state.abastecimentos.forEach(a=>{ if(!('cidade' in a)) a.cidade=''; });
+  state.abastecimentos.forEach(a=>{
+    if(!('cidade' in a)) a.cidade='';
+    if(!('nf' in a)) a.nf='';
+    if(!('saving' in a)) a.saving=false;
+    if(!('precoEvitado' in a)) a.precoEvitado=0;
+    if(!('justificativaId' in a)) a.justificativaId=null;
+  });
   // Migração: tanques sem data do estoque inicial → assume hoje, para não regredir comportamento existente
   const today = todayStr();
   state.empurradores.forEach(e=>{
@@ -1863,6 +1893,17 @@ function getOrCreateFornecedor(nome, cidade){
   return f;
 }
 
+function getOrCreateJustificativa(descricao){
+  descricao=(descricao||'').trim();
+  if(!descricao) return null;
+  let j=state.justificativas.find(x=>x.descricao.toLowerCase()===descricao.toLowerCase());
+  if(!j){
+    j={id:uid(), descricao};
+    state.justificativas.push(j);
+  }
+  return j;
+}
+
 function openAbastModal(id, prefill){
   editAbastId=id;
   const aEdit = id ? state.abastecimentos.find(x=>x.id===id) : null;
@@ -1893,6 +1934,11 @@ function openAbastModal(id, prefill){
     document.getElementById('maPreco').value=a.preco||'';
     const forn = a.fornecedorId ? state.fornecedores.find(f=>f.id===a.fornecedorId) : null;
     document.getElementById('maForn').value = forn ? forn.nome : '';
+    document.getElementById('maNF').value=a.nf||'';
+    document.getElementById('maSavingFlag').checked=!!a.saving;
+    document.getElementById('maPrecoEvitado').value=a.precoEvitado||'';
+    const just = a.justificativaId ? state.justificativas.find(j=>j.id===a.justificativaId) : null;
+    document.getElementById('maJustif').value = just ? just.descricao : '';
     document.getElementById('maDelete').style.display='';
   }else{
     document.getElementById('maTitle').textContent='Novo Abastecimento';
@@ -1906,6 +1952,10 @@ function openAbastModal(id, prefill){
     document.getElementById('maCidade').value='';
     document.getElementById('maPreco').value='';
     document.getElementById('maForn').value='';
+    document.getElementById('maNF').value='';
+    document.getElementById('maSavingFlag').checked=false;
+    document.getElementById('maPrecoEvitado').value='';
+    document.getElementById('maJustif').value='';
     document.getElementById('maDelete').style.display='none';
   }
   refreshAbastRealizadoBox();
@@ -1931,10 +1981,35 @@ function refreshAbastRealizadoBox(){
   }else{
     hint.innerHTML = `Informe a cidade para sugerir fornecedores existentes. Novos fornecedores são cadastrados automaticamente.`;
   }
+  // datalist de justificativas (cadastro silencioso)
+  document.getElementById('maJustifList').innerHTML =
+    state.justificativas.map(j=>`<option value="${j.descricao.replace(/"/g,'&quot;')}">`).join('');
+  refreshSavingBox();
+}
+function refreshSavingBox(){
+  const on = document.getElementById('maSavingFlag').checked;
+  document.getElementById('maSavingBox').style.display = on ? '' : 'none';
+  if(!on) return;
+  const pe = parseFloat(document.getElementById('maPrecoEvitado').value)||0;
+  const pp = parseFloat(document.getElementById('maPreco').value)||0;
+  const qtd = parseFloat(document.getElementById('maQtd').value)||0;
+  const hint = document.getElementById('maSavingHint');
+  if(pe>0 && pp>0 && qtd>0){
+    const sav=(pe-pp)*qtd;
+    hint.innerHTML = sav>=0
+      ? `Saving estimado: <b style="color:var(--ok)">${fmtMoney(sav)}</b> &nbsp;(${fmt2(pe-pp)} R$/L economizados × ${fmt(qtd)} L).`
+      : `Atenção: o preço pago é maior que o preço evitado — saving negativo de <b style="color:var(--bad)">${fmtMoney(sav)}</b>.`;
+  }else{
+    hint.innerHTML='Informe o <b>preço evitado</b> (referência que seria paga sem a negociação) e a <b>justificativa</b>. Saving = (Preço Evitado − Preço Pago) × Quantidade. Campos opcionais.';
+  }
 }
 ['maStatus','maCidade'].forEach(id=>{
   document.getElementById(id).addEventListener('input', refreshAbastRealizadoBox);
   document.getElementById(id).addEventListener('change', refreshAbastRealizadoBox);
+});
+document.getElementById('maSavingFlag').addEventListener('change', refreshSavingBox);
+['maPrecoEvitado','maPreco','maQtd'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', refreshSavingBox);
 });
 
 document.getElementById('maSave').addEventListener('click', ()=>{
@@ -1947,7 +2022,11 @@ document.getElementById('maSave').addEventListener('click', ()=>{
     obs:document.getElementById('maObs').value.trim(),
     cidade:document.getElementById('maCidade').value.trim(),
     preco:parseFloat(document.getElementById('maPreco').value)||0,
-    fornecedorId:null
+    fornecedorId:null,
+    nf:'',
+    saving:false,
+    precoEvitado:0,
+    justificativaId:null
   };
   if(!data.empId||!data.comb||!data.data||!data.qtd){ alert('Preencha empurrador, combustível, data e quantidade.'); return; }
   if(data.status==='Realizado'){
@@ -1956,6 +2035,17 @@ document.getElementById('maSave').addEventListener('click', ()=>{
     if(!data.preco){ alert('Informe o preço (R$/L) para confirmar o abastecimento como Realizado.'); return; }
     const f = getOrCreateFornecedor(fornNome, data.cidade);
     data.fornecedorId = f ? f.id : null;
+    // NF e Saving — opcionais
+    data.nf = document.getElementById('maNF').value.trim();
+    data.saving = document.getElementById('maSavingFlag').checked;
+    if(data.saving){
+      data.precoEvitado = parseFloat(document.getElementById('maPrecoEvitado').value)||0;
+      const jNome = document.getElementById('maJustif').value.trim();
+      if(jNome){
+        const j = getOrCreateJustificativa(jNome);
+        data.justificativaId = j ? j.id : null;
+      }
+    }
     // também registra no histórico de preços (sem duplicar mesma data/fornecedor/comb/preço)
     if(f && data.preco>0){
       const dup = state.historicoPrecos.some(p =>
@@ -2033,7 +2123,7 @@ function renderAbast(){
   const t=document.getElementById('tblAbast');
   if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum abastecimento no filtro.</td></tr>'; return; }
   let h=`<tr><th></th><th>Data</th><th>Empurrador</th><th>Cidade</th><th>Combustível</th><th class="num">Quantidade (L)</th>
-    <th class="num">Preço (R$/L)</th><th>Fornecedor</th><th>Status</th><th>Observação</th><th>Ações</th></tr>`;
+    <th class="num">Preço (R$/L)</th><th>Fornecedor</th><th>NF</th><th>Status</th><th>Observação</th><th>Ações</th></tr>`;
   list.forEach(a=>{
     const e=empById(a.empId);
     const d=a.data?parseDate(a.data).toLocaleDateString('pt-BR'):'—';
@@ -2048,6 +2138,7 @@ function renderAbast(){
       <td class="num">${fmt(a.qtd)}</td>
       <td class="num">${a.preco?fmt2(a.preco):'—'}</td>
       <td>${forn?forn.nome:'—'}</td>
+      <td>${a.nf||'—'}${a.saving?` <span class="tag" style="background:var(--ok);color:#001018;" title="Saving registrado">Saving</span>`:''}</td>
       <td>
         <select class="status-sel" onchange="changeAbastStatus('${a.id}',this.value)">
           ${STATUS.map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
@@ -2773,9 +2864,100 @@ function renderPrecos(){
 
   renderPrecosChart({chartId:1, comb:prChartCombs[1], style:prChartStyles[1], ini, fim});
   renderPrecosChart({chartId:2, comb:prChartCombs[2], style:prChartStyles[2], ini, fim});
+  renderSaving(ini, fim);
   renderMediasPorEmpurrador(ini, fim);
   renderHpTable();
   renderFornTable();
+}
+
+function renderSaving(ini, fim){
+  const kpis=document.getElementById('savingKpis');
+  const bd=document.getElementById('savingBreakdown');
+  const t=document.getElementById('tblSaving');
+  const noPeriodo=a=>{
+    if(ini && a.data<ini) return false;
+    if(fim && a.data>fim) return false;
+    return true;
+  };
+  const savOf=a=>((a.precoEvitado||0)-(a.preco||0))*(a.qtd||0);
+  const regs=state.abastecimentos.filter(a=>a.status==='Realizado' && a.saving && noPeriodo(a));
+  const absReal=state.abastecimentos.filter(a=>a.status==='Realizado' && noPeriodo(a));
+
+  const totalSaving=regs.reduce((s,a)=>s+savOf(a),0);
+  const totalLitros=regs.reduce((s,a)=>s+(a.qtd||0),0);
+  const totalPago=absReal.reduce((s,a)=>s+((a.qtd||0)*(a.preco||0)),0);
+  const pct=totalPago>0 ? totalSaving/totalPago*100 : 0;
+
+  // agrupar por justificativa
+  const grupos={};
+  regs.forEach(a=>{
+    const jid=a.justificativaId||'__none__';
+    if(!grupos[jid]) grupos[jid]={litros:0,saving:0,custo:0,count:0};
+    grupos[jid].litros+=a.qtd||0;
+    grupos[jid].saving+=savOf(a);
+    grupos[jid].custo+=(a.qtd||0)*(a.preco||0);
+    grupos[jid].count++;
+  });
+  const linhas=Object.entries(grupos).map(([jid,g])=>{
+    const j=state.justificativas.find(x=>x.id===jid);
+    return {nome:j?j.descricao:'(sem justificativa)', ...g};
+  }).sort((a,b)=>b.saving-a.saving);
+  const topJust=linhas.length ? linhas[0].nome : '—';
+
+  kpis.innerHTML=`
+    <div class="kpi"><div class="v" style="color:var(--ok)">${totalSaving?fmtMoney(totalSaving):'—'}</div><div class="l">Saving total</div></div>
+    <div class="kpi"><div class="v">${totalPago?fmt1(pct)+'%':'—'}</div><div class="l">% sobre R$ pago</div></div>
+    <div class="kpi"><div class="v">${regs.length}</div><div class="l">Registros com saving</div></div>
+    <div class="kpi"><div class="v">${fmt(totalLitros)}</div><div class="l">Litros com saving</div></div>
+    <div class="kpi"><div class="v" style="font-size:14px;line-height:1.3;">${topJust}</div><div class="l">Maior categoria</div></div>
+  `;
+
+  if(!regs.length){
+    bd.innerHTML='';
+    t.innerHTML='<tr><td class="empty">Nenhum saving registrado no período. Ao confirmar um abastecimento como "Realizado", marque <b>Registrar Saving?</b> e informe o preço evitado e a justificativa.</td></tr>';
+    return;
+  }
+
+  // barras horizontais por justificativa
+  const maxSav=Math.max(...linhas.map(l=>Math.abs(l.saving)),1);
+  bd.innerHTML='<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">Saving por justificativa</div>'+
+    linhas.map(l=>{
+      const w=Math.max(2,Math.abs(l.saving)/maxSav*100);
+      const col=l.saving>=0?'var(--ok)':'var(--bad)';
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div style="width:200px;flex-shrink:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${l.nome.replace(/"/g,'&quot;')}">${l.nome}</div>
+        <div style="flex:1;background:var(--panel2);border-radius:4px;height:18px;overflow:hidden;">
+          <div style="width:${w}%;background:${col};height:100%;border-radius:4px;"></div>
+        </div>
+        <div style="width:120px;flex-shrink:0;text-align:right;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:${col};">${fmtMoney(l.saving)}</div>
+      </div>`;
+    }).join('');
+
+  let h=`<tr><th>Justificativa</th><th class="num">Registros</th><th class="num">Litros</th><th class="num">Custo (R$)</th><th class="num">Saving (R$)</th><th class="num">Saving R$/L</th><th class="num">% do total</th></tr>`;
+  linhas.forEach(l=>{
+    const slL=l.litros>0 ? l.saving/l.litros : 0;
+    const pctTot=totalSaving!==0 ? l.saving/totalSaving*100 : 0;
+    h+=`<tr>
+      <td>${l.nome}</td>
+      <td class="num">${l.count}</td>
+      <td class="num">${fmt(l.litros)}</td>
+      <td class="num">${fmtMoney(l.custo)}</td>
+      <td class="num" style="color:${l.saving>=0?'var(--ok)':'var(--bad)'};font-weight:600;">${fmtMoney(l.saving)}</td>
+      <td class="num">${fmt2(slL)}</td>
+      <td class="num">${fmt1(pctTot)}%</td>
+    </tr>`;
+  });
+  const totCusto=regs.reduce((s,a)=>s+(a.qtd||0)*(a.preco||0),0);
+  h+=`<tr style="font-weight:700;background:var(--panel2);">
+    <td>Total</td>
+    <td class="num">${regs.length}</td>
+    <td class="num">${fmt(totalLitros)}</td>
+    <td class="num">${fmtMoney(totCusto)}</td>
+    <td class="num" style="color:var(--ok);">${fmtMoney(totalSaving)}</td>
+    <td class="num">${fmt2(totalLitros>0?totalSaving/totalLitros:0)}</td>
+    <td class="num">100%</td>
+  </tr>`;
+  t.innerHTML=h;
 }
 
 function renderHpTable(){
@@ -3371,7 +3553,7 @@ document.getElementById('fileImportData').addEventListener('change', e=>{
   r.onload=ev=>{
     try{
       const data=JSON.parse(ev.target.result);
-      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],historicoPrecos:[],budgetVolume:{},estoques:[]}, data);
+      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],justificativas:[],historicoPrecos:[],budgetVolume:{},estoques:[]}, data);
       ensureState();
       save(); renderView(document.querySelector('nav button.active').dataset.view);
       alert('Dados importados.');
@@ -3515,7 +3697,7 @@ async function loadFromFile(silent){
     const txt=await f.text();
     if(txt.trim()){
       const data=JSON.parse(txt);
-      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],historicoPrecos:[],budgetVolume:{},estoques:[]}, data);
+      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],justificativas:[],historicoPrecos:[],budgetVolume:{},estoques:[]}, data);
       ensureState();
       save();
       renderView(document.querySelector('nav button.active').dataset.view);

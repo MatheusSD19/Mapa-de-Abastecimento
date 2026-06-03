@@ -244,6 +244,7 @@
     <button data-view="abastecimentos">Abastecimentos</button>
     <button data-view="viagens">Viagens</button>
     <button data-view="precos">Preços e Desempenho</button>
+    <button data-view="precificacao">Precificação de Cotas</button>
   </nav>
   <div class="side-bottom">
     <button class="theme-toggle" id="btnTheme" title="Alternar tema">🌙</button>
@@ -510,6 +511,11 @@
       <div style="overflow:auto;"><table id="tblForn"></table></div>
     </div>
   </section>
+
+  <!-- ================= PRECIFICAÇÃO DE COTAS ================= -->
+  <section class="view" id="view-precificacao">
+    <div id="precRoot"></div>
+  </section>
 </main>
 </div>
 
@@ -634,7 +640,8 @@ let state = {
   historicoPrecos: [],// {id,data,fornecedorId,combustivel,preco}
   budgetVolume: {},  // {cidade:{'YYYY-MM':toneladas}}
   estoques: [],      // âncoras manuais: {id,empId,comb,data,valor}
-  mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
+  mapaEmpFilter: null,// array de ids exibidos no Mapa de Giros; null = todos
+  cenarios: []       // Precificação de Cotas — cenários anuais de orçamento
 };
 
 function ensureState(){
@@ -643,6 +650,7 @@ function ensureState(){
   if(!state.historicoPrecos) state.historicoPrecos=[];
   if(!state.budgetVolume) state.budgetVolume={};
   if(!state.estoques) state.estoques=[];
+  if(!state.cenarios) state.cenarios=[];
   state.viagens.forEach(v=>{ if(!v.status) v.status='Previsto'; });
   state.abastecimentos.forEach(a=>{
     if(!('cidade' in a)) a.cidade='';
@@ -807,6 +815,7 @@ function renderView(v){
   if(v==='abastecimentos'){ renderAbast(); }
   if(v==='viagens'){ renderViagens(); }
   if(v==='precos'){ renderPrecos(); }
+  if(v==='precificacao'){ renderPrec(); }
 }
 
 /* =========================================================
@@ -3770,6 +3779,324 @@ document.getElementById('btnSidebar').addEventListener('click', ()=>{
   localStorage.setItem(SIDEBAR_KEY, document.body.classList.contains('sidebar-collapsed')?'1':'0');
 });
 if(localStorage.getItem(SIDEBAR_KEY)==='1') document.body.classList.add('sidebar-collapsed');
+
+/* =========================================================
+   PRECIFICAÇÃO DE COTAS — calculadora de orçamento anual
+   ---------------------------------------------------------
+   Reaproveita as médias (tempo/consumo por rota/empurrador/condição)
+   e o consumo de porto para projetar litros e custo mês a mês.
+   ========================================================= */
+const PERIODOS = ['Cheia','Meia','Seca'];
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+let precSelId = null;
+let precTab = 'config';
+
+function cenById(id){ return state.cenarios.find(c=>c.id===id); }
+function novoCenario(nome, ano){
+  const periodoMes={}; for(let m=1;m<=12;m++) periodoMes[m]='Cheia';
+  const precos={}; COMBS.forEach(c=>{ precos[c]={}; for(let m=1;m<=12;m++) precos[c][m]=0; });
+  return {id:uid(), nome, ano, periodoMes, tonBarcaca:{Cheia:0,Meia:0,Seca:0}, precos, rotas:[]};
+}
+
+// ----------------- motor de cálculo -----------------
+// Para cada mês/rota/barco projeta horas de navegação, horas de porto,
+// litros por combustível e custo. A demanda de uma rota é dividida entre os
+// barcos navegando proporcionalmente à capacidade de comboio de cada um
+// (nº barcaças × tonelada do período). Ida usa a condição "Carregada" e a
+// volta a condição "Vazia" por padrão (configurável por barco). As horas que
+// sobram no mês (não navegadas) são debitadas no consumo de porto do barco —
+// igual à lógica do Mapa de Giros.
+function calcCenario(cen){
+  const res={meses:[], porRota:{}, totalAnual:0, litrosAnual:{}, custoAnualComb:{}};
+  COMBS.forEach(c=>{ res.litrosAnual[c]=0; res.custoAnualComb[c]=0; });
+  (cen.rotas||[]).forEach(rc=>{
+    res.porRota[rc.rotaId]={demandaAnual:0, custoAnual:0, litrosAnual:{}, custoPorTon:0};
+    COMBS.forEach(c=>res.porRota[rc.rotaId].litrosAnual[c]=0);
+  });
+  for(let mes=1; mes<=12; mes++){
+    const period = cen.periodoMes?.[mes] || 'Cheia';
+    const tonB = (cen.tonBarcaca?.[period]) || 0;
+    const dias = new Date(cen.ano, mes, 0).getDate();
+    const monthHours = dias*24;
+    const mObj={mes, period, tonB, dias, monthHours, rotas:{}, totalCusto:0, litros:{}, custoComb:{}};
+    COMBS.forEach(c=>{ mObj.litros[c]=0; mObj.custoComb[c]=0; });
+    (cen.rotas||[]).forEach(rc=>{
+      const demanda = rc.demanda?.[mes] || 0;
+      const rObj={demanda, custoTotal:0, litros:{}, custoComb:{}, barcos:[], capacidadeOk:true};
+      COMBS.forEach(c=>{ rObj.litros[c]=0; rObj.custoComb[c]=0; });
+      const barcos = rc.barcos||[];
+      const naveg = barcos.filter(b=>b.papel==='navegando');
+      const capTotal = naveg.reduce((s,b)=> s + (b.nBarcacas||0)*tonB, 0);
+      barcos.forEach(b=>{
+        const emp = empById(b.empId);
+        let navHours=0, trips=0, share=0;
+        const litros={}; COMBS.forEach(c=>litros[c]=0);
+        if(b.papel==='navegando' && emp){
+          const cap = (b.nBarcacas||0)*tonB; // ton por viagem (ida carregada)
+          share = capTotal>0 ? cap/capTotal : (naveg.length ? 1/naveg.length : 0);
+          const boatDemand = demanda*share;
+          trips = cap>0 ? boatDemand/cap : 0;
+          const condIda=b.condIda||'Carregada', condVolta=b.condVolta||'Vazia';
+          const mIda=getMedia(rc.rotaId,b.empId,condIda);
+          const mVolta=getMedia(rc.rotaId,b.empId,condVolta);
+          const tIda=mIda?.tempo||0, tVolta=mVolta?.tempo||0;
+          navHours = trips*(tIda+tVolta);
+          (emp.combustiveis||[]).forEach(c=>{
+            const consIda=(mIda?.consumo?.[c]||0)*tIda;
+            const consVolta=(mVolta?.consumo?.[c]||0)*tVolta;
+            litros[c]+= trips*(consIda+consVolta);
+          });
+        }
+        const idleHours = Math.max(0, monthHours-navHours);
+        if(emp){
+          const combPorto=(emp.combustiveis||[]).find(c=>c==='MGO'||c==='Diesel');
+          if(combPorto) litros[combPorto]+=(emp.consumoPorto||0)*idleHours;
+        }
+        const overCap = navHours>monthHours;
+        if(overCap) rObj.capacidadeOk=false;
+        let custo=0;
+        COMBS.forEach(c=>{
+          const preco=cen.precos?.[c]?.[mes]||0;
+          const cst=litros[c]*preco;
+          custo+=cst;
+          rObj.litros[c]+=litros[c]; rObj.custoComb[c]+=cst;
+        });
+        rObj.custoTotal+=custo;
+        rObj.barcos.push({empId:b.empId, papel:b.papel, nBarcacas:b.nBarcacas||0, share, trips, navHours, idleHours, litros, custo, overCap});
+      });
+      mObj.rotas[rc.rotaId]=rObj;
+      mObj.totalCusto+=rObj.custoTotal;
+      COMBS.forEach(c=>{ mObj.litros[c]+=rObj.litros[c]; mObj.custoComb[c]+=rObj.custoComb[c]; });
+      const pr=res.porRota[rc.rotaId];
+      pr.demandaAnual+=demanda; pr.custoAnual+=rObj.custoTotal;
+      COMBS.forEach(c=>pr.litrosAnual[c]+=rObj.litros[c]);
+    });
+    res.meses.push(mObj);
+    res.totalAnual+=mObj.totalCusto;
+    COMBS.forEach(c=>{ res.litrosAnual[c]+=mObj.litros[c]; res.custoAnualComb[c]+=mObj.custoComb[c]; });
+  }
+  Object.values(res.porRota).forEach(pr=>{ pr.custoPorTon = pr.demandaAnual>0 ? pr.custoAnual/pr.demandaAnual : 0; });
+  return res;
+}
+
+// ----------------- render principal -----------------
+function renderPrec(){
+  const root=document.getElementById('precRoot');
+  if(!root) return;
+  if(!state.cenarios) state.cenarios=[];
+  const cens=state.cenarios;
+  if(!precSelId || !cens.find(c=>c.id===precSelId)) precSelId = cens[0]?.id || null;
+  let h='';
+  h+=`<div class="card">
+    <h2>Precificação de Cotas <span class="sub">— calculadora de custo para orçamento anual, reaproveitando as médias de tempo e consumo</span></h2>
+    <div class="row" style="align-items:flex-end;">
+      <div class="field"><label>Cenário</label>
+        <select id="precSel">${cens.map(c=>`<option value="${c.id}" ${c.id===precSelId?'selected':''}>${c.nome} (${c.ano})</option>`).join('') || '<option value="">— nenhum —</option>'}</select>
+      </div>
+      <button class="btn" id="precNovo">+ Novo cenário</button>
+      ${precSelId?`<button class="btn secondary" id="precDup">Duplicar</button><button class="btn secondary" id="precDel">Excluir</button>`:''}
+    </div>
+    <div class="hint">Crie um cenário por ano (ex.: 2027): defina o <b>calendário do rio</b> (cheia/meia/seca), a <b>tonelada por barcaça</b> em cada período, os <b>preços</b> de combustível mês a mês e as <b>rotas com seus barcos</b>. O cálculo usa as médias de <b>tempo</b> e <b>consumo</b> de <b>Médias de Consumo</b> (ida = condição Carregada, volta = condição Vazia, ajustável por barco) e o <b>consumo de porto</b> de cada empurrador para as horas paradas/de apoio.</div>
+  </div>`;
+  if(!precSelId){
+    root.innerHTML=h+`<div class="card"><div class="empty">Crie um cenário para começar.</div></div>`;
+    bindPrecHeader();
+    return;
+  }
+  const cen=cenById(precSelId);
+  h+=`<div class="card"><div class="row" style="gap:6px;">
+    ${[['config','Configuração'],['rotas','Rotas & Barcos'],['result','Resultado']].map(([k,l])=>`<button class="btn ${precTab===k?'':'secondary'}" data-ptab="${k}">${l}</button>`).join('')}
+  </div></div>`;
+  if(precTab==='config') h+=precConfigHTML(cen);
+  else if(precTab==='rotas') h+=precRotasHTML(cen);
+  else h+=precResultHTML(cen);
+  root.innerHTML=h;
+  bindPrecHeader();
+  document.querySelectorAll('[data-ptab]').forEach(b=>b.addEventListener('click',()=>{ precTab=b.dataset.ptab; renderPrec(); }));
+  if(precTab==='config') bindPrecConfig(cen);
+  else if(precTab==='rotas') bindPrecRotas(cen);
+  else bindPrecResult(cen);
+}
+
+function bindPrecHeader(){
+  const root=document.getElementById('precRoot');
+  root.querySelector('#precSel')?.addEventListener('change',e=>{ precSelId=e.target.value; renderPrec(); });
+  root.querySelector('#precNovo')?.addEventListener('click',()=>{
+    const ano=new Date().getFullYear()+1;
+    const cen=novoCenario('Orçamento '+ano, ano);
+    state.cenarios.push(cen); precSelId=cen.id; precTab='config'; save(); renderPrec();
+  });
+  root.querySelector('#precDup')?.addEventListener('click',()=>{
+    const cur=cenById(precSelId); if(!cur) return;
+    const cp=JSON.parse(JSON.stringify(cur)); cp.id=uid(); cp.nome=cur.nome+' (cópia)';
+    state.cenarios.push(cp); precSelId=cp.id; save(); renderPrec();
+  });
+  root.querySelector('#precDel')?.addEventListener('click',()=>{
+    if(!confirm('Excluir este cenário?')) return;
+    state.cenarios=state.cenarios.filter(c=>c.id!==precSelId); precSelId=null; save(); renderPrec();
+  });
+}
+
+// ----------------- aba Configuração -----------------
+function precConfigHTML(cen){
+  let h='<div class="card"><h2>Configuração do cenário</h2>';
+  h+=`<div class="row">
+    <div class="field"><label>Nome</label><input id="cenNome" value="${cen.nome||''}"></div>
+    <div class="field"><label>Ano</label><input type="number" id="cenAno" value="${cen.ano||''}"></div>
+  </div>`;
+  h+=`<h3 style="margin-top:14px;font-size:14px;color:var(--accent);">Calendário do rio e tonelada por barcaça</h3>`;
+  h+=`<div class="hint">Defina o período de cada mês e a tonelada média por barcaça em cada período (padrão para todos os barcos). Volume por comboio = nº de barcaças do barco × tonelada do período do mês.</div>`;
+  h+=`<div class="row" style="margin-top:8px;">`;
+  PERIODOS.forEach(p=>{ h+=`<div class="field"><label>Ton/barcaça — ${p}</label><input type="number" step="any" data-cen-tonb="${p}" value="${cen.tonBarcaca?.[p]||''}"></div>`; });
+  h+=`</div>`;
+  h+=`<div style="overflow:auto;margin-top:8px;"><table><tr><th>Mês</th>${MESES.map(m=>`<th class="num">${m}</th>`).join('')}</tr><tr><td>Período</td>`;
+  for(let mes=1;mes<=12;mes++){
+    const cur=cen.periodoMes?.[mes]||'Cheia';
+    h+=`<td><select data-cen-per="${mes}">${PERIODOS.map(p=>`<option ${p===cur?'selected':''}>${p}</option>`).join('')}</select></td>`;
+  }
+  h+=`</tr></table></div>`;
+  h+=`<h3 style="margin-top:14px;font-size:14px;color:var(--accent);">Preços esperados de combustível (R$/L) — mês a mês</h3>`;
+  h+=`<div class="row" style="align-items:flex-end;"><div class="field"><label>Preencher combustível</label><select id="precFillComb">${COMBS.map(c=>`<option value="${c}">${COMB_LABEL[c]}</option>`).join('')}</select></div><div class="field"><label>Valor (R$/L) para todos os meses</label><input type="number" step="any" id="precFillVal"></div><button class="btn secondary" id="precFillBtn">Aplicar a todos os meses</button></div>`;
+  h+=`<div style="overflow:auto;margin-top:8px;"><table><tr><th>Combustível</th>${MESES.map(m=>`<th class="num">${m}</th>`).join('')}</tr>`;
+  COMBS.forEach(c=>{
+    h+=`<tr><td><span class="tag ${c}">${COMB_LABEL[c]}</span></td>`;
+    for(let mes=1;mes<=12;mes++) h+=`<td class="num"><input class="inline-input" type="number" step="any" data-cen-preco="${c}|${mes}" value="${cen.precos?.[c]?.[mes]||''}"></td>`;
+    h+=`</tr>`;
+  });
+  h+=`</table></div></div>`;
+  return h;
+}
+function bindPrecConfig(cen){
+  const root=document.getElementById('precRoot');
+  root.querySelector('#cenNome')?.addEventListener('change',e=>{ cen.nome=e.target.value.trim()||cen.nome; save(); renderPrec(); });
+  root.querySelector('#cenAno')?.addEventListener('change',e=>{ cen.ano=parseInt(e.target.value)||cen.ano; save(); renderPrec(); });
+  root.querySelectorAll('[data-cen-tonb]').forEach(inp=>inp.addEventListener('change',()=>{ cen.tonBarcaca=cen.tonBarcaca||{}; cen.tonBarcaca[inp.dataset.cenTonb]=parseFloat(inp.value)||0; save(); }));
+  root.querySelectorAll('[data-cen-per]').forEach(sel=>sel.addEventListener('change',()=>{ cen.periodoMes=cen.periodoMes||{}; cen.periodoMes[sel.dataset.cenPer]=sel.value; save(); }));
+  root.querySelectorAll('[data-cen-preco]').forEach(inp=>inp.addEventListener('change',()=>{ const[c,mes]=inp.dataset.cenPreco.split('|'); cen.precos=cen.precos||{}; cen.precos[c]=cen.precos[c]||{}; cen.precos[c][mes]=parseFloat(inp.value)||0; save(); }));
+  root.querySelector('#precFillBtn')?.addEventListener('click',()=>{
+    const c=root.querySelector('#precFillComb').value;
+    const v=parseFloat(root.querySelector('#precFillVal').value)||0;
+    cen.precos=cen.precos||{}; cen.precos[c]=cen.precos[c]||{};
+    for(let m=1;m<=12;m++) cen.precos[c][m]=v;
+    save(); renderPrec();
+  });
+}
+
+// ----------------- aba Rotas & Barcos -----------------
+function precRotasHTML(cen){
+  const usadas=new Set((cen.rotas||[]).map(r=>r.rotaId));
+  const disp=rotasAtivas().filter(r=>!usadas.has(r.id));
+  let h='<div class="card"><h2>Rotas do cenário</h2>';
+  h+=`<div class="row" style="align-items:flex-end;"><div class="field"><label>Adicionar rota</label><select id="precAddRotaSel">${disp.map(r=>`<option value="${r.id}">${r.nome}</option>`).join('') || '<option value="">— todas já adicionadas —</option>'}</select></div><button class="btn" id="precAddRota" ${disp.length?'':'disabled'}>+ Adicionar rota</button></div>`;
+  if(!(cen.rotas||[]).length){ h+='<div class="empty">Nenhuma rota no cenário. Adicione uma rota cadastrada nas Premissas.</div></div>'; return h; }
+  h+='</div>';
+  (cen.rotas||[]).forEach(rc=>{
+    const rota=rotaById(rc.rotaId); if(!rota) return;
+    h+=`<div class="card"><h2>${rota.nome} <span class="sub">— ${rota.origem||''} → ${rota.destino||''}</span><button class="btn secondary" style="float:right;" data-prec-delrota="${rc.rotaId}">Remover rota</button></h2>`;
+    h+=`<h3 style="font-size:13px;color:var(--accent);">Demanda mensal (toneladas)</h3>`;
+    h+=`<div style="overflow:auto;"><table><tr>${MESES.map(m=>`<th class="num">${m}</th>`).join('')}</tr><tr>`;
+    for(let mes=1;mes<=12;mes++) h+=`<td class="num"><input class="inline-input" type="number" step="any" data-prec-dem="${rc.rotaId}|${mes}" value="${rc.demanda?.[mes]||''}"></td>`;
+    h+=`</tr></table></div>`;
+    h+=`<h3 style="margin-top:12px;font-size:13px;color:var(--accent);">Barcos nesta rota</h3>`;
+    const empsDisp=empsAtivos().filter(e=>!(rc.barcos||[]).some(b=>b.empId===e.id));
+    h+=`<div class="row" style="align-items:flex-end;"><div class="field"><label>Adicionar barco</label><select data-prec-addbarco-sel="${rc.rotaId}">${empsDisp.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('') || '<option value="">— todos já adicionados —</option>'}</select></div><button class="btn secondary" data-prec-addbarco="${rc.rotaId}" ${empsDisp.length?'':'disabled'}>+ Adicionar barco</button></div>`;
+    if((rc.barcos||[]).length){
+      h+=`<div style="overflow:auto;margin-top:8px;"><table><tr><th>Barco</th><th>Papel</th><th class="num">Nº barcaças</th><th>Cond. ida</th><th>Cond. volta</th><th></th></tr>`;
+      (rc.barcos||[]).forEach(b=>{
+        const emp=empById(b.empId); if(!emp) return;
+        const apoio=b.papel==='apoio';
+        h+=`<tr><td>${emp.nome}</td>
+          <td><select data-prec-papel="${rc.rotaId}|${b.empId}"><option value="navegando" ${!apoio?'selected':''}>Navegando</option><option value="apoio" ${apoio?'selected':''}>Apoio portuário</option></select></td>
+          <td class="num"><input class="inline-input" type="number" step="any" data-prec-nbarc="${rc.rotaId}|${b.empId}" value="${b.nBarcacas||''}" ${apoio?'disabled':''}></td>
+          <td><select data-prec-condida="${rc.rotaId}|${b.empId}" ${apoio?'disabled':''}>${CONDICOES.map(cd=>`<option ${(b.condIda||'Carregada')===cd?'selected':''}>${cd}</option>`).join('')}</select></td>
+          <td><select data-prec-condvolta="${rc.rotaId}|${b.empId}" ${apoio?'disabled':''}>${CONDICOES.map(cd=>`<option ${(b.condVolta||'Vazia')===cd?'selected':''}>${cd}</option>`).join('')}</select></td>
+          <td><button class="btn secondary" data-prec-delbarco="${rc.rotaId}|${b.empId}">✕</button></td></tr>`;
+      });
+      h+=`</table></div>`;
+    } else {
+      h+=`<div class="empty">Nenhum barco. Adicione ao menos um barco navegando.</div>`;
+    }
+    h+=`<div class="hint">Barcos <b>navegando</b> atendem a demanda (volume/viagem = nº barcaças × ton do período; a demanda é dividida entre eles proporcionalmente à capacidade). Barcos de <b>apoio portuário</b> não carregam volume — consomem só no porto durante todo o mês.</div>`;
+    h+='</div>';
+  });
+  return h;
+}
+function bindPrecRotas(cen){
+  const root=document.getElementById('precRoot');
+  const findRc=rid=>cen.rotas.find(r=>r.rotaId===rid);
+  const findB=(rid,eid)=>findRc(rid)?.barcos.find(x=>x.empId===eid);
+  root.querySelector('#precAddRota')?.addEventListener('click',()=>{
+    const rid=root.querySelector('#precAddRotaSel')?.value; if(!rid) return;
+    cen.rotas=cen.rotas||[]; cen.rotas.push({rotaId:rid, demanda:{}, barcos:[]}); save(); renderPrec();
+  });
+  root.querySelectorAll('[data-prec-delrota]').forEach(b=>b.addEventListener('click',()=>{ cen.rotas=cen.rotas.filter(r=>r.rotaId!==b.dataset.precDelrota); save(); renderPrec(); }));
+  root.querySelectorAll('[data-prec-dem]').forEach(inp=>inp.addEventListener('change',()=>{ const[rid,mes]=inp.dataset.precDem.split('|'); const rc=findRc(rid); rc.demanda=rc.demanda||{}; rc.demanda[mes]=parseFloat(inp.value)||0; save(); }));
+  root.querySelectorAll('[data-prec-addbarco]').forEach(btn=>btn.addEventListener('click',()=>{
+    const rid=btn.dataset.precAddbarco; const eid=root.querySelector(`[data-prec-addbarco-sel="${rid}"]`)?.value; if(!eid) return;
+    const rc=findRc(rid); rc.barcos=rc.barcos||[]; rc.barcos.push({empId:eid, papel:'navegando', nBarcacas:0, condIda:'Carregada', condVolta:'Vazia'}); save(); renderPrec();
+  }));
+  root.querySelectorAll('[data-prec-delbarco]').forEach(btn=>btn.addEventListener('click',()=>{ const[rid,eid]=btn.dataset.precDelbarco.split('|'); const rc=findRc(rid); rc.barcos=rc.barcos.filter(x=>x.empId!==eid); save(); renderPrec(); }));
+  root.querySelectorAll('[data-prec-papel]').forEach(sel=>sel.addEventListener('change',()=>{ const[rid,eid]=sel.dataset.precPapel.split('|'); findB(rid,eid).papel=sel.value; save(); renderPrec(); }));
+  root.querySelectorAll('[data-prec-nbarc]').forEach(inp=>inp.addEventListener('change',()=>{ const[rid,eid]=inp.dataset.precNbarc.split('|'); findB(rid,eid).nBarcacas=parseFloat(inp.value)||0; save(); }));
+  root.querySelectorAll('[data-prec-condida]').forEach(sel=>sel.addEventListener('change',()=>{ const[rid,eid]=sel.dataset.precCondida.split('|'); findB(rid,eid).condIda=sel.value; save(); }));
+  root.querySelectorAll('[data-prec-condvolta]').forEach(sel=>sel.addEventListener('change',()=>{ const[rid,eid]=sel.dataset.precCondvolta.split('|'); findB(rid,eid).condVolta=sel.value; save(); }));
+}
+
+// ----------------- aba Resultado -----------------
+function precResultHTML(cen){
+  const r=calcCenario(cen);
+  let h=`<div class="card"><h2>Resultado — ${cen.nome} (${cen.ano})</h2>`;
+  h+=`<div class="kpi-row">`;
+  h+=`<div class="kpi"><div class="l">Orçamento anual</div><div class="v">${fmtMoney(r.totalAnual)}</div></div>`;
+  COMBS.forEach(c=> h+=`<div class="kpi"><div class="l">${COMB_LABEL[c]} (ano)</div><div class="v">${fmtMoney(r.custoAnualComb[c])}</div><div class="muted" style="font-size:11px;">${fmt(r.litrosAnual[c])} L</div></div>`);
+  h+=`</div>`;
+  h+=`<div class="row"><button class="btn secondary" id="precExport">Exportar Excel</button></div></div>`;
+  // alertas de capacidade
+  const alerts=[];
+  r.meses.forEach(m=>Object.entries(m.rotas).forEach(([rid,ro])=>{ if(!ro.capacidadeOk) alerts.push(`${MESES[m.mes-1]} · ${rotaById(rid)?.nome||rid} — horas de navegação excedem as horas do mês (capacidade insuficiente para a demanda).`); }));
+  if(alerts.length){ h+=`<div class="card" style="border-left:3px solid var(--warn);"><h3 style="color:var(--warn);font-size:14px;">⚠ Alertas de capacidade</h3><ul style="margin:6px 0 0 18px;">${alerts.map(a=>`<li>${a}</li>`).join('')}</ul></div>`; }
+  // R$/t por rota
+  h+=`<div class="card"><h2>Custo por tonelada (R$/t) <span class="sub">— base para precificar a cota</span></h2><div style="overflow:auto;"><table><tr><th>Rota</th><th class="num">Demanda anual (t)</th><th class="num">Custo anual</th><th class="num">R$/t</th></tr>`;
+  const rotasEntries=Object.entries(r.porRota);
+  if(!rotasEntries.length){ h+=`<tr><td colspan="4"><span class="empty">Sem rotas no cenário.</span></td></tr>`; }
+  rotasEntries.forEach(([rid,pr])=>{ h+=`<tr><td>${rotaById(rid)?.nome||rid}</td><td class="num">${fmt(pr.demandaAnual)}</td><td class="num">${fmtMoney(pr.custoAnual)}</td><td class="num"><b>${fmtMoney(pr.custoPorTon)}</b></td></tr>`; });
+  h+=`</table></div></div>`;
+  // orçamento mês a mês
+  h+=`<div class="card"><h2>Orçamento mês a mês</h2><div style="overflow:auto;"><table><tr><th>Mês</th><th>Período</th><th class="num">Demanda (t)</th>`;
+  COMBS.forEach(c=>h+=`<th class="num">${COMB_LABEL[c]} (L)</th>`);
+  h+=`<th class="num">Custo total</th></tr>`;
+  r.meses.forEach(m=>{
+    const demMes=Object.values(m.rotas).reduce((s,ro)=>s+ro.demanda,0);
+    h+=`<tr><td>${MESES[m.mes-1]}</td><td>${m.period}</td><td class="num">${fmt(demMes)}</td>`;
+    COMBS.forEach(c=>h+=`<td class="num">${fmt(m.litros[c])}</td>`);
+    h+=`<td class="num">${fmtMoney(m.totalCusto)}</td></tr>`;
+  });
+  const demAnual=Object.values(r.porRota).reduce((s,p)=>s+p.demandaAnual,0);
+  h+=`<tr style="font-weight:700;border-top:2px solid var(--accent);"><td>Anual</td><td>—</td><td class="num">${fmt(demAnual)}</td>`;
+  COMBS.forEach(c=>h+=`<td class="num">${fmt(r.litrosAnual[c])}</td>`);
+  h+=`<td class="num">${fmtMoney(r.totalAnual)}</td></tr></table></div></div>`;
+  return h;
+}
+function bindPrecResult(cen){
+  document.getElementById('precExport')?.addEventListener('click',()=>exportPrec(cen));
+}
+function exportPrec(cen){
+  const r=calcCenario(cen);
+  const wb=XLSX.utils.book_new();
+  const head=['Mês','Período','Demanda (t)', ...COMBS.map(c=>COMB_LABEL[c]+' (L)'), ...COMBS.map(c=>COMB_LABEL[c]+' (R$)'), 'Custo total (R$)'];
+  const rows=[head];
+  r.meses.forEach(m=>{
+    const dem=Object.values(m.rotas).reduce((s,ro)=>s+ro.demanda,0);
+    rows.push([MESES[m.mes-1], m.period, dem, ...COMBS.map(c=>m.litros[c]), ...COMBS.map(c=>m.custoComb[c]), m.totalCusto]);
+  });
+  const demAnual=Object.values(r.porRota).reduce((s,p)=>s+p.demandaAnual,0);
+  rows.push(['Anual','', demAnual, ...COMBS.map(c=>r.litrosAnual[c]), ...COMBS.map(c=>r.custoAnualComb[c]), r.totalAnual]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Mensal');
+  const rr=[['Rota','Demanda anual (t)','Custo anual (R$)','R$/t']];
+  Object.entries(r.porRota).forEach(([rid,pr])=>rr.push([rotaById(rid)?.nome||rid, pr.demandaAnual, pr.custoAnual, pr.custoPorTon]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rr), 'Por rota');
+  XLSX.writeFile(wb, ('precificacao_'+cen.nome+'_'+cen.ano+'.xlsx').replace(/\s+/g,'_'));
+}
 
 /* =========================================================
    INIT

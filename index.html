@@ -219,6 +219,41 @@
   .small-tbl input{width:100%;}
   .modal.wide{width:680px;}
   .modal.xwide{width:780px;}
+  /* ===== Dashboard ===== */
+  .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
+  .dash-grid .full{grid-column:1 / -1;}
+  @media (max-width:1180px){ .dash-grid{grid-template-columns:1fr;} }
+  .chart-card h3{font-size:13px;margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .chart-card h3 .sub{font-size:11px;color:var(--muted);font-weight:400;}
+  .chart-card .ch-tools{display:flex;gap:6px;align-items:center;margin-left:auto;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .seg button{background:var(--panel2);color:var(--txt);border:none;border-right:1px solid var(--line);padding:5px 10px;font-size:11px;cursor:pointer;}
+  .seg button:last-child{border-right:none;}
+  .seg button.active{background:var(--accent2);color:#001018;font-weight:600;}
+  .hbars{display:flex;flex-direction:column;gap:7px;margin-top:4px;}
+  .hbar{display:flex;align-items:center;gap:8px;}
+  .hbar .nm{width:150px;flex-shrink:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hbar .track{flex:1;background:var(--panel2);border-radius:4px;height:18px;overflow:hidden;position:relative;}
+  .hbar .fill{height:100%;border-radius:4px;}
+  .hbar .val{width:120px;flex-shrink:0;text-align:right;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
+  .dash-crumb{font-size:12px;color:var(--muted);margin-top:8px;}
+  .dash-crumb b{color:var(--accent);cursor:pointer;}
+  .dash-empty{color:var(--muted);font-size:12px;padding:30px 10px;text-align:center;}
+  .kpi.good .v{color:var(--ok);} .kpi.bad .v{color:var(--bad);}
+  .kpi .d{font-size:11px;margin-top:2px;font-weight:600;}
+  .kpi .d.up{color:var(--bad);} .kpi .d.down{color:var(--ok);}
+  .bridge{display:flex;align-items:flex-end;gap:6px;height:150px;margin-top:10px;padding:0 4px;}
+  .bridge .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .bridge .bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;}
+  .bridge .cap{font-size:10px;color:var(--muted);margin-top:4px;text-align:center;line-height:1.2;}
+  .bridge .amt{font-size:11px;font-weight:600;margin-bottom:3px;}
+  .src-tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);vertical-align:middle;}
+  .src-tag.real{border-color:var(--ok);color:var(--ok);}
+  .imp-status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+  .imp-status .box{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;}
+  .imp-status .box .v{font-size:18px;font-weight:700;color:var(--accent);}
+  .imp-status .box .l{font-size:11px;color:var(--muted);}
+  .imp-status .box .s{font-size:10px;color:var(--muted);margin-top:3px;}
 </style>
 </head>
 <body>
@@ -238,12 +273,14 @@
 <aside class="sidebar">
   <div class="side-title">Módulos</div>
   <nav>
+    <button data-view="dashboard">📊 Dashboard</button>
     <button data-view="premissas" class="active">Premissas</button>
     <button data-view="medias">Médias de Consumo</button>
     <button data-view="mapa">Mapa de Giros</button>
     <button data-view="abastecimentos">Abastecimentos</button>
     <button data-view="viagens">Viagens</button>
     <button data-view="precos">Preços e Desempenho</button>
+    <button data-view="importacoes">📥 Importações</button>
   </nav>
   <div class="side-bottom">
     <button class="theme-toggle" id="btnTheme" title="Alternar tema">🌙</button>
@@ -296,14 +333,12 @@
     <div class="card">
       <h2>Médias de Consumo e Tempo de Viagem <span class="sub">— por embarcação e trecho</span></h2>
       <div class="row">
-        <button class="tool-btn" id="btnImportMed">Importar Excel / CSV</button>
-        <input type="file" id="fileMed" accept=".csv,.xlsx,.xls" style="display:none">
         <button class="btn secondary" id="btnMedExpandAll">Expandir todos</button>
         <button class="btn secondary" id="btnMedCollapseAll">Recolher todos</button>
+        <div class="spacer"></div>
+        <button class="tool-btn" data-goto-view="importacoes">📥 Importar médias…</button>
       </div>
-      <div class="hint">Colunas esperadas no arquivo: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino</b>.
-      A importação <b>substitui integralmente</b> a base de médias anterior e <b>cria automaticamente</b> os trechos e empurradores que ainda não existem (adicionando os combustíveis usados por cada um). Consumo é interpretado em <b>L/h</b> e Tempo em <b>horas</b>.
-      As colunas Distância, Origem e Destino atualizam o cadastro dos trechos em Premissas. Após importar, revise potência e tanques dos empurradores nas Premissas.</div>
+      <div class="hint">A importação de médias agora fica no módulo <b>Importações</b>. Os valores abaixo (consumo médio em L/h e tempo em horas) podem ser editados manualmente por condição.</div>
       <div id="medContent" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -388,22 +423,6 @@
       <h2>Sugestões de Atualização de Médias <span class="sub">— a partir das viagens finalizadas</span></h2>
       <div class="hint">As médias sugeridas usam a média do realizado das viagens finalizadas por trecho/empurrador/condição. Você pode editar antes de aplicar.</div>
       <div id="viagSugestoes" style="margin-top:8px;"></div>
-    </div>
-
-    <div class="card">
-      <h2>Budget Mensal de Volume por Cidade <span class="sub">— volume previsto (t) por mês/cidade</span></h2>
-      <div class="row">
-        <div class="field"><label>Mês de referência</label><input type="month" id="budgetMes"></div>
-        <div class="field"><label>Cidade</label><input id="budgetCidade" list="budgetCidadesList" placeholder="Cidade"></div>
-        <datalist id="budgetCidadesList"></datalist>
-        <div class="field"><label>Volume previsto (t)</label><input type="number" step="any" id="budgetVol" placeholder="0"></div>
-        <button class="btn" id="btnAddBudget">Salvar</button>
-        <div class="spacer"></div>
-        <button class="tool-btn" id="btnImportBudget">Importar Excel / CSV</button>
-        <input type="file" id="fileBudget" accept=".csv,.xlsx,.xls" style="display:none">
-      </div>
-      <div class="hint">Colunas esperadas no arquivo: <b>Mês, Cidade, Volume (t)</b>. O mês aceita texto (Janeiro, Jan, jan/2026) ou data (01/01/2026); o ano é inferido como o atual quando não informado.</div>
-      <div style="margin-top:12px;overflow:auto;"><table id="tblBudget"></table></div>
     </div>
   </section>
 
@@ -508,6 +527,190 @@
     <div class="card">
       <h2>Fornecedores Cadastrados <span class="sub">— cadastro silencioso a partir dos abastecimentos</span></h2>
       <div style="overflow:auto;"><table id="tblForn"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="view" id="view-dashboard">
+    <div class="card">
+      <h2>Dashboard de Combustível <span class="sub">— indicadores de eficiência, consumo, custo e budget</span></h2>
+      <div class="hint">Os indicadores priorizam os <b>dados reais importados</b> (Histórico de Viagens, Estoque/Horas Máquina, Abastecimentos). Quando não há dado real do dia, valem as estimativas do mapa. Visão padrão <b>mensal</b> — clique numa barra/mês para detalhar por <b>dia</b>.</div>
+      <div class="row" style="margin-top:10px;align-items:flex-end;">
+        <div class="field"><label>De</label><input type="date" id="dashIni"></div>
+        <div class="field"><label>Até</label><input type="date" id="dashFim"></div>
+        <div class="field"><label>Granularidade</label>
+          <div class="seg" id="dashGranSeg">
+            <button data-gran="month" class="active">Mensal</button>
+            <button data-gran="day">Diário</button>
+          </div>
+        </div>
+        <div class="field"><label>Empurradores</label>
+          <div class="dropdown" id="dashEmpDrop">
+            <button type="button" class="dropdown-btn" id="dashEmpBtn">Todos ▾</button>
+            <div class="dropdown-panel" id="dashEmpPanel"></div>
+          </div>
+        </div>
+        <div class="field"><label>Rotas / Trechos</label>
+          <div class="dropdown" id="dashRotaDrop">
+            <button type="button" class="dropdown-btn" id="dashRotaBtn">Todas ▾</button>
+            <div class="dropdown-panel" id="dashRotaPanel"></div>
+          </div>
+        </div>
+        <button class="btn secondary" id="btnDashMesAtual">Mês atual</button>
+        <button class="btn secondary" id="btnDashYtd">Ano (YTD)</button>
+        <button class="btn secondary" id="btnDash12m">12 meses</button>
+      </div>
+      <div id="dashCrumb" class="dash-crumb"></div>
+    </div>
+
+    <div class="kpi-row" id="dashKpis"></div>
+
+    <div class="dash-grid">
+      <div class="chart-card full">
+        <div class="chart-card-header">
+          <h3>Consumo de Combustível <span class="sub" id="dashConsumoSub"></span></h3>
+          <div class="ch-tools">
+            <div class="seg" id="dashConsumoMode">
+              <button data-mode="stack" class="active">Empilhado</button>
+              <button data-mode="line">Linhas</button>
+            </div>
+          </div>
+        </div>
+        <div class="chart-wrap"><svg id="dashChartConsumo" class="chart-svg" preserveAspectRatio="none"></svg>
+          <div id="dashTipConsumo" class="chart-tooltip" style="display:none;"></div>
+          <div id="dashLegConsumo" class="chart-legend"></div></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header"><h3>L/Ton <span class="sub">— litros por tonelada transportada (carregada)</span></h3></div>
+        <div class="chart-wrap"><svg id="dashChartLTon" class="chart-svg" preserveAspectRatio="none"></svg>
+          <div id="dashTipLTon" class="chart-tooltip" style="display:none;"></div>
+          <div id="dashLegLTon" class="chart-legend"></div></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header"><h3>L/h navegada <span class="sub">— litros por hora de navegação</span></h3></div>
+        <div class="chart-wrap"><svg id="dashChartLh" class="chart-svg" preserveAspectRatio="none"></svg>
+          <div id="dashTipLh" class="chart-tooltip" style="display:none;"></div>
+          <div id="dashLegLh" class="chart-legend"></div></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header"><h3>Horas de Máquina <span class="sub">— MCP / MCA (horímetro)</span></h3></div>
+        <div class="chart-wrap"><svg id="dashChartHoras" class="chart-svg" preserveAspectRatio="none"></svg>
+          <div id="dashTipHoras" class="chart-tooltip" style="display:none;"></div>
+          <div id="dashLegHoras" class="chart-legend"></div></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header"><h3>Tempo de Viagem <span class="sub">— horas por viagem (média)</span></h3></div>
+        <div class="chart-wrap"><svg id="dashChartTempo" class="chart-svg" preserveAspectRatio="none"></svg>
+          <div id="dashTipTempo" class="chart-tooltip" style="display:none;"></div>
+          <div id="dashLegTempo" class="chart-legend"></div></div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-card-header"><h3>Realizado × Budget de Volume <span class="sub">— toneladas entregues por cidade de destino vs budget</span></h3></div>
+        <div class="chart-wrap"><svg id="dashChartBudget" class="chart-svg" preserveAspectRatio="none"></svg>
+          <div id="dashTipBudget" class="chart-tooltip" style="display:none;"></div>
+          <div id="dashLegBudget" class="chart-legend"></div></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header"><h3>Consumo por Rota <span class="sub">— litros no período</span></h3></div>
+        <div id="dashRotaBars" class="hbars"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header"><h3>Consumo por Empurrador <span class="sub">— litros no período</span></h3></div>
+        <div id="dashEmpBars" class="hbars"></div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-card-header"><h3>Efeito Preço × Efeito Consumo <span class="sub">— decomposição da variação de custo de combustível entre os dois últimos períodos</span></h3></div>
+        <div id="dashEfeito"></div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-card-header"><h3>Resumo por Empurrador <span class="sub">— período filtrado</span></h3></div>
+        <div style="overflow:auto;"><table id="dashTblEmp"></table></div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-card-header"><h3>Resumo por Rota <span class="sub">— período filtrado</span></h3></div>
+        <div style="overflow:auto;"><table id="dashTblRota"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= IMPORTAÇÕES ================= -->
+  <section class="view" id="view-importacoes">
+    <div class="card">
+      <h2>Importações <span class="sub">— centralize aqui todas as cargas de dados (Excel / CSV)</span></h2>
+      <div class="hint">Os dados reais importados (Histórico de Viagens, Estoque/Horas Máquina e Abastecimentos) são <b>soberanos</b>: substituem as estimativas no Mapa de Giros nos dias em que há informação real. Onde não houver dado importado para o dia, seguem valendo as estimativas já existentes no mapa.</div>
+      <div class="imp-status" id="impStatus" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Médias de Consumo e Tempo de Viagem <span class="sub">— alimenta as estimativas do mapa</span></h2>
+      <div class="row">
+        <button class="tool-btn" id="btnImportMed">Importar Excel / CSV</button>
+        <input type="file" id="fileMed" accept=".csv,.xlsx,.xls" style="display:none">
+      </div>
+      <div class="hint">Colunas esperadas: <b>Trecho, Empurrador, Condição, Combustível, Consumo, Tempo, Distância, Origem, Destino</b>.
+      A importação <b>substitui integralmente</b> a base de médias e <b>cria</b> automaticamente trechos e empurradores inexistentes. Consumo em <b>L/h</b>, Tempo em <b>horas</b>. Distância/Origem/Destino atualizam os trechos nas Premissas.</div>
+    </div>
+
+    <div class="card">
+      <h2>Histórico de Viagens <span class="sub src-tag real">dado real</span></h2>
+      <div class="row">
+        <button class="tool-btn" id="btnImportHistViag">Importar Excel / CSV</button>
+        <input type="file" id="fileHistViag" accept=".csv,.xlsx,.xls" style="display:none">
+        <div class="spacer"></div>
+        <button class="btn secondary danger" id="btnClearHistViag">Limpar base</button>
+      </div>
+      <div class="hint">Colunas esperadas: <b>Empurrador, Comand, Condição, Produto, Volume, Barcaças, Saída</b> (DD/MM/AAAA HH:MM), <b>Chegada</b> (DD/MM/AAAA HH:MM), <b>Trecho, Tempo, Diesel, HFO</b>. Diesel e HFO são o <b>consumo real</b> (litros) da viagem — "Diesel" é tratado como MGO. Cria automaticamente trechos/empurradores inexistentes.</div>
+      <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblHistViag"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Estoque e Horas de Máquina <span class="sub src-tag real">dado real</span></h2>
+      <div class="row">
+        <button class="tool-btn" id="btnImportEstoque">Importar Excel / CSV</button>
+        <input type="file" id="fileEstoque" accept=".csv,.xlsx,.xls" style="display:none">
+        <div class="spacer"></div>
+        <button class="btn secondary danger" id="btnClearEstoque">Limpar base</button>
+      </div>
+      <div class="hint">Colunas esperadas: <b>ADM_Empurrador, Estoque Diesel, Estoque HFO, Horas MCP, Horas MCA</b> e uma coluna de <b>Data/Hora</b> (ex.: Data, Momento, Início — DD/MM/AAAA HH:MM). Quando há mais de uma leitura no mesmo dia, considera-se apenas a <b>primeira (mais cedo, ~06:00)</b>. Estoque Diesel é tratado como MGO. Os estoques viram <b>âncoras soberanas</b> do Mapa de Giros.</div>
+      <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblEstoque"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Abastecimentos (reais) <span class="sub src-tag real">dado real</span></h2>
+      <div class="row">
+        <button class="tool-btn" id="btnImportAbastReal">Importar Excel / CSV</button>
+        <input type="file" id="fileAbastReal" accept=".csv,.xlsx,.xls" style="display:none">
+        <div class="spacer"></div>
+        <button class="btn secondary danger" id="btnClearAbastReal">Limpar base</button>
+      </div>
+      <div class="hint">Colunas esperadas: <b>ADM_Empurrador, Início</b> (DD/MM/AAAA HH:MM), <b>ADM_Fim</b> (DD/MM/AAAA HH:MM), <b>ADM_Produto</b>. Produto: "Água Potável", "Diesel" = MGO, "Óleo Pesado" = HFO. Registra os eventos reais de abastecimento (janela de início/fim).</div>
+      <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblAbastReal"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Budget Mensal de Volume por Cidade <span class="sub">— volume previsto (t) por mês/cidade</span></h2>
+      <div class="row">
+        <div class="field"><label>Mês de referência</label><input type="month" id="budgetMes"></div>
+        <div class="field"><label>Cidade</label><input id="budgetCidade" list="budgetCidadesList" placeholder="Cidade"></div>
+        <datalist id="budgetCidadesList"></datalist>
+        <div class="field"><label>Volume previsto (t)</label><input type="number" step="any" id="budgetVol" placeholder="0"></div>
+        <button class="btn" id="btnAddBudget">Salvar</button>
+        <div class="spacer"></div>
+        <button class="tool-btn" id="btnImportBudget">Importar Excel / CSV</button>
+        <input type="file" id="fileBudget" accept=".csv,.xlsx,.xls" style="display:none">
+      </div>
+      <div class="hint">Colunas esperadas no arquivo: <b>Mês, Cidade, Volume (t)</b>. O mês aceita texto (Janeiro, Jan, jan/2026) ou data (01/01/2026); o ano é inferido como o atual quando não informado.</div>
+      <div style="margin-top:12px;overflow:auto;"><table id="tblBudget"></table></div>
     </div>
   </section>
 </main>
@@ -634,6 +837,9 @@ let state = {
   historicoPrecos: [],// {id,data,fornecedorId,combustivel,preco}
   budgetVolume: {},  // {cidade:{'YYYY-MM':toneladas}}
   estoques: [],      // âncoras manuais: {id,empId,comb,data,valor}
+  historicoViagens: [],    // viagens REAIS importadas: {id,empId,empNome,comandante,condicao,produto,volume,barcacas,saida,chegada,trecho,rotaId,tempo,consumo:{MGO,HFO},data}
+  estoqueLeituras: [],     // leituras REAIS de estoque+horas: {id,empId,empNome,data,datetime,estoqueMGO,estoqueHFO,horasMCP,horasMCA}
+  abastecimentosReais: [], // abastecimentos REAIS: {id,empId,empNome,inicio,fim,produto,data}
   mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
 };
 
@@ -643,6 +849,9 @@ function ensureState(){
   if(!state.historicoPrecos) state.historicoPrecos=[];
   if(!state.budgetVolume) state.budgetVolume={};
   if(!state.estoques) state.estoques=[];
+  if(!state.historicoViagens) state.historicoViagens=[];
+  if(!state.estoqueLeituras) state.estoqueLeituras=[];
+  if(!state.abastecimentosReais) state.abastecimentosReais=[];
   state.viagens.forEach(v=>{ if(!v.status) v.status='Previsto'; });
   state.abastecimentos.forEach(a=>{
     if(!('cidade' in a)) a.cidade='';
@@ -668,7 +877,8 @@ function ensureState(){
    ESTOQUE — âncoras e cálculo diário
    ========================================================= */
 function getAnchors(empId, comb){
-  // retorna { 'YYYY-MM-DD': valor } combinando estoque inicial (cadastro) + manuais
+  // retorna { 'YYYY-MM-DD': valor } combinando estoque inicial (cadastro) + manuais + leituras REAIS
+  // Prioridade (vence a última escrita): cadastro < âncora manual < leitura real importada (soberana)
   const e = empById(empId);
   const out = {};
   const t = e?.tanques?.[comb];
@@ -680,6 +890,20 @@ function getAnchors(empId, comb){
       out[o.data] = o.valor;
     }
   });
+  // Leituras REAIS de estoque (importadas) — soberanas; usa a 1ª leitura do dia (mais cedo, ~06:00)
+  const realKey = comb==='MGO' ? 'estoqueMGO' : (comb==='HFO' ? 'estoqueHFO' : null);
+  if(realKey && state.estoqueLeituras && state.estoqueLeituras.length){
+    const firstOfDay = {}; // data -> {dt, val}
+    state.estoqueLeituras.forEach(o=>{
+      if(o.empId!==empId) return;
+      const val = o[realKey];
+      if(val===null || val===undefined || isNaN(val)) return;
+      const dt = o.datetime || (o.data+'T06:00');
+      const cur = firstOfDay[o.data];
+      if(!cur || dt < cur.dt){ firstOfDay[o.data] = {dt, val}; }
+    });
+    Object.keys(firstOfDay).forEach(d=>{ out[d] = firstOfDay[d].val; });
+  }
   return out;
 }
 function earliestAnchorDate(empId, comb){
@@ -698,8 +922,41 @@ function setManualEstoque(empId, comb, dataStr, valor){
 function clearManualEstoque(empId, comb, dataStr){
   state.estoques = state.estoques.filter(o=> !(o.empId===empId && o.comb===comb && o.data===dataStr));
 }
-// Consumo diário (L) de um empurrador/combustível num dado dia
+// Consumo navegando REAL (L) por combustível num dado dia, a partir do Histórico de Viagens importado.
+// Rateia o consumo total da viagem pela fração de horas que cai dentro do dia.
+function realConsumoDia(empId, day){
+  const dayStart = day.getTime();
+  const dayEnd = dayStart + 86400000;
+  const byComb = {MGO:0, HFO:0, Diesel:0};
+  let horasNav = 0, has = false;
+  (state.historicoViagens||[]).forEach(v=>{
+    if(v.empId!==empId) return;
+    const s = v.saida ? new Date(v.saida).getTime() : NaN;
+    const c = v.chegada ? new Date(v.chegada).getTime() : NaN;
+    if(isNaN(s)||isNaN(c)||c<=s) return;
+    const ini = Math.max(s, dayStart), fim = Math.min(c, dayEnd);
+    if(fim<=ini) return;
+    const overlapH = (fim-ini)/3600000;
+    const totalH = (c-s)/3600000;
+    const frac = totalH>0 ? overlapH/totalH : 0;
+    has = true; horasNav += overlapH;
+    byComb.MGO += (v.consumo && v.consumo.MGO ? v.consumo.MGO : 0)*frac;
+    byComb.HFO += (v.consumo && v.consumo.HFO ? v.consumo.HFO : 0)*frac;
+  });
+  if(horasNav>24) horasNav=24;
+  return {has, byComb, horasNav};
+}
+// Consumo diário (L) de um empurrador/combustível num dado dia.
+// Soberania: se há viagem REAL importada nesse dia, usa o consumo real; senão, usa a estimativa do mapa.
 function dailyConsumption(e, comb, day){
+  const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
+  const real = realConsumoDia(e.id, day);
+  if(real.has){
+    let consumoDia = real.byComb[comb] || 0;
+    const horasPorto = Math.max(0, 24 - real.horasNav);
+    if(comb===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
+    return consumoDia;
+  }
   const dStr = dateStr(day);
   const vSaida = viagensDoDia(e.id, dStr);
   const vAtiva = viagemAtivaNoDia(e.id, day);
@@ -707,7 +964,6 @@ function dailyConsumption(e, comb, day){
   const cdNav = vRef ? consumoDiaViagem(vRef, day) : {};
   const horasNav = cdNav.__horas || 0;
   const horasPorto = Math.max(0, 24 - horasNav);
-  const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
   let consumoDia = cdNav[comb] || 0;
   if(comb===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
   return consumoDia;
@@ -790,14 +1046,20 @@ function corContraste(hex){
 /* =========================================================
    NAVEGAÇÃO
    ========================================================= */
+function gotoView(v){
+  const btn=document.querySelector('nav button[data-view="'+v+'"]');
+  if(!btn) return;
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('view-'+v).classList.add('active');
+  renderView(v);
+}
 document.querySelectorAll('nav button').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    b.classList.add('active');
-    document.getElementById('view-'+b.dataset.view).classList.add('active');
-    renderView(b.dataset.view);
-  });
+  b.addEventListener('click', ()=>gotoView(b.dataset.view));
+});
+document.querySelectorAll('[data-goto-view]').forEach(b=>{
+  b.addEventListener('click', ()=>gotoView(b.dataset.gotoView));
 });
 function renderView(v){
   refreshViagemStatuses();
@@ -807,6 +1069,8 @@ function renderView(v){
   if(v==='abastecimentos'){ renderAbast(); }
   if(v==='viagens'){ renderViagens(); }
   if(v==='precos'){ renderPrecos(); }
+  if(v==='dashboard'){ renderDashboard(); }
+  if(v==='importacoes'){ renderImportacoes(); }
 }
 
 /* =========================================================
@@ -2229,7 +2493,6 @@ function renderViagens(){
     t.innerHTML='<tr><td class="empty">Nenhuma viagem no filtro.</td></tr>';
     renderViagemMetricas();
     renderSugestoesMedias();
-    renderBudget();
     return;
   }
   let h=`<tr><th></th><th>Saída</th><th>Empurrador</th><th>Trecho</th><th>Condição</th>
@@ -2260,7 +2523,6 @@ function renderViagens(){
 
   renderViagemMetricas();
   renderSugestoesMedias();
-  renderBudget();
 }
 
 function renderViagemMetricas(){
@@ -3529,6 +3791,740 @@ function cbColor(cb,i){
 }
 
 /* =========================================================
+   IMPORTAÇÕES — dados reais (soberanos)
+   ========================================================= */
+function p2(n){ return String(n).padStart(2,'0'); }
+function na(s){ return norm(s).normalize('NFD').replace(/[̀-ͯ]/g,''); } // norm + sem acentos
+function toLocalISO(d){ return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+function dateOfISO(iso){ return iso ? iso.slice(0,10) : ''; }
+function fmtDT(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return '—'; return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+
+// Aceita Date, serial Excel, 'DD/MM/AAAA HH:MM[:SS]', 'YYYY-MM-DD[THH:MM]'. Retorna 'YYYY-MM-DDTHH:MM' ou ''.
+function parseDateTimeBR(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(v instanceof Date && !isNaN(v)) return toLocalISO(v);
+  if(typeof v==='number'){
+    const base=new Date(Date.UTC(1899,11,30));
+    const d=new Date(base.getTime()+Math.round(v*86400000));
+    return `${d.getUTCFullYear()}-${p2(d.getUTCMonth()+1)}-${p2(d.getUTCDate())}T${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+  }
+  let s=String(v).trim(); if(!s) return '';
+  let m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:[ T]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if(m){ let yy=+m[3]; if(yy<100) yy+=2000; const hh=m[4]!==undefined?+m[4]:0, mi=m[5]!==undefined?+m[5]:0; return `${yy}-${p2(+m[2])}-${p2(+m[1])}T${p2(hh)}:${p2(mi)}`; }
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{1,2}))?/);
+  if(m){ const hh=m[4]!==undefined?+m[4]:0, mi=m[5]!==undefined?+m[5]:0; return `${m[1]}-${m[2]}-${m[3]}T${p2(hh)}:${p2(mi)}`; }
+  return '';
+}
+
+function stripAdm(s){ return String(s||'').replace(/^adm[_\s-]*/i,'').trim(); }
+function findEmpByName(nome){
+  const n1=na(nome), n2=na(stripAdm(nome));
+  return state.empurradores.find(e=> na(e.nome)===n1 || na(e.nome)===n2 || na(stripAdm(e.nome))===n1);
+}
+function ensureEmpByName(nome, combs){
+  let nm=stripAdm(nome) || String(nome||'').trim();
+  if(!nm) return null;
+  let e=findEmpByName(nome);
+  if(!e){
+    e={id:uid(), nome:nm, potencia:0, cor:'', combustiveis:[], consumoPorto:0, tanques:{}};
+    state.empurradores.push(e);
+  }
+  if(!e.tanques) e.tanques={};
+  (combs||[]).forEach(cb=>{
+    if(cb && !e.combustiveis.includes(cb)){
+      e.combustiveis.push(cb);
+      if(!e.tanques[cb]) e.tanques[cb]={capacidade:0, estoqueInicial:0, estoqueInicialData:''};
+    }
+  });
+  return e;
+}
+function findOrCreateRota(trechoNome){
+  const nome=String(trechoNome||'').trim(); if(!nome) return null;
+  let r=state.rotas.find(x=>na(x.nome)===na(nome));
+  if(!r){
+    let ori='', dst='';
+    const parts=nome.split(/\s*(?:x|×|>|→|->)\s*/i);
+    if(parts.length>=2){ ori=parts[0].trim(); dst=parts[parts.length-1].trim(); }
+    r={id:uid(), nome, origem:ori, destino:dst, distancia:0};
+    state.rotas.push(r);
+  }
+  return r;
+}
+function mapAdmProduto(raw){
+  const s=na(raw); if(!s) return null;
+  if(s.includes('agua')||s.includes('potav')) return 'Água Potável';
+  if(s.includes('pesado')||s.includes('hfo')) return 'HFO';
+  if(s.includes('diesel')||s.includes('mgo')||s.includes('marine')) return 'MGO';
+  return null;
+}
+
+// Wiring genérico de importação (botão + input file → processFn(rows))
+function wireImport(btnId, fileId, processFn){
+  const btn=document.getElementById(btnId), inp=document.getElementById(fileId);
+  if(!btn||!inp) return;
+  btn.addEventListener('click', ()=>inp.click());
+  inp.addEventListener('change', e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    const isCsv=/\.csv$/i.test(file.name);
+    reader.onload=ev=>{
+      let rows=[];
+      try{
+        if(isCsv){ rows=parseCSV(ev.target.result); }
+        else{ const wb=XLSX.read(ev.target.result,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]]; rows=XLSX.utils.sheet_to_json(ws,{header:1}); }
+        processFn(rows);
+      }catch(err){ alert('Falha ao ler arquivo: '+err.message); }
+      e.target.value='';
+    };
+    if(isCsv) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
+  });
+}
+const headerFinder = header => (...keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
+
+/* ---- Histórico de Viagens (real) ---- */
+function processHistViagRows(rows){
+  if(!rows.length){ alert('Arquivo vazio.'); return; }
+  const header=rows[0].map(na); const find=headerFinder(header);
+  const idx={
+    emp:find('empurrador','embarca'), comand:find('comand'), cond:find('condi'),
+    prod:find('produto'), vol:find('volume'), barc:find('barca'),
+    saida:find('saida','partida'), cheg:find('chegada'), trecho:find('trecho','rota'),
+    tempo:find('tempo'), diesel:find('diesel','mgo'), hfo:find('hfo'),
+  };
+  if(idx.emp<0 || idx.saida<0){ alert('Cabeçalho inválido. Esperado ao menos: Empurrador e Saída.'); return; }
+  let ok=0, skip=0; const novos=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const empNome=String(r[idx.emp]||'').trim();
+    const saida=parseDateTimeBR(r[idx.saida]);
+    if(!empNome || !saida){ skip++; continue; }
+    let chegada=idx.cheg>=0?parseDateTimeBR(r[idx.cheg]):'';
+    const cond=idx.cond>=0?(CONDICOES.find(c=>na(c)===na(r[idx.cond]))||String(r[idx.cond]||'').trim()):'';
+    const produto=idx.prod>=0?String(r[idx.prod]||'').trim():'';
+    const volume=idx.vol>=0?(parseNum(r[idx.vol])||0):0;
+    const barcacas=idx.barc>=0?(parseNum(r[idx.barc])||0):0;
+    let tempo=idx.tempo>=0?parseNum(r[idx.tempo]):NaN;
+    if((isNaN(tempo)||tempo<=0) && chegada){ tempo=(new Date(chegada)-new Date(saida))/3600000; }
+    if(isNaN(tempo)||tempo<0) tempo=0;
+    if(!chegada && tempo>0){ chegada=toLocalISO(new Date(new Date(saida).getTime()+tempo*3600000)); }
+    const diesel=idx.diesel>=0?(parseNum(r[idx.diesel])||0):0;
+    const hfo=idx.hfo>=0?(parseNum(r[idx.hfo])||0):0;
+    const trechoNome=idx.trecho>=0?String(r[idx.trecho]||'').trim():'';
+    const emp=ensureEmpByName(empNome, [diesel>0?'MGO':null, hfo>0?'HFO':null].filter(Boolean));
+    const rota=trechoNome?findOrCreateRota(trechoNome):null;
+    novos.push({
+      id:uid(), empId:emp?emp.id:null, empNome:emp?emp.nome:empNome,
+      comandante:idx.comand>=0?String(r[idx.comand]||'').trim():'',
+      condicao:cond, produto, volume, barcacas, saida, chegada,
+      trecho:trechoNome, rotaId:rota?rota.id:null,
+      tempo, consumo:{MGO:diesel, HFO:hfo}, data:dateOfISO(saida)
+    });
+    ok++;
+  }
+  state.historicoViagens=novos;
+  save(); renderHistViagTable(); renderImpStatus(); renderRot(); renderEmp();
+  alert(`Histórico de Viagens importado.\nViagens aplicadas: ${ok}\nIgnoradas (sem empurrador/saída): ${skip}\n\nA base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
+}
+function renderHistViagTable(){
+  const t=document.getElementById('tblHistViag'); if(!t) return;
+  const list=(state.historicoViagens||[]).slice().sort((a,b)=>(b.saida||'').localeCompare(a.saida||''));
+  if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhuma viagem real importada.</td></tr>'; return; }
+  let h=`<tr><th>Empurrador</th><th>Trecho</th><th>Cond.</th><th>Produto</th><th class="num">Vol (t)</th><th class="num">Barc.</th><th>Saída</th><th>Chegada</th><th class="num">Tempo (h)</th><th class="num">MGO (L)</th><th class="num">HFO (L)</th></tr>`;
+  list.slice(0,400).forEach(v=>{
+    h+=`<tr><td>${v.empNome||'—'}</td><td>${v.trecho||'—'}</td><td>${v.condicao||'—'}</td><td>${v.produto||'—'}</td>
+      <td class="num">${v.volume?fmt(v.volume):'—'}</td><td class="num">${v.barcacas||'—'}</td>
+      <td>${fmtDT(v.saida)}</td><td>${fmtDT(v.chegada)}</td><td class="num">${v.tempo?fmt1(v.tempo):'—'}</td>
+      <td class="num">${v.consumo&&v.consumo.MGO?fmt(v.consumo.MGO):'—'}</td>
+      <td class="num">${v.consumo&&v.consumo.HFO?fmt(v.consumo.HFO):'—'}</td></tr>`;
+  });
+  if(list.length>400) h+=`<tr><td class="empty" colspan="11">… e mais ${list.length-400} viagens (exibindo as 400 mais recentes).</td></tr>`;
+  t.innerHTML=h;
+}
+
+/* ---- Estoque e Horas de Máquina (real) ---- */
+function processEstoqueRows(rows){
+  if(!rows.length){ alert('Arquivo vazio.'); return; }
+  const header=rows[0].map(na); const find=headerFinder(header);
+  const idx={
+    emp:find('empurrador','embarca'),
+    data:find('data','momento','inicio','instante','timestamp','leitura','hora','dia'),
+    diesel:find('estoque diesel','estoque mgo','diesel','mgo'),
+    hfo:find('estoque hfo','hfo'),
+    mcp:find('mcp'), mca:find('mca'),
+  };
+  if(idx.emp<0){ alert('Cabeçalho inválido. Esperado ao menos: ADM_Empurrador.'); return; }
+  if(idx.data<0){ alert('Não foi encontrada uma coluna de Data/Hora. Inclua uma coluna como "Data", "Momento" ou "Início" (formato DD/MM/AAAA HH:MM) para identificar a primeira leitura de cada dia.'); return; }
+  const raw=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const empNome=String(r[idx.emp]||'').trim(); if(!empNome) continue;
+    const dt=parseDateTimeBR(r[idx.data]); const data=dateOfISO(dt); if(!data) continue;
+    raw.push({
+      empNome, data, dt: dt || (data+'T06:00'),
+      estoqueMGO: idx.diesel>=0?parseNum(r[idx.diesel]):NaN,
+      estoqueHFO: idx.hfo>=0?parseNum(r[idx.hfo]):NaN,
+      horasMCP: idx.mcp>=0?parseNum(r[idx.mcp]):NaN,
+      horasMCA: idx.mca>=0?parseNum(r[idx.mca]):NaN,
+    });
+  }
+  // dedup: 1ª leitura do dia (menor datetime) por empurrador+data
+  const firstOfDay={};
+  raw.forEach(o=>{ const k=na(o.empNome)+'|'+o.data; if(!firstOfDay[k] || o.dt<firstOfDay[k].dt) firstOfDay[k]=o; });
+  const novos=Object.values(firstOfDay).map(o=>{
+    const emp=ensureEmpByName(o.empNome, [isNaN(o.estoqueMGO)?null:'MGO', isNaN(o.estoqueHFO)?null:'HFO'].filter(Boolean));
+    return {
+      id:uid(), empId:emp?emp.id:null, empNome:emp?emp.nome:o.empNome, data:o.data, datetime:o.dt,
+      estoqueMGO:isNaN(o.estoqueMGO)?null:o.estoqueMGO, estoqueHFO:isNaN(o.estoqueHFO)?null:o.estoqueHFO,
+      horasMCP:isNaN(o.horasMCP)?null:o.horasMCP, horasMCA:isNaN(o.horasMCA)?null:o.horasMCA,
+    };
+  }).sort((a,b)=>a.datetime.localeCompare(b.datetime));
+  const dups=raw.length-novos.length;
+  state.estoqueLeituras=novos;
+  save(); renderEstoqueTable(); renderImpStatus(); renderEmp();
+  alert(`Estoque e Horas de Máquina importados.\nLeituras aplicadas (1ª de cada dia): ${novos.length}\nLeituras do mesmo dia descartadas: ${dups}\n\nA base anterior foi substituída. Os estoques viram âncoras soberanas do Mapa de Giros.`);
+}
+function renderEstoqueTable(){
+  const t=document.getElementById('tblEstoque'); if(!t) return;
+  const list=(state.estoqueLeituras||[]).slice().sort((a,b)=>(b.datetime||'').localeCompare(a.datetime||''));
+  if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhuma leitura de estoque importada.</td></tr>'; return; }
+  let h=`<tr><th>Empurrador</th><th>Data/Hora</th><th class="num">Estoque MGO (L)</th><th class="num">Estoque HFO (L)</th><th class="num">Horas MCP</th><th class="num">Horas MCA</th></tr>`;
+  list.slice(0,400).forEach(o=>{
+    h+=`<tr><td>${o.empNome||'—'}</td><td>${fmtDT(o.datetime)}</td>
+      <td class="num">${o.estoqueMGO!=null?fmt(o.estoqueMGO):'—'}</td>
+      <td class="num">${o.estoqueHFO!=null?fmt(o.estoqueHFO):'—'}</td>
+      <td class="num">${o.horasMCP!=null?fmt1(o.horasMCP):'—'}</td>
+      <td class="num">${o.horasMCA!=null?fmt1(o.horasMCA):'—'}</td></tr>`;
+  });
+  if(list.length>400) h+=`<tr><td class="empty" colspan="6">… e mais ${list.length-400} leituras.</td></tr>`;
+  t.innerHTML=h;
+}
+
+/* ---- Abastecimentos reais ---- */
+function processAbastRealRows(rows){
+  if(!rows.length){ alert('Arquivo vazio.'); return; }
+  const header=rows[0].map(na); const find=headerFinder(header);
+  const idx={ emp:find('empurrador','embarca'), inicio:find('inicio','início','start'), fim:find('fim','termino','término','end'), prod:find('produto') };
+  if(idx.emp<0 || idx.inicio<0){ alert('Cabeçalho inválido. Esperado ao menos: ADM_Empurrador e Início.'); return; }
+  let ok=0, skip=0; const novos=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const empNome=String(r[idx.emp]||'').trim();
+    const inicio=parseDateTimeBR(r[idx.inicio]);
+    if(!empNome || !inicio){ skip++; continue; }
+    const fim=idx.fim>=0?parseDateTimeBR(r[idx.fim]):'';
+    const produto=idx.prod>=0?mapAdmProduto(r[idx.prod]):null;
+    const emp=ensureEmpByName(empNome, (produto && produto!=='Água Potável') ? [produto] : []);
+    novos.push({ id:uid(), empId:emp?emp.id:null, empNome:emp?emp.nome:empNome, inicio, fim, produto:produto||(idx.prod>=0?String(r[idx.prod]||'').trim():'—')||'—', data:dateOfISO(inicio) });
+    ok++;
+  }
+  state.abastecimentosReais=novos;
+  save(); renderAbastRealTable(); renderImpStatus();
+  alert(`Abastecimentos (reais) importados.\nEventos aplicados: ${ok}\nIgnorados (sem empurrador/início): ${skip}\n\nA base anterior foi substituída.`);
+}
+function renderAbastRealTable(){
+  const t=document.getElementById('tblAbastReal'); if(!t) return;
+  const list=(state.abastecimentosReais||[]).slice().sort((a,b)=>(b.inicio||'').localeCompare(a.inicio||''));
+  if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum abastecimento real importado.</td></tr>'; return; }
+  let h=`<tr><th>Empurrador</th><th>Produto</th><th>Início</th><th>Fim</th><th class="num">Duração (h)</th></tr>`;
+  list.slice(0,400).forEach(o=>{
+    let dur='—';
+    if(o.inicio && o.fim){ const d=(new Date(o.fim)-new Date(o.inicio))/3600000; if(!isNaN(d)&&d>=0) dur=fmt1(d); }
+    const pTag = o.produto==='MGO'||o.produto==='HFO' ? `<span class="tag ${o.produto}">${COMB_LABEL[o.produto]||o.produto}</span>` : (o.produto||'—');
+    h+=`<tr><td>${o.empNome||'—'}</td><td>${pTag}</td><td>${fmtDT(o.inicio)}</td><td>${fmtDT(o.fim)}</td><td class="num">${dur}</td></tr>`;
+  });
+  if(list.length>400) h+=`<tr><td class="empty" colspan="5">… e mais ${list.length-400} eventos.</td></tr>`;
+  t.innerHTML=h;
+}
+
+wireImport('btnImportHistViag','fileHistViag', processHistViagRows);
+wireImport('btnImportEstoque','fileEstoque', processEstoqueRows);
+wireImport('btnImportAbastReal','fileAbastReal', processAbastRealRows);
+function clearBase(arrName, label, renderFn){
+  if(!confirm('Limpar toda a base de '+label+' importada?')) return;
+  state[arrName]=[]; save(); renderFn(); renderImpStatus();
+}
+document.getElementById('btnClearHistViag').addEventListener('click', ()=>clearBase('historicoViagens','Histórico de Viagens', renderHistViagTable));
+document.getElementById('btnClearEstoque').addEventListener('click', ()=>clearBase('estoqueLeituras','Estoque e Horas de Máquina', renderEstoqueTable));
+document.getElementById('btnClearAbastReal').addEventListener('click', ()=>clearBase('abastecimentosReais','Abastecimentos (reais)', renderAbastRealTable));
+
+function lastDateOf(list, key){
+  let mx='';
+  (list||[]).forEach(o=>{ const d=(o[key]||'').slice(0,10); if(d>mx) mx=d; });
+  return mx ? parseDate(mx).toLocaleDateString('pt-BR') : '—';
+}
+function renderImpStatus(){
+  const el=document.getElementById('impStatus'); if(!el) return;
+  const hv=state.historicoViagens||[], es=state.estoqueLeituras||[], ar=state.abastecimentosReais||[];
+  const nMed=Object.keys(state.medias||{}).length;
+  const nBudget=Object.values(state.budgetVolume||{}).reduce((s,m)=>s+Object.keys(m||{}).length,0);
+  el.innerHTML=`
+    <div class="box"><div class="v">${hv.length}</div><div class="l">Viagens reais</div><div class="s">última saída: ${lastDateOf(hv,'saida')}</div></div>
+    <div class="box"><div class="v">${es.length}</div><div class="l">Leituras de estoque</div><div class="s">última: ${lastDateOf(es,'data')}</div></div>
+    <div class="box"><div class="v">${ar.length}</div><div class="l">Abastec. reais</div><div class="s">último: ${lastDateOf(ar,'inicio')}</div></div>
+    <div class="box"><div class="v">${nBudget}</div><div class="l">Budget (mês×cidade)</div><div class="s">${Object.keys(state.budgetVolume||{}).length} cidade(s)</div></div>
+    <div class="box"><div class="v">${nMed}</div><div class="l">Trechos com médias</div><div class="s">base de estimativas</div></div>`;
+}
+function renderImportacoes(){
+  renderImpStatus();
+  renderHistViagTable();
+  renderEstoqueTable();
+  renderAbastRealTable();
+  renderBudget();
+}
+
+/* =========================================================
+   DASHBOARD DE COMBUSTÍVEL
+   ========================================================= */
+let dashGran='month', dashConsumoMode='stack';
+let dashEmpFilter=null;   // Set de empIds, ou null = todos
+let dashRotaFilter=null;  // Set de rotaIds, ou null = todas
+let dashDrillPrev=null;   // {ini,fim} para voltar do drill mensal→diário
+
+function addMonths(d,n){ const x=new Date(d); x.setMonth(x.getMonth()+n); return x; }
+function isCarregada(cond){ return na(cond).includes('carregad'); }
+function setSegActiveByData(sel, attr, val){ document.querySelectorAll(sel+' button').forEach(b=>b.classList.toggle('active', b.dataset[attr]===val)); }
+
+function dashEmpList(){ const a=empsAtivos(); return a.length?a:state.empurradores.slice(); }
+function dashRotaList(){
+  const ids=new Set(); (state.historicoViagens||[]).forEach(v=>{ if(v.rotaId) ids.add(v.rotaId); });
+  const base=rotasAtivas();
+  const merged=[...new Map([...base, ...state.rotas.filter(r=>ids.has(r.id))].map(r=>[r.id,r])).values()];
+  return merged.length?merged:state.rotas.slice();
+}
+function initDashFilters(){
+  const ini=document.getElementById('dashIni'), fim=document.getElementById('dashFim');
+  if(!fim.value){ fim.value=dateStr(new Date()); }
+  if(!ini.value){ ini.value=dateStr(firstDayOfMonth(addMonths(new Date(),-11))); }
+}
+function dashBuckets(ini, fim, gran){
+  if(!ini||!fim) return [];
+  let cur=bucketKeyOf(ini, gran); const end=bucketKeyOf(fim, gran);
+  const out=[]; let g=0;
+  while(cur<=end && g++<2000){ out.push(cur); cur=nextBucketKey(cur, gran); }
+  return out;
+}
+function monthsInRange(ini, fim){
+  if(!ini||!fim) return [];
+  let cur=ini.slice(0,7); const end=fim.slice(0,7); const out=[]; let g=0;
+  while(cur<=end && g++<400){ out.push(cur); cur=nextBucketKey(cur,'month'); }
+  return out;
+}
+function prevRange(ini, fim){
+  const di=parseDate(ini), df=parseDate(fim);
+  const days=Math.round((df-di)/86400000);
+  const pf=addDays(di,-1), pi=addDays(pf,-days);
+  return {ini:dateStr(pi), fim:dateStr(pf)};
+}
+function tripTotals(arr){
+  return arr.reduce((a,v)=>{
+    const cM=v.consumo&&v.consumo.MGO?v.consumo.MGO:0, cH=v.consumo&&v.consumo.HFO?v.consumo.HFO:0;
+    a.cons+=cM+cH; a.mgo+=cM; a.hfo+=cH; a.horas+=v.tempo||0; a.n++; a.barc+=v.barcacas||0;
+    if(isCarregada(v.condicao)&&v.volume){ a.vol+=v.volume; a.consCar+=cM+cH; }
+    return a;
+  }, {cons:0,mgo:0,hfo:0,horas:0,n:0,vol:0,consCar:0,barc:0});
+}
+function dashTripAggByBucket(trips, gran){
+  const out={};
+  trips.forEach(v=>{
+    const k=bucketKeyOf(v.data, gran);
+    const o=out[k]=out[k]||{consMGO:0,consHFO:0,cons:0,horas:0,volCarregada:0,consCarregada:0,nViag:0,tempoSum:0};
+    const cM=v.consumo&&v.consumo.MGO?v.consumo.MGO:0, cH=v.consumo&&v.consumo.HFO?v.consumo.HFO:0;
+    o.consMGO+=cM; o.consHFO+=cH; o.cons+=cM+cH; o.horas+=v.tempo||0; o.nViag++; o.tempoSum+=v.tempo||0;
+    if(isCarregada(v.condicao)&&v.volume){ o.volCarregada+=v.volume; o.consCarregada+=cM+cH; }
+  });
+  return out;
+}
+// Horas de máquina por bucket: delta positivo do horímetro entre leituras consecutivas (por empurrador)
+function dashMachineHoursByBucket(ini, fim, gran, empAll, empSet){
+  const out={}, byEmp={};
+  (state.estoqueLeituras||[]).forEach(o=>{ if(!empAll && !(o.empId && empSet.has(o.empId))) return; (byEmp[o.empId]=byEmp[o.empId]||[]).push(o); });
+  Object.values(byEmp).forEach(arr=>{
+    arr.sort((a,b)=>a.datetime.localeCompare(b.datetime));
+    for(let i=1;i<arr.length;i++){
+      const pr=arr[i-1], cu=arr[i];
+      if(ini && cu.data<ini) continue; if(fim && cu.data>fim) continue;
+      const dm=(cu.horasMCP!=null && pr.horasMCP!=null)?cu.horasMCP-pr.horasMCP:0;
+      const da=(cu.horasMCA!=null && pr.horasMCA!=null)?cu.horasMCA-pr.horasMCA:0;
+      const k=bucketKeyOf(cu.data, gran);
+      out[k]=out[k]||{MCP:0,MCA:0};
+      if(dm>0) out[k].MCP+=dm; if(da>0) out[k].MCA+=da;
+    }
+  });
+  return out;
+}
+function machineHoursByEmp(ini, fim){
+  const out={}, byEmp={};
+  (state.estoqueLeituras||[]).forEach(o=>{ (byEmp[o.empId]=byEmp[o.empId]||[]).push(o); });
+  Object.entries(byEmp).forEach(([eid,arr])=>{
+    arr.sort((a,b)=>a.datetime.localeCompare(b.datetime));
+    let mcp=0,mca=0;
+    for(let k=1;k<arr.length;k++){
+      const pr=arr[k-1], cu=arr[k];
+      if(ini && cu.data<ini) continue; if(fim && cu.data>fim) continue;
+      const dm=(cu.horasMCP!=null&&pr.horasMCP!=null)?cu.horasMCP-pr.horasMCP:0;
+      const da=(cu.horasMCA!=null&&pr.horasMCA!=null)?cu.horasMCA-pr.horasMCA:0;
+      if(dm>0) mcp+=dm; if(da>0) mca+=da;
+    }
+    out[eid]={mcp,mca};
+  });
+  return out;
+}
+function avgPricePeriod(ini, fim, pool){
+  let q=0,c=0;
+  state.abastecimentos.forEach(a=>{
+    if(a.status!=='Realizado') return;
+    if(!pool.includes(a.comb)) return;
+    if(ini && a.data<ini) return; if(fim && a.data>fim) return;
+    const qq=a.qtd||0; q+=qq; c+=qq*(a.preco||0);
+  });
+  return q>0?c/q:0;
+}
+// Preço a partir do Histórico de Preços (média do dia mais recente <= f)
+function priceFromHistorico(fim, pool){
+  const list=(state.historicoPrecos||[]).filter(p=>pool.includes(p.combustivel) && (!fim||p.data<=fim)).sort((a,b)=>a.data.localeCompare(b.data));
+  if(!list.length) return 0;
+  const lastDate=list[list.length-1].data;
+  const sameDay=list.filter(p=>p.data===lastDate);
+  return sameDay.reduce((s,p)=>s+(p.preco||0),0)/sameDay.length;
+}
+// Preço robusto: abastecimentos do bucket → abastecimentos do período todo → histórico de preços
+function fuelPrice(i, f, pool, fallI, fallF){
+  let p=avgPricePeriod(i,f,pool); if(p>0) return p;
+  p=avgPricePeriod(fallI,fallF,pool); if(p>0) return p;
+  return priceFromHistorico(f||fallF, pool);
+}
+function bucketRange(k, gran){
+  return gran==='day' ? {i:k, f:k} : {i:k+'-01', f:dateStr(lastDayOfMonth(parseDate(k+'-01')))};
+}
+
+/* ---- Renderizador genérico de gráfico (linhas / barras agrupadas ou empilhadas) ---- */
+function drawChart(cfg){
+  const svg=document.getElementById(cfg.svgId);
+  const legend=cfg.legendId?document.getElementById(cfg.legendId):null;
+  const tip=cfg.tipId?document.getElementById(cfg.tipId):null;
+  if(!svg) return;
+  const buckets=cfg.buckets||[], gran=cfg.gran||'month', series=cfg.series||[];
+  const stacked=!!cfg.stacked, yfmt=cfg.yfmt||fmt;
+  const shortL=cfg.labelFn || (b=>bucketShortLabel(b,gran));
+  const longL=cfg.longLabelFn || (b=>bucketLongLabel(b,gran));
+  const hasData = buckets.length && series.some(s=>s.values.some(v=>v!=null && v!==0));
+  if(!hasData){ svg.innerHTML=''; if(legend) legend.innerHTML=`<div class="dash-empty">${cfg.empty||'Sem dados no período.'}</div>`; if(tip) tip.style.display='none'; return; }
+  const bars=series.filter(s=>s.type==='bar'), lines=series.filter(s=>s.type==='line');
+  const W=svg.clientWidth||820, H=cfg.height||300, padL=56, padR=14, padT=16, padB=40;
+  const innerW=W-padL-padR, n=buckets.length;
+  let maxY=0, minY=0;
+  if(stacked){ buckets.forEach((b,i)=>{ let s=0; bars.forEach(sr=>s+=(sr.values[i]||0)); if(s>maxY) maxY=s; }); }
+  else { bars.forEach(sr=>sr.values.forEach(v=>{ if(v!=null){ if(v>maxY)maxY=v; if(v<minY)minY=v; } })); }
+  lines.forEach(sr=>sr.values.forEach(v=>{ if(v!=null){ if(v>maxY)maxY=v; if(v<minY)minY=v; } }));
+  if(maxY===0 && minY===0) maxY=1;
+  maxY += (maxY-minY)*0.12;
+  const y=v=> H-padB-(v-minY)/((maxY-minY)||1)*(H-padT-padB);
+  const slot= n>0 ? innerW/n : innerW;
+  const xC=i=> padL + slot*i + slot/2;
+  const xL=i=> n>1 ? padL + (innerW/(n-1))*i : padL+innerW/2;
+  const xPos=i=> bars.length ? xC(i) : xL(i);
+  let s='';
+  for(let g=0;g<=4;g++){ const yv=minY+(maxY-minY)*g/4, yy=y(yv); s+=`<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="currentColor" stroke-opacity="0.10"/><text x="${padL-6}" y="${yy+3}" font-size="10" text-anchor="end" fill="currentColor" opacity="0.6">${yfmt(yv)}</text>`; }
+  if(cfg.yLabel) s+=`<text x="${padL-6}" y="${padT-5}" font-size="9" text-anchor="end" fill="currentColor" opacity="0.55">${cfg.yLabel}</text>`;
+  if(minY<0){ const y0=y(0); s+=`<line x1="${padL}" y1="${y0}" x2="${W-padR}" y2="${y0}" stroke="currentColor" stroke-opacity="0.3"/>`; }
+  const maxLabels=Math.max(5, Math.min(16, Math.floor(innerW/60)));
+  const step=Math.max(1, Math.ceil(n/maxLabels));
+  buckets.forEach((b,i)=>{ if(i%step!==0 && i!==n-1) return; s+=`<text x="${xC(i)}" y="${H-padB+15}" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">${shortL(b)}</text>`; });
+  if(bars.length){
+    const groupW=Math.min(slot*0.72, 48);
+    if(stacked){
+      buckets.forEach((b,i)=>{ let acc=0; bars.forEach(sr=>{ const v=sr.values[i]||0; if(v<=0) return; const y1=y(acc+v), y0=y(acc); s+=`<rect x="${xC(i)-groupW/2}" y="${y1}" width="${groupW}" height="${Math.max(0,y0-y1)}" fill="${sr.color}" fill-opacity="0.9" rx="1.5"/>`; acc+=v; }); });
+    } else {
+      const bw=groupW/bars.length;
+      buckets.forEach((b,i)=>{ bars.forEach((sr,bi)=>{ const v=sr.values[i]; if(v==null||v===0) return; const x0=xC(i)-groupW/2 + bi*bw; const yy=y(v), yb=y(minY<0?0:minY); s+=`<rect x="${x0}" y="${Math.min(yy,yb)}" width="${Math.max(1.5,bw-2)}" height="${Math.max(0,Math.abs(yb-yy))}" fill="${sr.color}" fill-opacity="0.9" rx="1.5"/>`; }); });
+    }
+  }
+  lines.forEach(sr=>{
+    let path='', started=false;
+    sr.values.forEach((v,i)=>{ if(v==null){ started=false; return; } path+=(started?' L ':'M ')+xPos(i)+' '+y(v); started=true; });
+    s+=`<path d="${path}" fill="none" stroke="${sr.color}" stroke-width="2"${sr.dash?` stroke-dasharray="${sr.dash}"`:''}/>`;
+    sr.values.forEach((v,i)=>{ if(v==null) return; s+=`<circle cx="${xPos(i)}" cy="${y(v)}" r="2.6" fill="${sr.color}"/>`; });
+  });
+  buckets.forEach((b,i)=>{ s+=`<rect class="chart-hover-zone" x="${padL+slot*i}" y="${padT}" width="${slot}" height="${H-padT-padB}" data-idx="${i}"/>`; });
+  svg.innerHTML=s; svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  if(legend) legend.innerHTML=series.map(sr=>`<span><span class="sw" style="background:${sr.color}"></span>${sr.label}</span>`).join('');
+  const showTip=idx=>{
+    if(!tip) return;
+    const rect=svg.getBoundingClientRect(), wrap=svg.parentElement.getBoundingClientRect();
+    const cx=xPos(idx), scaleX=rect.width/W, scaleY=rect.height/H;
+    let topY=padT+20; series.forEach(sr=>{ const v=sr.values[idx]; if(v!=null) topY=Math.min(topY, y(stacked&&sr.type==='bar'?maxY*0.6:v)); });
+    const rows=series.map(sr=> sr.values[idx]!=null ? `<div class="lin"><span class="sw" style="background:${sr.color}"></span>${sr.label}: <b>${(cfg.tipFmt||yfmt)(sr.values[idx])}</b></div>` : '').join('');
+    tip.innerHTML=`<div class="ttl">${longL(buckets[idx])}</div>${rows||'<div class="sub">sem dados</div>'}`;
+    tip.style.display='block';
+    tip.style.left=((cx*scaleX)+(rect.left-wrap.left))+'px';
+    tip.style.top=((topY*scaleY)+(rect.top-wrap.top))+'px';
+  };
+  svg.querySelectorAll('.chart-hover-zone').forEach(z=>{
+    z.addEventListener('mousemove', e=>showTip(+e.currentTarget.dataset.idx));
+    z.addEventListener('mouseleave', ()=>{ if(tip) tip.style.display='none'; });
+    if(cfg.onBucketClick && gran==='month'){ z.style.cursor='pointer'; z.addEventListener('click', e=>cfg.onBucketClick(buckets[+e.currentTarget.dataset.idx])); }
+  });
+}
+function renderHBars(elId, items, color, unit){
+  const el=document.getElementById(elId); if(!el) return;
+  const arr=items.filter(x=>x.value>0).sort((a,b)=>b.value-a.value);
+  if(!arr.length){ el.innerHTML='<div class="dash-empty">Sem dados no período.</div>'; return; }
+  const max=Math.max(...arr.map(x=>x.value));
+  el.innerHTML=arr.slice(0,12).map((x,i)=>{
+    const w=Math.max(2, x.value/max*100);
+    const col=typeof color==='function'?color(i):color;
+    return `<div class="hbar"><div class="nm" title="${String(x.name||'').replace(/"/g,'&quot;')}">${x.name}</div><div class="track"><div class="fill" style="width:${w}%;background:${col}"></div></div><div class="val">${fmt(x.value)} ${unit||''}</div></div>`;
+  }).join('');
+}
+function kpiCard(v,l,o){
+  o=o||{}; let dh=''; const d=o.delta;
+  if(d!=null && isFinite(d)){ const dir=d>0?'up':(d<0?'down':''); const cls=o.neutral?'':dir; const arrow=d>0?'▲':(d<0?'▼':'•'); dh=`<div class="d ${cls}">${arrow} ${fmt1(Math.abs(d))}% <span style="opacity:.6;font-weight:400">vs ant.</span></div>`; }
+  return `<div class="kpi ${o.cls||''}"><div class="v">${v}</div><div class="l">${l}</div>${dh}</div>`;
+}
+
+/* ---- Filtros (dropdowns) ---- */
+function renderDashEmpFilter(){
+  const lista=dashEmpList();
+  const sel = dashEmpFilter===null ? new Set(lista.map(e=>e.id)) : dashEmpFilter;
+  const panel=document.getElementById('dashEmpPanel');
+  panel.innerHTML=`<div class="dd-actions"><button type="button" data-act="all">Todos</button><button type="button" data-act="none">Nenhum</button></div>`+
+    (lista.map(e=>`<label><input type="checkbox" value="${e.id}" ${sel.has(e.id)?'checked':''}> ${e.nome}</label>`).join('')||'<div class="empty">Sem empurradores.</div>');
+  document.getElementById('dashEmpBtn').textContent=(sel.size>=lista.length?'Todos':sel.size+' de '+lista.length)+' ▾';
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.addEventListener('change',()=>{
+    const s=new Set(); panel.querySelectorAll('input[type=checkbox]:checked').forEach(x=>s.add(x.value));
+    dashEmpFilter = s.size>=lista.length ? null : s; renderDashboard();
+  }));
+  panel.querySelector('[data-act=all]').addEventListener('click',()=>{ dashEmpFilter=null; renderDashboard(); });
+  panel.querySelector('[data-act=none]').addEventListener('click',()=>{ dashEmpFilter=new Set(); renderDashboard(); });
+}
+function renderDashRotaFilter(){
+  const lista=dashRotaList();
+  const sel = dashRotaFilter===null ? new Set(lista.map(r=>r.id)) : dashRotaFilter;
+  const panel=document.getElementById('dashRotaPanel');
+  panel.innerHTML=`<div class="dd-actions"><button type="button" data-act="all">Todas</button><button type="button" data-act="none">Nenhuma</button></div>`+
+    (lista.map(r=>`<label><input type="checkbox" value="${r.id}" ${sel.has(r.id)?'checked':''}> ${r.nome}</label>`).join('')||'<div class="empty">Sem rotas.</div>');
+  document.getElementById('dashRotaBtn').textContent=(sel.size>=lista.length?'Todas':sel.size+' de '+lista.length)+' ▾';
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.addEventListener('change',()=>{
+    const s=new Set(); panel.querySelectorAll('input[type=checkbox]:checked').forEach(x=>s.add(x.value));
+    dashRotaFilter = s.size>=lista.length ? null : s; renderDashboard();
+  }));
+  panel.querySelector('[data-act=all]').addEventListener('click',()=>{ dashRotaFilter=null; renderDashboard(); });
+  panel.querySelector('[data-act=none]').addEventListener('click',()=>{ dashRotaFilter=new Set(); renderDashboard(); });
+}
+function drillToMonth(ym){
+  if(dashGran!=='month' || !/^\d{4}-\d{2}$/.test(ym)) return;
+  dashDrillPrev={ini:document.getElementById('dashIni').value, fim:document.getElementById('dashFim').value};
+  const [y,m]=ym.split('-').map(Number);
+  document.getElementById('dashIni').value=dateStr(new Date(y,m-1,1));
+  document.getElementById('dashFim').value=dateStr(new Date(y,m,0));
+  dashGran='day'; renderDashboard();
+}
+
+/* ---- Decomposição efeito preço × consumo ---- */
+function renderEfeito(el, eff){
+  if(!eff || (eff.cost0===0 && eff.cost1===0)){
+    el.innerHTML='<div class="dash-empty">Para a decomposição é preciso consumo (Histórico de Viagens) em pelo menos dois períodos, e preços (abastecimentos realizados ou Histórico de Preços).</div>';
+    return;
+  }
+  const cost0=eff.cost0, cost1=eff.cost1, volEff=eff.volEff, priceEff=eff.priceEff, fuelRows=eff.rows;
+  const dCost=cost1-cost0;
+  const seq=[
+    {label:'Custo '+(eff.labelPrev||'anterior'), bottom:0, top:cost0, color:'#64748b', amt:cost0, abs:true},
+  ];
+  let run=cost0;
+  seq.push({label:'Efeito consumo', bottom:Math.min(run,run+volEff), top:Math.max(run,run+volEff), color:volEff>=0?'#ef4444':'#22c55e', amt:volEff}); run+=volEff;
+  seq.push({label:'Efeito preço', bottom:Math.min(run,run+priceEff), top:Math.max(run,run+priceEff), color:priceEff>=0?'#ef4444':'#22c55e', amt:priceEff}); run+=priceEff;
+  seq.push({label:'Custo '+(eff.labelCur||'atual'), bottom:0, top:cost1, color:'#64748b', amt:cost1, abs:true});
+  const W=el.clientWidth||760, H=210, padT=24, padB=46, baseY=H-padB, plotH=H-padT-padB;
+  const maxTop=Math.max(1, cost0, cost1, ...seq.map(s=>s.top));
+  const yv=v=> baseY - v/maxTop*plotH;
+  const cw=W/seq.length, bw=Math.min(90, cw*0.5);
+  let s='';
+  seq.forEach((c,i)=>{
+    const cx=cw*i+cw/2, x0=cx-bw/2;
+    const yt=yv(c.top), yb=yv(c.bottom);
+    s+=`<rect x="${x0}" y="${yt}" width="${bw}" height="${Math.max(2,yb-yt)}" fill="${c.color}" fill-opacity="0.9" rx="2"/>`;
+    const amtTxt=(c.abs?'':(c.amt>=0?'+':'−'))+fmtMoney(Math.abs(c.amt)).replace('R$ ','R$');
+    s+=`<text x="${cx}" y="${yt-6}" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">${amtTxt}</text>`;
+    s+=`<text x="${cx}" y="${baseY+16}" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">${c.label}</text>`;
+    if(i<seq.length-1){ const nb=yv(seq[i+1].abs?seq[i+1].top:seq[i+1].top); const yConn=yv(seq[i].abs?seq[i].top:(c.amt>=0?c.top:c.bottom)); s+=`<line x1="${cx+bw/2}" y1="${yConn}" x2="${cw*(i+1)+cw/2-bw/2}" y2="${yConn}" stroke="currentColor" stroke-opacity="0.25" stroke-dasharray="3 3"/>`; }
+  });
+  const dCls=dCost>0?'up':(dCost<0?'down':'');
+  let h=`<div style="font-size:12px;margin-bottom:4px;">Variação de custo de combustível: <b class="${dCls==='up'?'':''}" style="color:${dCost>0?'var(--bad)':'var(--ok)'}">${dCost>=0?'+':'−'}${fmtMoney(Math.abs(dCost))}</b> &nbsp;=&nbsp; efeito consumo <b style="color:${volEff>=0?'var(--bad)':'var(--ok)'}">${volEff>=0?'+':'−'}${fmtMoney(Math.abs(volEff))}</b> &nbsp;+&nbsp; efeito preço <b style="color:${priceEff>=0?'var(--bad)':'var(--ok)'}">${priceEff>=0?'+':'−'}${fmtMoney(Math.abs(priceEff))}</b></div>`;
+  h+=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;color:var(--txt);">${s}</svg>`;
+  h+=`<div style="overflow:auto;margin-top:8px;"><table><tr><th>Combustível</th><th class="num">Consumo ant. (L)</th><th class="num">Consumo atual (L)</th><th class="num">Preço ant. (R$/L)</th><th class="num">Preço atual (R$/L)</th><th class="num">Efeito consumo</th><th class="num">Efeito preço</th></tr>`;
+  fuelRows.forEach(f=>{
+    h+=`<tr><td><span class="tag ${f.key}">${f.label}</span></td>
+      <td class="num">${fmt(f.Q0)}</td><td class="num">${fmt(f.Q1)}</td>
+      <td class="num">${f.P0?fmt2(f.P0):'—'}</td><td class="num">${f.P1?fmt2(f.P1):'—'}</td>
+      <td class="num" style="color:${f.ve>=0?'var(--bad)':'var(--ok)'}">${f.ve>=0?'+':'−'}${fmtMoney(Math.abs(f.ve))}</td>
+      <td class="num" style="color:${f.pe>=0?'var(--bad)':'var(--ok)'}">${f.pe>=0?'+':'−'}${fmtMoney(Math.abs(f.pe))}</td></tr>`;
+  });
+  h+=`</table></div><div class="hint" style="margin-top:6px;">Comparando <b>${eff.labelPrev}</b> → <b>${eff.labelCur}</b> (os dois últimos períodos com consumo). Efeito preço = (Preço atual − Preço anterior) × Consumo atual. Efeito consumo = (Consumo atual − Consumo anterior) × Preço anterior. Preço ponderado dos abastecimentos realizados, com retorno ao Histórico de Preços quando ausente (MGO inclui "Diesel").</div>`;
+  el.innerHTML=h;
+}
+
+function renderDashboard(){
+  initDashFilters();
+  renderDashEmpFilter(); renderDashRotaFilter();
+  setSegActiveByData('#dashGranSeg','gran',dashGran);
+  setSegActiveByData('#dashConsumoMode','mode',dashConsumoMode);
+
+  const ini=document.getElementById('dashIni').value;
+  const fim=document.getElementById('dashFim').value;
+  const gran=dashGran;
+  const empAll=dashEmpFilter===null, rotaAll=dashRotaFilter===null;
+  const empSet=empAll?null:dashEmpFilter, rotaSet=rotaAll?null:dashRotaFilter;
+  const baseOk=v=>{
+    if(!empAll && !(v.empId && empSet.has(v.empId))) return false;
+    if(!rotaAll && !(v.rotaId && rotaSet.has(v.rotaId))) return false;
+    return true;
+  };
+  const filterTrips=(i,f)=> (state.historicoViagens||[]).filter(v=> v.data && (!i||v.data>=i) && (!f||v.data<=f) && baseOk(v));
+  const trips=filterTrips(ini,fim);
+  const prev=(ini&&fim)?prevRange(ini,fim):null;
+  const prevTrips=prev?filterTrips(prev.ini,prev.fim):[];
+  const tot=tripTotals(trips), prevTot=prev?tripTotals(prevTrips):null;
+
+  // crumb
+  const crumbEl=document.getElementById('dashCrumb');
+  if(gran==='day'){
+    let c=`📅 Visão diária — ${ini?parseDate(ini).toLocaleDateString('pt-BR'):''} a ${fim?parseDate(fim).toLocaleDateString('pt-BR'):''}`;
+    if(dashDrillPrev) c+=` · <b id="dashBack">↩ voltar à visão mensal</b>`;
+    crumbEl.innerHTML=c;
+    const bk=document.getElementById('dashBack');
+    if(bk) bk.addEventListener('click',()=>{ document.getElementById('dashIni').value=dashDrillPrev.ini; document.getElementById('dashFim').value=dashDrillPrev.fim; dashGran='month'; dashDrillPrev=null; renderDashboard(); });
+  } else {
+    crumbEl.innerHTML='🗓️ Visão mensal — clique numa barra/mês de um gráfico para detalhar por dia.';
+  }
+
+  const buckets=dashBuckets(ini,fim,gran);
+  const agg=dashTripAggByBucket(trips, gran);
+  const has=k=>!!agg[k];
+  const consMGOraw=buckets.map(k=>agg[k]?agg[k].consMGO:0);
+  const consHFOraw=buckets.map(k=>agg[k]?agg[k].consHFO:0);
+  const lineNull=arr=>arr.map((v,i)=>has(buckets[i])?v:null);
+  const lton=buckets.map(k=>{ const o=agg[k]; return o&&o.volCarregada>0?o.consCarregada/o.volCarregada:null; });
+  const lh=buckets.map(k=>{ const o=agg[k]; return o&&o.horas>0?o.cons/o.horas:null; });
+  const tempoMed=buckets.map(k=>{ const o=agg[k]; return o&&o.nViag>0?o.tempoSum/o.nViag:null; });
+
+  // máquina
+  const mh=dashMachineHoursByBucket(ini,fim,gran,empAll,empSet);
+  const mcp=buckets.map(k=>mh[k]?mh[k].MCP:0), mca=buckets.map(k=>mh[k]?mh[k].MCA:0);
+  const totMCP=mcp.reduce((a,b)=>a+b,0), totMCA=mca.reduce((a,b)=>a+b,0);
+
+  const fuels=[{key:'MGO',label:'MGO',pool:['MGO','Diesel']},{key:'HFO',label:'HFO',pool:['HFO']}];
+  // Custo de combustível do período (para o KPI) e da janela anterior equivalente (para o Δ)
+  let costPeriod=0, costPrevWindow=0;
+  fuels.forEach(fu=>{
+    const Q1=fu.key==='MGO'?tot.mgo:tot.hfo;
+    const Q0=prevTot?(fu.key==='MGO'?prevTot.mgo:prevTot.hfo):0;
+    costPeriod    += Q1 * fuelPrice(ini,fim,fu.pool,ini,fim);
+    if(prev) costPrevWindow += Q0 * fuelPrice(prev.ini,prev.fim,fu.pool,ini,fim);
+  });
+  // Decomposição efeito preço × consumo entre os DOIS ÚLTIMOS buckets com consumo
+  const bucketsData=buckets.filter(k=>agg[k] && agg[k].cons>0);
+  let effData=null;
+  if(bucketsData.length>=2){
+    const bCur=bucketsData[bucketsData.length-1], bPrev=bucketsData[bucketsData.length-2];
+    const rc=bucketRange(bCur,gran), rp=bucketRange(bPrev,gran);
+    let c1=0,c0=0,pe=0,ve=0; const rows=[];
+    fuels.forEach(fu=>{
+      const Q1=(fu.key==='MGO'?agg[bCur].consMGO:agg[bCur].consHFO)||0;
+      const Q0=(fu.key==='MGO'?agg[bPrev].consMGO:agg[bPrev].consHFO)||0;
+      const P1=fuelPrice(rc.i,rc.f,fu.pool,ini,fim), P0=fuelPrice(rp.i,rp.f,fu.pool,ini,fim);
+      c1+=Q1*P1; c0+=Q0*P0; pe+=(P1-P0)*Q1; ve+=(Q1-Q0)*P0;
+      rows.push({key:fu.key,label:fu.label,Q1,Q0,P1,P0,pe:(P1-P0)*Q1,ve:(Q1-Q0)*P0});
+    });
+    effData={cost0:c0,cost1:c1,volEff:ve,priceEff:pe,rows,
+      labelCur:bucketShortLabel(bCur,gran), labelPrev:bucketShortLabel(bPrev,gran)};
+  }
+
+  // KPIs
+  const lTonTot=tot.vol>0?tot.consCar/tot.vol:0, lhTot=tot.horas>0?tot.cons/tot.horas:0;
+  const prevLTon=prevTot&&prevTot.vol>0?prevTot.consCar/prevTot.vol:null;
+  const prevLh=prevTot&&prevTot.horas>0?prevTot.cons/prevTot.horas:null;
+  const pct=(c,p)=> (p!=null&&isFinite(p)&&p!==0)?((c-p)/p*100):null;
+  const hasPrevWindow=!!prev && prevTot && prevTot.cons>0;
+  document.getElementById('dashKpis').innerHTML=[
+    kpiCard(fmt(tot.vol)+' t','Volume transportado',{neutral:true,delta:pct(tot.vol,prevTot?prevTot.vol:null)}),
+    kpiCard(fmt(tot.cons)+' L','Consumo total',{delta:pct(tot.cons,prevTot?prevTot.cons:null)}),
+    kpiCard(lTonTot?fmt1(lTonTot):'—','L/Ton',{delta:pct(lTonTot,prevLTon)}),
+    kpiCard(lhTot?fmt1(lhTot):'—','L/h navegada',{delta:pct(lhTot,prevLh)}),
+    kpiCard(fmt1(tot.horas)+' h','Horas navegadas',{neutral:true,delta:pct(tot.horas,prevTot?prevTot.horas:null)}),
+    kpiCard(String(tot.n),'Viagens',{neutral:true,delta:pct(tot.n,prevTot?prevTot.n:null)}),
+    kpiCard(fmt1(totMCP+totMCA)+' h','Horas máquina',{neutral:true}),
+    kpiCard(costPeriod?fmtMoney(costPeriod):'—','Custo combustível',{delta:hasPrevWindow?pct(costPeriod,costPrevWindow):null}),
+  ].join('');
+
+  // Gráfico consumo
+  const consumoSeries = dashConsumoMode==='stack'
+    ? [{label:'MGO',type:'bar',color:cbColor('MGO',0),values:consMGOraw},{label:'HFO',type:'bar',color:cbColor('HFO',1),values:consHFOraw}]
+    : [{label:'MGO',type:'line',color:cbColor('MGO',0),values:lineNull(consMGOraw)},{label:'HFO',type:'line',color:cbColor('HFO',1),values:lineNull(consHFOraw)}];
+  drawChart({svgId:'dashChartConsumo',legendId:'dashLegConsumo',tipId:'dashTipConsumo',buckets,gran,series:consumoSeries,stacked:dashConsumoMode==='stack',yLabel:'L',yfmt:fmt,onBucketClick:drillToMonth,empty:'Importe o Histórico de Viagens (módulo Importações) para ver o consumo real.'});
+  document.getElementById('dashConsumoSub').textContent=`— total ${fmt(tot.cons)} L (MGO ${fmt(tot.mgo)} · HFO ${fmt(tot.hfo)})`;
+
+  drawChart({svgId:'dashChartLTon',legendId:'dashLegLTon',tipId:'dashTipLTon',buckets,gran,series:[{label:'L/Ton',type:'line',color:'#0ea5e9',values:lton}],yLabel:'L/t',yfmt:fmt1,tipFmt:v=>fmt1(v)+' L/t',onBucketClick:drillToMonth,empty:'Sem viagens carregadas com volume no período.'});
+  drawChart({svgId:'dashChartLh',legendId:'dashLegLh',tipId:'dashTipLh',buckets,gran,series:[{label:'L/h navegada',type:'line',color:'#7c3aed',values:lh}],yLabel:'L/h',yfmt:fmt1,tipFmt:v=>fmt1(v)+' L/h',onBucketClick:drillToMonth,empty:'Sem horas de navegação no período.'});
+  drawChart({svgId:'dashChartHoras',legendId:'dashLegHoras',tipId:'dashTipHoras',buckets,gran,series:[{label:'Horas MCP',type:'bar',color:'#0e7490',values:mcp},{label:'Horas MCA',type:'bar',color:'#f59e0b',values:mca}],stacked:true,yLabel:'h',yfmt:fmt1,tipFmt:v=>fmt1(v)+' h',onBucketClick:drillToMonth,empty:'Importe Estoque e Horas de Máquina para ver o horímetro.'});
+  drawChart({svgId:'dashChartTempo',legendId:'dashLegTempo',tipId:'dashTipTempo',buckets,gran,series:[{label:'Tempo médio',type:'line',color:'#22c55e',values:tempoMed}],yLabel:'h',yfmt:fmt1,tipFmt:v=>fmt1(v)+' h',onBucketClick:drillToMonth,empty:'Sem viagens no período.'});
+
+  // Realizado × Budget por cidade
+  const cityOf=v=>{ const r=v.rotaId?rotaById(v.rotaId):null; return r&&r.destino?r.destino:''; };
+  const realByCity={}; trips.forEach(v=>{ if(!isCarregada(v.condicao)||!v.volume) return; const c=cityOf(v); if(!c) return; realByCity[c]=(realByCity[c]||0)+v.volume; });
+  const mesesR=monthsInRange(ini,fim); const budByCity={};
+  Object.keys(state.budgetVolume||{}).forEach(c=>{ let sm=0; mesesR.forEach(m=>{ sm+=state.budgetVolume[c][m]||0; }); if(sm>0) budByCity[c]=sm; });
+  const cities=[...new Set([...Object.keys(realByCity),...Object.keys(budByCity)])].filter(c=>c).sort();
+  drawChart({svgId:'dashChartBudget',legendId:'dashLegBudget',tipId:'dashTipBudget',buckets:cities,gran:'month',labelFn:c=>c,longLabelFn:c=>c,series:[{label:'Realizado (t)',type:'bar',color:'#0ea5e9',values:cities.map(c=>realByCity[c]||0)},{label:'Budget (t)',type:'bar',color:'#f59e0b',values:cities.map(c=>budByCity[c]||0)}],stacked:false,yLabel:'t',yfmt:fmt,tipFmt:v=>fmt(v)+' t',empty:'Cadastre o Budget e importe viagens com Trecho (destino) para comparar.'});
+
+  // Consumo por rota / por empurrador
+  const byRota={}, byEmp={};
+  trips.forEach(v=>{ const c=(v.consumo&&v.consumo.MGO?v.consumo.MGO:0)+(v.consumo&&v.consumo.HFO?v.consumo.HFO:0); const rk=v.rotaId||'(sem trecho)'; byRota[rk]=(byRota[rk]||0)+c; const ek=v.empId||'(sem emp)'; byEmp[ek]=(byEmp[ek]||0)+c; });
+  renderHBars('dashRotaBars', Object.entries(byRota).map(([id,val])=>({name:id==='(sem trecho)'?'(sem trecho)':((rotaById(id)||{}).nome||id),value:val})), '#0ea5e9','L');
+  renderHBars('dashEmpBars', Object.entries(byEmp).map(([id,val])=>({name:id==='(sem emp)'?'(sem emp)':((empById(id)||{}).nome||id),value:val})), '#22c55e','L');
+
+  // Efeito
+  renderEfeito(document.getElementById('dashEfeito'), effData);
+
+  // Tabela por empurrador
+  const empAgg={};
+  trips.forEach(v=>{ const k=v.empId||'(sem)'; const o=empAgg[k]=empAgg[k]||{n:0,vol:0,cons:0,consCar:0,horas:0}; const c=(v.consumo&&v.consumo.MGO?v.consumo.MGO:0)+(v.consumo&&v.consumo.HFO?v.consumo.HFO:0); o.n++; o.cons+=c; o.horas+=v.tempo||0; if(isCarregada(v.condicao)&&v.volume){o.vol+=v.volume;o.consCar+=c;} });
+  const mhEmp=machineHoursByEmp(ini,fim);
+  const te=document.getElementById('dashTblEmp');
+  const empRows=Object.entries(empAgg).sort((a,b)=>b[1].cons-a[1].cons);
+  if(!empRows.length){ te.innerHTML='<tr><td class="empty">Sem viagens reais no período.</td></tr>'; }
+  else{
+    let h=`<tr><th>Empurrador</th><th class="num">Viagens</th><th class="num">Volume (t)</th><th class="num">Consumo (L)</th><th class="num">L/Ton</th><th class="num">L/h nav.</th><th class="num">Horas nav.</th><th class="num">Horas MCP</th><th class="num">Horas MCA</th></tr>`;
+    empRows.forEach(([id,o])=>{ const mhv=mhEmp[id]||{mcp:0,mca:0}; h+=`<tr><td>${id==='(sem)'?'(sem emp)':((empById(id)||{}).nome||id)}</td><td class="num">${o.n}</td><td class="num">${fmt(o.vol)}</td><td class="num">${fmt(o.cons)}</td><td class="num">${o.vol>0?fmt1(o.consCar/o.vol):'—'}</td><td class="num">${o.horas>0?fmt1(o.cons/o.horas):'—'}</td><td class="num">${fmt1(o.horas)}</td><td class="num">${mhv.mcp>0?fmt1(mhv.mcp):'—'}</td><td class="num">${mhv.mca>0?fmt1(mhv.mca):'—'}</td></tr>`; });
+    te.innerHTML=h;
+  }
+  // Tabela por rota
+  const rotaAgg={};
+  trips.forEach(v=>{ const k=v.rotaId||'(sem)'; const o=rotaAgg[k]=rotaAgg[k]||{n:0,vol:0,cons:0,consCar:0,horas:0,tempoSum:0}; const c=(v.consumo&&v.consumo.MGO?v.consumo.MGO:0)+(v.consumo&&v.consumo.HFO?v.consumo.HFO:0); o.n++; o.cons+=c; o.horas+=v.tempo||0; o.tempoSum+=v.tempo||0; if(isCarregada(v.condicao)&&v.volume){o.vol+=v.volume;o.consCar+=c;} });
+  const tr=document.getElementById('dashTblRota');
+  const rotaRows=Object.entries(rotaAgg).sort((a,b)=>b[1].cons-a[1].cons);
+  if(!rotaRows.length){ tr.innerHTML='<tr><td class="empty">Sem viagens reais no período.</td></tr>'; }
+  else{
+    let h=`<tr><th>Rota / Trecho</th><th class="num">Viagens</th><th class="num">Volume (t)</th><th class="num">Consumo (L)</th><th class="num">L/Ton</th><th class="num">L/h nav.</th><th class="num">Tempo médio (h)</th></tr>`;
+    rotaRows.forEach(([id,o])=>{ h+=`<tr><td>${id==='(sem)'?'(sem trecho)':((rotaById(id)||{}).nome||id)}</td><td class="num">${o.n}</td><td class="num">${fmt(o.vol)}</td><td class="num">${fmt(o.cons)}</td><td class="num">${o.vol>0?fmt1(o.consCar/o.vol):'—'}</td><td class="num">${o.horas>0?fmt1(o.cons/o.horas):'—'}</td><td class="num">${o.n>0?fmt1(o.tempoSum/o.n):'—'}</td></tr>`; });
+    tr.innerHTML=h;
+  }
+}
+
+/* ---- Wiring dos controles do Dashboard ---- */
+document.querySelectorAll('#dashGranSeg button').forEach(b=>b.addEventListener('click',()=>{ dashGran=b.dataset.gran; dashDrillPrev=null; renderDashboard(); }));
+document.querySelectorAll('#dashConsumoMode button').forEach(b=>b.addEventListener('click',()=>{ dashConsumoMode=b.dataset.mode; renderDashboard(); }));
+['dashIni','dashFim'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ dashDrillPrev=null; renderDashboard(); }));
+document.getElementById('btnDashMesAtual').addEventListener('click',()=>{ document.getElementById('dashIni').value=dateStr(firstDayOfMonth()); document.getElementById('dashFim').value=dateStr(lastDayOfMonth()); dashGran='day'; dashDrillPrev=null; renderDashboard(); });
+document.getElementById('btnDashYtd').addEventListener('click',()=>{ const now=new Date(); document.getElementById('dashIni').value=dateStr(new Date(now.getFullYear(),0,1)); document.getElementById('dashFim').value=dateStr(now); dashGran='month'; dashDrillPrev=null; renderDashboard(); });
+document.getElementById('btnDash12m').addEventListener('click',()=>{ const now=new Date(); document.getElementById('dashIni').value=dateStr(firstDayOfMonth(addMonths(now,-11))); document.getElementById('dashFim').value=dateStr(now); dashGran='month'; dashDrillPrev=null; renderDashboard(); });
+['dashEmpDrop','dashRotaDrop'].forEach(id=>{
+  const d=document.getElementById(id); if(!d) return;
+  d.querySelector('.dropdown-btn').addEventListener('click', e=>{ e.stopPropagation(); d.classList.toggle('open'); });
+});
+document.addEventListener('click', e=>{ ['dashEmpDrop','dashRotaDrop'].forEach(id=>{ const d=document.getElementById(id); if(d && !d.contains(e.target)) d.classList.remove('open'); }); });
+
+/* =========================================================
    MODAIS — fechar
    ========================================================= */
 function closeModals(){ document.querySelectorAll('.modal-bg').forEach(m=>m.classList.remove('show')); }
@@ -3624,9 +4620,45 @@ function seedData(){
     state.historicoPrecos.push({id:uid(),data:dt,fornecedorId:f1.id,combustivel:'HFO',preco:4.00+m*0.02});
     state.historicoPrecos.push({id:uid(),data:dt,fornecedorId:f2.id,combustivel:'MGO',preco:7.10+m*0.05});
   }
-  // Budget exemplo
-  const cMes = ymStr(new Date());
-  state.budgetVolume={'Cidade A':{[cMes]:50},'Cidade B':{[cMes]:300}};
+  // Budget exemplo — cobre os últimos meses para comparar com o realizado
+  const bMonths=[ymStr(addMonths(today,-3)),ymStr(addMonths(today,-2)),ymStr(addMonths(today,-1)),ymStr(today)];
+  state.budgetVolume={'Cidade A':{},'Cidade B':{}};
+  bMonths.forEach(m=>{ state.budgetVolume['Cidade A'][m]=60; state.budgetVolume['Cidade B'][m]=320; });
+
+  // ===== Dados REAIS de exemplo (soberanos sobre as estimativas) =====
+  state.historicoViagens=[]; state.estoqueLeituras=[]; state.abastecimentosReais=[];
+  const hMCP={[e1.id]:12000,[e2.id]:8000}, hMCA={[e1.id]:9000,[e2.id]:6000};
+  const estMGO={[e1.id]:120000,[e2.id]:70000}, estHFO={[e1.id]:480000};
+  let cursor=new Date(firstDayOfMonth(addMonths(today,-3))); let toggle=0;
+  while(cursor < today){
+    const ds=dateStr(cursor);
+    // leitura de estoque + horímetro às 06:00
+    state.estoqueLeituras.push({id:uid(),empId:e1.id,empNome:e1.nome,data:ds,datetime:ds+'T06:00',
+      estoqueMGO:Math.round(estMGO[e1.id]),estoqueHFO:Math.round(estHFO[e1.id]),horasMCP:Math.round(hMCP[e1.id]),horasMCA:Math.round(hMCA[e1.id])});
+    state.estoqueLeituras.push({id:uid(),empId:e2.id,empNome:e2.nome,data:ds,datetime:ds+'T06:00',
+      estoqueMGO:Math.round(estMGO[e2.id]),estoqueHFO:null,horasMCP:Math.round(hMCP[e2.id]),horasMCA:Math.round(hMCA[e2.id])});
+    // a cada 6 dias inicia uma viagem real (alterna empurrador/rota/condição)
+    if(cursor.getDate()%6===0){
+      const e=toggle%2===0?e1:e2, r=toggle%2===0?r1:r2; toggle++;
+      const cond=toggle%3===0?'Vazia':'Carregada', tempo=e===e1?96:108;
+      const saida=new Date(cursor); saida.setHours(8,0,0,0);
+      const chegada=new Date(saida.getTime()+tempo*3600000);
+      const mgo=Math.round((e===e1?50:88)*tempo*(0.92+Math.random()*0.16));
+      const hfo=e===e1?Math.round(620*tempo*(0.92+Math.random()*0.16)):0;
+      const vol=cond==='Carregada'?(e===e1?5000:3200):0;
+      state.historicoViagens.push({id:uid(),empId:e.id,empNome:e.nome,comandante:'Cmte. '+e.nome.split(' ').pop(),
+        condicao:cond,produto:cond==='Carregada'?'Combustível':'—',volume:vol,barcacas:e===e1?4:2,
+        saida:toLocalISO(saida),chegada:toLocalISO(chegada),trecho:r.nome,rotaId:r.id,
+        tempo,consumo:{MGO:mgo,HFO:hfo},data:dateStr(saida)});
+      state.abastecimentosReais.push({id:uid(),empId:e.id,empNome:e.nome,inicio:toLocalISO(chegada),
+        fim:toLocalISO(new Date(chegada.getTime()+4*3600000)),produto:e===e1?'HFO':'MGO',data:dateStr(chegada)});
+      if(e===e1){ estHFO[e1.id]+=200000; estMGO[e1.id]+=30000; } else { estMGO[e2.id]+=30000; }
+    }
+    hMCP[e1.id]+=20; hMCA[e1.id]+=14; hMCP[e2.id]+=18; hMCA[e2.id]+=12;
+    estMGO[e1.id]=Math.max(15000,estMGO[e1.id]-1500); estHFO[e1.id]=Math.max(40000,estHFO[e1.id]-9000);
+    estMGO[e2.id]=Math.max(10000,estMGO[e2.id]-2000);
+    cursor=addDays(cursor,1);
+  }
 }
 
 /* =========================================================

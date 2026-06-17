@@ -939,28 +939,65 @@ function clearManualEstoque(empId, comb, dataStr){
   state.estoques = state.estoques.filter(o=> !(o.empId===empId && o.comb===comb && o.data===dataStr));
 }
 // Consumo navegando REAL (L) por combustível num dado dia, a partir do Histórico de Viagens importado.
-// Rateia o consumo total da viagem pela fração de horas que cai dentro do dia.
+// Rateia o consumo da viagem pelas horas navegadas no dia (saída→chegada). Quando duas viagens do
+// mesmo empurrador se SOBREPÕEM no tempo, a viagem PRINCIPAL (mais longa) fica com o trecho sobreposto,
+// evitando dupla contagem de consumo.
 function realConsumoDia(empId, day){
-  const dayStart = day.getTime();
-  const dayEnd = dayStart + 86400000;
-  const byComb = {MGO:0, HFO:0, Diesel:0};
-  let horasNav = 0, has = false;
+  const dayStart = day.getTime(), dayEnd = dayStart + 86400000;
+  const segs=[];
   (state.historicoViagens||[]).forEach(v=>{
-    if(v.empId!==empId) return;
-    const s = v.saida ? new Date(v.saida).getTime() : NaN;
-    const c = v.chegada ? new Date(v.chegada).getTime() : NaN;
+    if(v.empId!==empId || !v.saida || !v.chegada) return;
+    const s=new Date(v.saida).getTime(), c=new Date(v.chegada).getTime();
     if(isNaN(s)||isNaN(c)||c<=s) return;
-    const ini = Math.max(s, dayStart), fim = Math.min(c, dayEnd);
+    const ini=Math.max(s,dayStart), fim=Math.min(c,dayEnd);
     if(fim<=ini) return;
-    const overlapH = (fim-ini)/3600000;
-    const totalH = (c-s)/3600000;
-    const frac = totalH>0 ? overlapH/totalH : 0;
-    has = true; horasNav += overlapH;
-    byComb.MGO += (v.consumo && v.consumo.MGO ? v.consumo.MGO : 0)*frac;
-    byComb.HFO += (v.consumo && v.consumo.HFO ? v.consumo.HFO : 0)*frac;
+    const totalH=(c-s)/3600000;
+    segs.push({ini,fim,dur:c-s,
+      rMGO:(v.consumo&&v.consumo.MGO?v.consumo.MGO:0)/totalH,
+      rHFO:(v.consumo&&v.consumo.HFO?v.consumo.HFO:0)/totalH});
+  });
+  const byComb={MGO:0,HFO:0,Diesel:0}; let horasNav=0;
+  if(!segs.length) return {has:false, byComb, horasNav};
+  segs.sort((a,b)=>b.dur-a.dur); // principal (mais longa) primeiro
+  const covered=[]; // intervalos já atribuídos a uma viagem
+  segs.forEach(sg=>{
+    let pieces=[[sg.ini,sg.fim]];
+    covered.forEach(([ci,cf])=>{
+      const next=[];
+      pieces.forEach(([pi,pf])=>{
+        if(cf<=pi||ci>=pf){ next.push([pi,pf]); return; }   // sem sobreposição
+        if(ci>pi) next.push([pi,Math.min(ci,pf)]);          // pedaço antes do coberto
+        if(cf<pf) next.push([Math.max(cf,pi),pf]);          // pedaço depois do coberto
+      });
+      pieces=next;
+    });
+    let h=0;
+    pieces.forEach(([pi,pf])=>{ if(pf>pi){ h+=(pf-pi)/3600000; covered.push([pi,pf]); } });
+    horasNav+=h; byComb.MGO+=sg.rMGO*h; byComb.HFO+=sg.rHFO*h;
   });
   if(horasNav>24) horasNav=24;
-  return {has, byComb, horasNav};
+  return {has:true, byComb, horasNav};
+}
+// Ids das viagens reais que se sobrepõem no tempo com outra do MESMO empurrador
+function overlappingTripIds(){
+  const byEmp={};
+  (state.historicoViagens||[]).forEach(v=>{
+    if(!v.empId||!v.saida||!v.chegada) return;
+    const s=new Date(v.saida).getTime(), c=new Date(v.chegada).getTime();
+    if(isNaN(s)||isNaN(c)||c<=s) return;
+    (byEmp[v.empId]=byEmp[v.empId]||[]).push({id:v.id,s,c});
+  });
+  const over=new Set();
+  Object.values(byEmp).forEach(arr=>{
+    arr.sort((a,b)=>a.s-b.s);
+    for(let i=0;i<arr.length;i++){
+      for(let j=i+1;j<arr.length;j++){
+        if(arr[j].s>=arr[i].c) break;     // ordenado por início; sem mais sobreposições com i
+        over.add(arr[i].id); over.add(arr[j].id);
+      }
+    }
+  });
+  return over;
 }
 // Consumo diário (L) de um empurrador/combustível num dado dia.
 // Soberania: se há viagem REAL importada nesse dia, usa o consumo real; senão, usa a estimativa do mapa.
@@ -3968,16 +4005,24 @@ function processHistViagRows(rows){
     ok++;
   }
   state.historicoViagens=novos;
+  const nOver=overlappingTripIds().size;
   save(); renderHistViagTable(); renderImpStatus(); renderRot(); renderEmp();
-  alert(`Histórico de Viagens importado.\nViagens aplicadas: ${ok}\nIgnoradas (sem empurrador/saída): ${skip}\n\nA base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
+  alert(`Histórico de Viagens importado.\nViagens aplicadas: ${ok}\nIgnoradas (sem empurrador/saída): ${skip}`+
+    (nOver?`\n⚠ ${nOver} viagem(ns) com sobreposição de horário no mesmo empurrador (marcadas na tabela). No Mapa, o trecho sobreposto entra só na viagem principal — sem dupla contagem.`:'')+
+    `\n\nA base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
 }
 function renderHistViagTable(){
   const t=document.getElementById('tblHistViag'); if(!t) return;
   const list=(state.historicoViagens||[]).slice().sort((a,b)=>(b.saida||'').localeCompare(a.saida||''));
   if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhuma viagem real importada.</td></tr>'; return; }
-  let h=`<tr><th>Empurrador</th><th>Trecho</th><th>Cond.</th><th>Produto</th><th class="num">Vol (t)</th><th class="num">Barc.</th><th>Saída</th><th>Chegada</th><th class="num">Tempo (h)</th><th class="num">MGO (L)</th><th class="num">HFO (L)</th><th></th></tr>`;
+  const overSet=overlappingTripIds();
+  const nOver=list.filter(v=>overSet.has(v.id)).length;
+  let h='';
+  if(nOver){ h+=`<tr><td colspan="12" style="background:rgba(245,158,11,.12);color:var(--warn);font-size:11px;padding:6px 8px;">⚠ ${nOver} viagem(ns) com <b>sobreposição de horário</b> no mesmo empurrador. No Mapa, o consumo do trecho sobreposto é atribuído só à viagem principal (mais longa) — corrija saída/chegada no lápis se necessário.</td></tr>`; }
+  h+=`<tr><th>Empurrador</th><th>Trecho</th><th>Cond.</th><th>Produto</th><th class="num">Vol (t)</th><th class="num">Barc.</th><th>Saída</th><th>Chegada</th><th class="num">Tempo (h)</th><th class="num">MGO (L)</th><th class="num">HFO (L)</th><th></th></tr>`;
   list.slice(0,400).forEach(v=>{
-    h+=`<tr><td>${v.empNome||'—'}</td><td>${v.trecho||'—'}</td><td>${v.condicao||'—'}</td><td>${v.produto||'—'}</td>
+    const over=overSet.has(v.id)?'<span title="Sobrepõe outra viagem do mesmo empurrador" style="color:var(--warn);cursor:help;">⚠ </span>':'';
+    h+=`<tr${over?' style="background:rgba(245,158,11,.06);"':''}><td>${over}${v.empNome||'—'}</td><td>${v.trecho||'—'}</td><td>${v.condicao||'—'}</td><td>${v.produto||'—'}</td>
       <td class="num">${v.volume?fmt(v.volume):'—'}</td><td class="num">${v.barcacas||'—'}</td>
       <td>${fmtDT(v.saida)}</td><td>${fmtDT(v.chegada)}</td><td class="num">${v.tempo?fmt1(v.tempo):'—'}</td>
       <td class="num">${v.consumo&&v.consumo.MGO?fmt(v.consumo.MGO):'—'}</td>

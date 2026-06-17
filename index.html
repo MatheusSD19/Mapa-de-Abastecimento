@@ -596,7 +596,7 @@
       </div>
 
       <div class="chart-card">
-        <div class="chart-card-header"><h3>Horas de Máquina <span class="sub">— MCP / MCA (horímetro)</span></h3></div>
+        <div class="chart-card-header"><h3>Horas de Máquina <span class="sub">— horas trabalhadas MCP / MCA</span></h3></div>
         <div class="chart-wrap"><svg id="dashChartHoras" class="chart-svg" preserveAspectRatio="none"></svg>
           <div id="dashTipHoras" class="chart-tooltip" style="display:none;"></div>
           <div id="dashLegHoras" class="chart-legend"></div></div>
@@ -681,7 +681,7 @@
         <div class="spacer"></div>
         <button class="btn secondary danger" id="btnClearEstoque">Limpar base</button>
       </div>
-      <div class="hint">Colunas esperadas: <b>ADM_Empurrador, Estoque Diesel, Estoque HFO, Horas MCP, Horas MCA</b> e uma coluna de <b>Data/Hora</b> (ex.: Data, Momento, Início — DD/MM/AAAA HH:MM). Quando há mais de uma leitura no mesmo dia, considera-se apenas a <b>primeira (mais cedo, ~06:00)</b>. Estoque Diesel é tratado como MGO. Os estoques viram <b>âncoras soberanas</b> do Mapa de Giros.</div>
+      <div class="hint">Colunas esperadas: <b>ADM_Data</b> (DD/MM/AAAA HH:MM), <b>ADM_Empurrador, Estoque Diesel, Estoque HFO, Horas MCP, Horas MCA</b>. <b>Estoque</b>: quando há mais de uma leitura no mesmo dia, considera-se apenas a <b>primeira (~06:00)</b> — Estoque Diesel é tratado como MGO e vira <b>âncora soberana</b> do Mapa de Giros. <b>Horas MCP/MCA</b>: cada valor já é o total de horas trabalhadas desde a última aferição, portanto são <b>somadas</b> no período.</div>
       <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblEstoque"></table></div>
     </div>
 
@@ -3947,13 +3947,14 @@ function processEstoqueRows(rows){
   const header=rows[0].map(na); const find=headerFinder(header);
   const idx={
     emp:find('empurrador','embarca'),
-    data:find('data','momento','inicio','instante','timestamp','leitura','hora','dia'),
+    // coluna de data = ADM_Data. Evita casar com "Horas MCP/MCA" (por isso não usamos 'hora'/'dia').
+    data:find('adm_data','data','momento','instante','timestamp','leitura','aferic'),
     diesel:find('estoque diesel','estoque mgo','diesel','mgo'),
     hfo:find('estoque hfo','hfo'),
     mcp:find('mcp'), mca:find('mca'),
   };
   if(idx.emp<0){ alert('Cabeçalho inválido. Esperado ao menos: ADM_Empurrador.'); return; }
-  if(idx.data<0){ alert('Não foi encontrada uma coluna de Data/Hora. Inclua uma coluna como "Data", "Momento" ou "Início" (formato DD/MM/AAAA HH:MM) para identificar a primeira leitura de cada dia.'); return; }
+  if(idx.data<0){ alert('Não foi encontrada a coluna de data. Inclua a coluna "ADM_Data" (formato DD/MM/AAAA HH:MM) para identificar a primeira leitura de cada dia.'); return; }
   const raw=[];
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
@@ -3967,21 +3968,34 @@ function processEstoqueRows(rows){
       horasMCA: idx.mca>=0?parseNum(r[idx.mca]):NaN,
     });
   }
-  // dedup: 1ª leitura do dia (menor datetime) por empurrador+data
-  const firstOfDay={};
-  raw.forEach(o=>{ const k=na(o.empNome)+'|'+o.data; if(!firstOfDay[k] || o.dt<firstOfDay[k].dt) firstOfDay[k]=o; });
-  const novos=Object.values(firstOfDay).map(o=>{
-    const emp=ensureEmpByName(o.empNome, [isNaN(o.estoqueMGO)?null:'MGO', isNaN(o.estoqueHFO)?null:'HFO'].filter(Boolean));
+  // Um registro por empurrador+dia:
+  //  - Estoque = leitura mais cedo do dia (~06:00), pois é dado pontual e soberano.
+  //  - Horas MCP/MCA = SOMA das aferições do dia (cada valor já é o horímetro trabalhado desde a última aferição).
+  //    Aferições com o mesmo horário (duplicatas) são contadas uma única vez.
+  const groups={};
+  raw.forEach(o=>{
+    const k=na(o.empNome)+'|'+o.data;
+    let g=groups[k];
+    if(!g){ g=groups[k]={empNome:o.empNome,data:o.data,dt:o.dt,estoqueMGO:o.estoqueMGO,estoqueHFO:o.estoqueHFO,mcp:0,mca:0,hasMCP:false,hasMCA:false,seen:new Set()}; }
+    if(o.dt < g.dt){ g.dt=o.dt; g.estoqueMGO=o.estoqueMGO; g.estoqueHFO=o.estoqueHFO; }
+    if(g.seen.has(o.dt)) return; // aferição duplicada (mesmo horário) — ignora as horas
+    g.seen.add(o.dt);
+    if(!isNaN(o.horasMCP)){ g.mcp+=o.horasMCP; g.hasMCP=true; }
+    if(!isNaN(o.horasMCA)){ g.mca+=o.horasMCA; g.hasMCA=true; }
+  });
+  const novos=Object.values(groups).map(g=>{
+    const emp=ensureEmpByName(g.empNome, [isNaN(g.estoqueMGO)?null:'MGO', isNaN(g.estoqueHFO)?null:'HFO'].filter(Boolean));
     return {
-      id:uid(), empId:emp?emp.id:null, empNome:emp?emp.nome:o.empNome, data:o.data, datetime:o.dt,
-      estoqueMGO:isNaN(o.estoqueMGO)?null:o.estoqueMGO, estoqueHFO:isNaN(o.estoqueHFO)?null:o.estoqueHFO,
-      horasMCP:isNaN(o.horasMCP)?null:o.horasMCP, horasMCA:isNaN(o.horasMCA)?null:o.horasMCA,
+      id:uid(), empId:emp?emp.id:null, empNome:emp?emp.nome:g.empNome, data:g.data, datetime:g.dt,
+      estoqueMGO:isNaN(g.estoqueMGO)?null:g.estoqueMGO, estoqueHFO:isNaN(g.estoqueHFO)?null:g.estoqueHFO,
+      horasMCP:g.hasMCP?g.mcp:null, horasMCA:g.hasMCA?g.mca:null,
     };
   }).sort((a,b)=>a.datetime.localeCompare(b.datetime));
-  const dups=raw.length-novos.length;
+  const afericoes=Object.values(groups).reduce((s,g)=>s+g.seen.size,0);
+  const dups=raw.length-afericoes;
   state.estoqueLeituras=novos;
   save(); renderEstoqueTable(); renderImpStatus(); renderEmp();
-  alert(`Estoque e Horas de Máquina importados.\nLeituras aplicadas (1ª de cada dia): ${novos.length}\nLeituras do mesmo dia descartadas: ${dups}\n\nA base anterior foi substituída. Os estoques viram âncoras soberanas do Mapa de Giros.`);
+  alert(`Estoque e Horas de Máquina importados.\nDias aplicados (estoque da 1ª leitura ~06:00): ${novos.length}\nAferições somadas (horas MCP/MCA): ${afericoes}\nLinhas duplicadas (mesmo horário) descartadas: ${dups}\n\nA base anterior foi substituída. Os estoques viram âncoras soberanas do Mapa de Giros.`);
 }
 function renderEstoqueTable(){
   const t=document.getElementById('tblEstoque'); if(!t) return;
@@ -4134,38 +4148,26 @@ function dashTripAggByBucket(trips, gran){
   });
   return out;
 }
-// Horas de máquina por bucket: delta positivo do horímetro entre leituras consecutivas (por empurrador)
+// Horas de máquina por bucket: SOMA das horas trabalhadas (cada leitura já é o horímetro desde a última aferição)
 function dashMachineHoursByBucket(ini, fim, gran, empAll, empSet){
-  const out={}, byEmp={};
-  (state.estoqueLeituras||[]).forEach(o=>{ if(!empAll && !(o.empId && empSet.has(o.empId))) return; (byEmp[o.empId]=byEmp[o.empId]||[]).push(o); });
-  Object.values(byEmp).forEach(arr=>{
-    arr.sort((a,b)=>a.datetime.localeCompare(b.datetime));
-    for(let i=1;i<arr.length;i++){
-      const pr=arr[i-1], cu=arr[i];
-      if(ini && cu.data<ini) continue; if(fim && cu.data>fim) continue;
-      const dm=(cu.horasMCP!=null && pr.horasMCP!=null)?cu.horasMCP-pr.horasMCP:0;
-      const da=(cu.horasMCA!=null && pr.horasMCA!=null)?cu.horasMCA-pr.horasMCA:0;
-      const k=bucketKeyOf(cu.data, gran);
-      out[k]=out[k]||{MCP:0,MCA:0};
-      if(dm>0) out[k].MCP+=dm; if(da>0) out[k].MCA+=da;
-    }
+  const out={};
+  (state.estoqueLeituras||[]).forEach(o=>{
+    if(!empAll && !(o.empId && empSet.has(o.empId))) return;
+    if(ini && o.data<ini) return; if(fim && o.data>fim) return;
+    const k=bucketKeyOf(o.data, gran);
+    out[k]=out[k]||{MCP:0,MCA:0};
+    if(o.horasMCP!=null) out[k].MCP+=o.horasMCP;
+    if(o.horasMCA!=null) out[k].MCA+=o.horasMCA;
   });
   return out;
 }
 function machineHoursByEmp(ini, fim){
-  const out={}, byEmp={};
-  (state.estoqueLeituras||[]).forEach(o=>{ (byEmp[o.empId]=byEmp[o.empId]||[]).push(o); });
-  Object.entries(byEmp).forEach(([eid,arr])=>{
-    arr.sort((a,b)=>a.datetime.localeCompare(b.datetime));
-    let mcp=0,mca=0;
-    for(let k=1;k<arr.length;k++){
-      const pr=arr[k-1], cu=arr[k];
-      if(ini && cu.data<ini) continue; if(fim && cu.data>fim) continue;
-      const dm=(cu.horasMCP!=null&&pr.horasMCP!=null)?cu.horasMCP-pr.horasMCP:0;
-      const da=(cu.horasMCA!=null&&pr.horasMCA!=null)?cu.horasMCA-pr.horasMCA:0;
-      if(dm>0) mcp+=dm; if(da>0) mca+=da;
-    }
-    out[eid]={mcp,mca};
+  const out={};
+  (state.estoqueLeituras||[]).forEach(o=>{
+    if(ini && o.data<ini) return; if(fim && o.data>fim) return;
+    const e=out[o.empId]=out[o.empId]||{mcp:0,mca:0};
+    if(o.horasMCP!=null) e.mcp+=o.horasMCP;
+    if(o.horasMCA!=null) e.mca+=o.horasMCA;
   });
   return out;
 }
@@ -4627,16 +4629,15 @@ function seedData(){
 
   // ===== Dados REAIS de exemplo (soberanos sobre as estimativas) =====
   state.historicoViagens=[]; state.estoqueLeituras=[]; state.abastecimentosReais=[];
-  const hMCP={[e1.id]:12000,[e2.id]:8000}, hMCA={[e1.id]:9000,[e2.id]:6000};
   const estMGO={[e1.id]:120000,[e2.id]:70000}, estHFO={[e1.id]:480000};
   let cursor=new Date(firstDayOfMonth(addMonths(today,-3))); let toggle=0;
   while(cursor < today){
     const ds=dateStr(cursor);
-    // leitura de estoque + horímetro às 06:00
+    // leitura de estoque (~06:00) + horas de máquina TRABALHADAS no dia (incremental — já somado desde a última aferição)
     state.estoqueLeituras.push({id:uid(),empId:e1.id,empNome:e1.nome,data:ds,datetime:ds+'T06:00',
-      estoqueMGO:Math.round(estMGO[e1.id]),estoqueHFO:Math.round(estHFO[e1.id]),horasMCP:Math.round(hMCP[e1.id]),horasMCA:Math.round(hMCA[e1.id])});
+      estoqueMGO:Math.round(estMGO[e1.id]),estoqueHFO:Math.round(estHFO[e1.id]),horasMCP:18+Math.round(Math.random()*5),horasMCA:11+Math.round(Math.random()*5)});
     state.estoqueLeituras.push({id:uid(),empId:e2.id,empNome:e2.nome,data:ds,datetime:ds+'T06:00',
-      estoqueMGO:Math.round(estMGO[e2.id]),estoqueHFO:null,horasMCP:Math.round(hMCP[e2.id]),horasMCA:Math.round(hMCA[e2.id])});
+      estoqueMGO:Math.round(estMGO[e2.id]),estoqueHFO:null,horasMCP:16+Math.round(Math.random()*5),horasMCA:9+Math.round(Math.random()*5)});
     // a cada 6 dias inicia uma viagem real (alterna empurrador/rota/condição)
     if(cursor.getDate()%6===0){
       const e=toggle%2===0?e1:e2, r=toggle%2===0?r1:r2; toggle++;
@@ -4654,7 +4655,6 @@ function seedData(){
         fim:toLocalISO(new Date(chegada.getTime()+4*3600000)),produto:e===e1?'HFO':'MGO',data:dateStr(chegada)});
       if(e===e1){ estHFO[e1.id]+=200000; estMGO[e1.id]+=30000; } else { estMGO[e2.id]+=30000; }
     }
-    hMCP[e1.id]+=20; hMCA[e1.id]+=14; hMCP[e2.id]+=18; hMCA[e2.id]+=12;
     estMGO[e1.id]=Math.max(15000,estMGO[e1.id]-1500); estHFO[e1.id]=Math.max(40000,estHFO[e1.id]-9000);
     estMGO[e2.id]=Math.max(10000,estMGO[e2.id]-2000);
     cursor=addDays(cursor,1);

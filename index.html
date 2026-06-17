@@ -816,6 +816,19 @@
   </div>
 </div>
 
+<!-- ===== MODAL EDITAR LANÇAMENTO IMPORTADO ===== -->
+<div class="modal-bg" id="modalEditImp">
+  <div class="modal wide">
+    <h3 id="meiTitle">Editar lançamento</h3>
+    <div id="meiBody" class="row" style="flex-wrap:wrap;gap:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn danger sm" id="meiDelete">Excluir</button>
+      <button class="btn secondary" data-close>Cancelar</button>
+      <button class="btn" id="meiSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* =========================================================
    ESTADO E PERSISTÊNCIA
@@ -3962,15 +3975,16 @@ function renderHistViagTable(){
   const t=document.getElementById('tblHistViag'); if(!t) return;
   const list=(state.historicoViagens||[]).slice().sort((a,b)=>(b.saida||'').localeCompare(a.saida||''));
   if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhuma viagem real importada.</td></tr>'; return; }
-  let h=`<tr><th>Empurrador</th><th>Trecho</th><th>Cond.</th><th>Produto</th><th class="num">Vol (t)</th><th class="num">Barc.</th><th>Saída</th><th>Chegada</th><th class="num">Tempo (h)</th><th class="num">MGO (L)</th><th class="num">HFO (L)</th></tr>`;
+  let h=`<tr><th>Empurrador</th><th>Trecho</th><th>Cond.</th><th>Produto</th><th class="num">Vol (t)</th><th class="num">Barc.</th><th>Saída</th><th>Chegada</th><th class="num">Tempo (h)</th><th class="num">MGO (L)</th><th class="num">HFO (L)</th><th></th></tr>`;
   list.slice(0,400).forEach(v=>{
     h+=`<tr><td>${v.empNome||'—'}</td><td>${v.trecho||'—'}</td><td>${v.condicao||'—'}</td><td>${v.produto||'—'}</td>
       <td class="num">${v.volume?fmt(v.volume):'—'}</td><td class="num">${v.barcacas||'—'}</td>
       <td>${fmtDT(v.saida)}</td><td>${fmtDT(v.chegada)}</td><td class="num">${v.tempo?fmt1(v.tempo):'—'}</td>
       <td class="num">${v.consumo&&v.consumo.MGO?fmt(v.consumo.MGO):'—'}</td>
-      <td class="num">${v.consumo&&v.consumo.HFO?fmt(v.consumo.HFO):'—'}</td></tr>`;
+      <td class="num">${v.consumo&&v.consumo.HFO?fmt(v.consumo.HFO):'—'}</td>
+      <td><button class="btn sm secondary" title="Editar / corrigir" onclick="openEditImp('histViag','${v.id}')">✏️</button></td></tr>`;
   });
-  if(list.length>400) h+=`<tr><td class="empty" colspan="11">… e mais ${list.length-400} viagens (exibindo as 400 mais recentes).</td></tr>`;
+  if(list.length>400) h+=`<tr><td class="empty" colspan="12">… e mais ${list.length-400} viagens (exibindo as 400 mais recentes).</td></tr>`;
   t.innerHTML=h;
 }
 
@@ -4034,15 +4048,16 @@ function renderEstoqueTable(){
   const t=document.getElementById('tblEstoque'); if(!t) return;
   const list=(state.estoqueLeituras||[]).slice().sort((a,b)=>(b.datetime||'').localeCompare(a.datetime||''));
   if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhuma leitura de estoque importada.</td></tr>'; return; }
-  let h=`<tr><th>Empurrador</th><th>Data/Hora</th><th class="num">Estoque MGO (L)</th><th class="num">Estoque HFO (L)</th><th class="num">Horas MCP</th><th class="num">Horas MCA</th></tr>`;
+  let h=`<tr><th>Empurrador</th><th>Data/Hora</th><th class="num">Estoque MGO (L)</th><th class="num">Estoque HFO (L)</th><th class="num">Horas MCP</th><th class="num">Horas MCA</th><th></th></tr>`;
   list.slice(0,400).forEach(o=>{
     h+=`<tr><td>${o.empNome||'—'}</td><td>${fmtDT(o.datetime)}</td>
       <td class="num">${o.estoqueMGO!=null?fmt(o.estoqueMGO):'—'}</td>
       <td class="num">${o.estoqueHFO!=null?fmt(o.estoqueHFO):'—'}</td>
       <td class="num">${o.horasMCP!=null?fmt1(o.horasMCP):'—'}</td>
-      <td class="num">${o.horasMCA!=null?fmt1(o.horasMCA):'—'}</td></tr>`;
+      <td class="num">${o.horasMCA!=null?fmt1(o.horasMCA):'—'}</td>
+      <td><button class="btn sm secondary" title="Editar / corrigir" onclick="openEditImp('estoque','${o.id}')">✏️</button></td></tr>`;
   });
-  if(list.length>400) h+=`<tr><td class="empty" colspan="6">… e mais ${list.length-400} leituras.</td></tr>`;
+  if(list.length>400) h+=`<tr><td class="empty" colspan="7">… e mais ${list.length-400} leituras.</td></tr>`;
   t.innerHTML=h;
 }
 
@@ -4072,14 +4087,15 @@ function renderAbastRealTable(){
   const t=document.getElementById('tblAbastReal'); if(!t) return;
   const list=(state.abastecimentosReais||[]).slice().sort((a,b)=>(b.inicio||'').localeCompare(a.inicio||''));
   if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum abastecimento real importado.</td></tr>'; return; }
-  let h=`<tr><th>Empurrador</th><th>Produto</th><th>Início</th><th>Fim</th><th class="num">Duração (h)</th></tr>`;
+  let h=`<tr><th>Empurrador</th><th>Produto</th><th>Início</th><th>Fim</th><th class="num">Duração (h)</th><th></th></tr>`;
   list.slice(0,400).forEach(o=>{
     let dur='—';
     if(o.inicio && o.fim){ const d=(new Date(o.fim)-new Date(o.inicio))/3600000; if(!isNaN(d)&&d>=0) dur=fmt1(d); }
     const pTag = o.produto==='MGO'||o.produto==='HFO' ? `<span class="tag ${o.produto}">${COMB_LABEL[o.produto]||o.produto}</span>` : (o.produto||'—');
-    h+=`<tr><td>${o.empNome||'—'}</td><td>${pTag}</td><td>${fmtDT(o.inicio)}</td><td>${fmtDT(o.fim)}</td><td class="num">${dur}</td></tr>`;
+    h+=`<tr><td>${o.empNome||'—'}</td><td>${pTag}</td><td>${fmtDT(o.inicio)}</td><td>${fmtDT(o.fim)}</td><td class="num">${dur}</td>
+      <td><button class="btn sm secondary" title="Editar / corrigir" onclick="openEditImp('abastReal','${o.id}')">✏️</button></td></tr>`;
   });
-  if(list.length>400) h+=`<tr><td class="empty" colspan="5">… e mais ${list.length-400} eventos.</td></tr>`;
+  if(list.length>400) h+=`<tr><td class="empty" colspan="6">… e mais ${list.length-400} eventos.</td></tr>`;
   t.innerHTML=h;
 }
 
@@ -4099,6 +4115,104 @@ function lastDateOf(list, key){
   (list||[]).forEach(o=>{ const d=(o[key]||'').slice(0,10); if(d>mx) mx=d; });
   return mx ? parseDate(mx).toLocaleDateString('pt-BR') : '—';
 }
+
+/* ---- Edição de lançamentos importados (lápis nas tabelas de Importações) ---- */
+function normDtLocal(s){ return s ? String(s).slice(0,16) : ''; }
+const editImpDefs = {
+  histViag:{ title:'Editar viagem real', arr:'historicoViagens',
+    fields:[
+      {k:'empNome',label:'Empurrador',type:'text'},
+      {k:'trecho',label:'Trecho',type:'text'},
+      {k:'condicao',label:'Condição',type:'text'},
+      {k:'produto',label:'Produto',type:'text'},
+      {k:'volume',label:'Volume (t)',type:'number'},
+      {k:'barcacas',label:'Barcaças',type:'number'},
+      {k:'saida',label:'Saída',type:'datetime-local'},
+      {k:'chegada',label:'Chegada',type:'datetime-local'},
+      {k:'_mgo',label:'MGO/Diesel (L)',type:'number',get:r=>r.consumo&&r.consumo.MGO||0},
+      {k:'_hfo',label:'HFO (L)',type:'number',get:r=>r.consumo&&r.consumo.HFO||0},
+    ],
+    apply(rec,v){
+      const emp=ensureEmpByName(v.empNome,[(parseNum(v._mgo)>0?'MGO':null),(parseNum(v._hfo)>0?'HFO':null)].filter(Boolean));
+      const rota=v.trecho?findOrCreateRota(v.trecho):null;
+      rec.empNome=emp?emp.nome:v.empNome; rec.empId=emp?emp.id:rec.empId;
+      rec.trecho=v.trecho; rec.rotaId=rota?rota.id:rec.rotaId;
+      rec.condicao=v.condicao; rec.produto=v.produto;
+      rec.volume=parseNum(v.volume)||0; rec.barcacas=parseNum(v.barcacas)||0;
+      rec.saida=normDtLocal(v.saida); rec.chegada=normDtLocal(v.chegada);
+      rec.consumo={MGO:parseNum(v._mgo)||0,HFO:parseNum(v._hfo)||0};
+      rec.tempo=(rec.saida&&rec.chegada)?(new Date(rec.chegada)-new Date(rec.saida))/3600000:(rec.tempo||0);
+      rec.data=dateOfISO(rec.saida);
+    },
+    after(){ renderHistViagTable(); renderImpStatus(); renderEmp(); renderRot(); } },
+  estoque:{ title:'Editar leitura de estoque', arr:'estoqueLeituras',
+    fields:[
+      {k:'empNome',label:'Empurrador',type:'text'},
+      {k:'datetime',label:'Data/Hora (ADM_Data)',type:'datetime-local'},
+      {k:'estoqueMGO',label:'Estoque Diesel/MGO (L)',type:'number'},
+      {k:'estoqueHFO',label:'Estoque HFO (L)',type:'number'},
+      {k:'horasMCP',label:'Horas MCP',type:'number'},
+      {k:'horasMCA',label:'Horas MCA',type:'number'},
+    ],
+    apply(rec,v){
+      const emp=ensureEmpByName(v.empNome,[(v.estoqueMGO!==''?'MGO':null),(v.estoqueHFO!==''?'HFO':null)].filter(Boolean));
+      rec.empNome=emp?emp.nome:v.empNome; rec.empId=emp?emp.id:rec.empId;
+      rec.datetime=normDtLocal(v.datetime); rec.data=dateOfISO(rec.datetime);
+      rec.estoqueMGO=v.estoqueMGO===''?null:parseNum(v.estoqueMGO);
+      rec.estoqueHFO=v.estoqueHFO===''?null:parseNum(v.estoqueHFO);
+      rec.horasMCP=v.horasMCP===''?null:parseNum(v.horasMCP);
+      rec.horasMCA=v.horasMCA===''?null:parseNum(v.horasMCA);
+    },
+    after(){ renderEstoqueTable(); renderImpStatus(); renderEmp(); } },
+  abastReal:{ title:'Editar abastecimento real', arr:'abastecimentosReais',
+    fields:[
+      {k:'empNome',label:'Empurrador',type:'text'},
+      {k:'inicio',label:'Início',type:'datetime-local'},
+      {k:'fim',label:'Fim',type:'datetime-local'},
+      {k:'produto',label:'Produto',type:'select',options:['Água Potável','MGO','HFO']},
+    ],
+    apply(rec,v){
+      const emp=ensureEmpByName(v.empNome,(v.produto==='MGO'||v.produto==='HFO')?[v.produto]:[]);
+      rec.empNome=emp?emp.nome:v.empNome; rec.empId=emp?emp.id:rec.empId;
+      rec.inicio=normDtLocal(v.inicio); rec.fim=normDtLocal(v.fim);
+      rec.produto=v.produto; rec.data=dateOfISO(rec.inicio);
+    },
+    after(){ renderAbastRealTable(); renderImpStatus(); } },
+};
+let editImpCtx=null;
+function openEditImp(type, id){
+  const def=editImpDefs[type]; if(!def) return;
+  const rec=(state[def.arr]||[]).find(x=>x.id===id); if(!rec) return;
+  editImpCtx={type,id};
+  document.getElementById('meiTitle').textContent=def.title;
+  document.getElementById('meiBody').innerHTML=def.fields.map(f=>{
+    let val=f.get?f.get(rec):rec[f.k];
+    if(val===null||val===undefined) val='';
+    if(f.type==='select'){
+      const opts=f.options.map(o=>`<option ${na(o)===na(val)?'selected':''}>${o}</option>`).join('');
+      return `<div class="field" style="flex:1 1 180px;"><label>${f.label}</label><select data-k="${f.k}" style="width:100%">${opts}</select></div>`;
+    }
+    return `<div class="field" style="flex:1 1 180px;"><label>${f.label}</label><input data-k="${f.k}" type="${f.type}" value="${String(val).replace(/"/g,'&quot;')}" style="width:100%"></div>`;
+  }).join('');
+  document.getElementById('modalEditImp').classList.add('show');
+}
+document.getElementById('meiSave').addEventListener('click', ()=>{
+  if(!editImpCtx) return;
+  const def=editImpDefs[editImpCtx.type];
+  const rec=(state[def.arr]||[]).find(x=>x.id===editImpCtx.id);
+  if(rec){
+    const v={}; document.querySelectorAll('#meiBody [data-k]').forEach(inp=>{ v[inp.dataset.k]=inp.value; });
+    def.apply(rec, v); save(); def.after();
+  }
+  closeModals();
+});
+document.getElementById('meiDelete').addEventListener('click', ()=>{
+  if(!editImpCtx) return;
+  if(!confirm('Excluir este lançamento?')) return;
+  const def=editImpDefs[editImpCtx.type];
+  state[def.arr]=(state[def.arr]||[]).filter(x=>x.id!==editImpCtx.id);
+  save(); def.after(); closeModals();
+});
 function renderImpStatus(){
   const el=document.getElementById('impStatus'); if(!el) return;
   const hv=state.historicoViagens||[], es=state.estoqueLeituras||[], ar=state.abastecimentosReais||[];

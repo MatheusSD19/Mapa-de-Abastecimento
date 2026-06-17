@@ -890,8 +890,10 @@ function getAnchors(empId, comb){
       out[o.data] = o.valor;
     }
   });
-  // Leituras REAIS de estoque (importadas) — soberanas; usa a 1ª leitura do dia (mais cedo, ~06:00)
-  const realKey = comb==='MGO' ? 'estoqueMGO' : (comb==='HFO' ? 'estoqueHFO' : null);
+  // Leituras REAIS de estoque (importadas) — soberanas; usa a 1ª leitura do dia (mais cedo, ~06:00).
+  // Estoque Diesel real é tratado como MGO e ancora o combustível leve do empurrador (MGO ou Diesel).
+  const combLeve = e ? e.combustiveis.find(c=>c==='MGO'||c==='Diesel') : null;
+  const realKey = comb==='HFO' ? 'estoqueHFO' : (comb===combLeve ? 'estoqueMGO' : null);
   if(realKey && state.estoqueLeituras && state.estoqueLeituras.length){
     const firstOfDay = {}; // data -> {dt, val}
     state.estoqueLeituras.forEach(o=>{
@@ -952,7 +954,10 @@ function dailyConsumption(e, comb, day){
   const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
   const real = realConsumoDia(e.id, day);
   if(real.has){
-    let consumoDia = real.byComb[comb] || 0;
+    // o combustível leve real (registrado como MGO) pertence ao combustível leve do empurrador (MGO ou Diesel)
+    let consumoDia = 0;
+    if(comb==='HFO') consumoDia = real.byComb.HFO||0;
+    else if(comb===combPorto) consumoDia = real.byComb.MGO||0;
     const horasPorto = Math.max(0, 24 - real.horasNav);
     if(comb===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
     return consumoDia;
@@ -1780,18 +1785,12 @@ function renderMapa(){
       h+=`<td class="hora-col">${horario}</td>
           <td class="cell-clickable" data-emp="${e.id}" data-date="${dStr}">${viagemCell}</td>
           <td>${cond}</td><td></td>`;
-      // viagem de referência para consumo de navegação no dia
-      const vRef = vAtiva || (vSaida.length ? vSaida[0] : null);
-      const cdNav = vRef ? consumoDiaViagem(vRef, day) : {};
-      const horasNav = cdNav.__horas || 0;
-      const horasPorto = Math.max(0, 24 - horasNav);
-      // consumo de porto (embarcação parada) só aplica a MGO ou Diesel Terceiro — HFO só consome em viagem
-      const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
+      // consumo do dia — respeita a SOBERANIA dos dados reais (viagem real importada > estimativa do mapa)
+      const realDia = realConsumoDia(e.id, day);
       // colunas por combustível
       e.combustiveis.forEach((c,ci)=>{
         const last = ci===e.combustiveis.length-1;
-        let consumoDia = cdNav[c] || 0;
-        if(c===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
+        let consumoDia = dailyConsumption(e, c, day);
         // abastecimentos do dia (cancelados aparecem no mapa mas não somam no estoque)
         const absAll = state.abastecimentos.filter(a=>a.empId===e.id && a.data===dStr && a.comb===c);
         const abast = absAll.reduce((s,a)=> a.status!=='Cancelado' ? s+(a.qtd||0) : s, 0);
@@ -1838,7 +1837,8 @@ function renderMapa(){
         const stockTxt = beforeAnchors && !isAnchorDay ? `<span class="pct ${pctCls}">— L</span>`
                        : `<span class="pct ${pctCls}">${fmt(estoque[e.id][c])} L · ${pct.toFixed(0)}%</span>`;
         const barWidth = beforeAnchors && !isAnchorDay ? 0 : Math.max(0,Math.min(100,pct));
-        h+=`<td class="num">${consumoDia?fmt(consumoDia):''}</td>
+        const realMark = realDia.has ? '<span title="Consumo real importado (soberano sobre a estimativa)" style="color:var(--ok);font-size:9px;margin-left:3px;vertical-align:middle;">●</span>' : '';
+        h+=`<td class="num">${consumoDia?fmt(consumoDia)+realMark:''}</td>
             <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abastChip}</td>
             <td class="${cellClasses.join(' ')}" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" title="${tipCell}">
               ${anchorMark}<div class="bar"><span style="width:${barWidth.toFixed(0)}%;background:${barColor}"></span></div>

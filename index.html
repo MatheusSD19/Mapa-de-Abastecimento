@@ -2630,15 +2630,19 @@ function renderViagens(){
     const chegada = (c && !c.incompleto) ? c.chegada.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
     const tempo = (c && !c.incompleto) ? fmt1(c.horas) : '—';
     const pend = isViagemPendente(v);
+    const alerta = v.consumoPendente
+      ? '<span class="alerta" title="Dados reais importados — aguardando o consumo na base para finalizar automaticamente">⚠</span>'
+      : (pend?'<span class="alerta" title="Viagem realizada — aguarda finalização">⚠</span>':'');
+    const autoMark = v.autoFinalizada ? ' <span title="Finalizada automaticamente pela importação do real" style="color:var(--ok);font-size:10px;">⤓</span>' : '';
     h+=`<tr class="${pend?'row-alert':''}">
-      <td>${pend?'<span class="alerta" title="Viagem realizada — aguarda finalização">⚠</span>':''}</td>
+      <td>${alerta}</td>
       <td>${v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—'} ${v.horaSaida||''}</td>
       <td>${e?e.nome:'—'}</td>
       <td>${r?r.nome:'—'}</td>
       <td>${v.condicao}</td>
       <td>${chegada}</td>
       <td class="num">${tempo}</td>
-      <td><span class="pill ${v.status}">${v.status}</span></td>
+      <td><span class="pill ${v.status}">${v.status}</span>${autoMark}</td>
       <td>
         <button class="btn sm secondary" onclick="openViagemModal('${v.id}')">Editar</button>
         ${v.status==='Realizada'?`<button class="btn sm" onclick="openFinalizarViagem('${v.id}')">Finalizar</button>`:''}
@@ -2893,6 +2897,8 @@ document.getElementById('fvSave').addEventListener('click', ()=>{
   }
   v.status='Finalizada';
   v.finalizadaEm = todayStr();
+  // finalização manual: desvincula da importação para não ser revertida em futuras importações
+  v.autoFinalizada=false; v.consumoPendente=false; delete v.realImportId;
   save(); closeModals(); renderViagens();
 });
 
@@ -4008,6 +4014,67 @@ function wireImport(btnId, fileId, processFn){
 }
 const headerFinder = header => (...keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
 
+// Cruza as viagens REAIS importadas com as viagens PROGRAMADAS (state.viagens): preenche os
+// realizados (tempo, consumo, volume) e FINALIZA automaticamente quando o consumo veio na base.
+// Se faltar consumo, atualiza os dados mas deixa a viagem em "Realizada" (aguardando consumo).
+// Idempotente: reverte o que foi aplicado por importações anteriores e reaplica a cada importação.
+// Viagens finalizadas MANUALMENTE (sem realImportId) são preservadas.
+function sincronizarViagensProgramadas(){
+  // 1) reset do que importações anteriores aplicaram (mantém finalizações manuais intactas)
+  state.viagens.forEach(v=>{
+    if(v.realImportId){
+      delete v.tempoRealizado; delete v.consumoRealizado; delete v.volumeRealizado;
+      delete v.saidaReal; delete v.chegadaReal; delete v.realImportId;
+      delete v.autoFinalizada; delete v.consumoPendente;
+      if(v.status==='Finalizada') v.status='Realizada';
+    }
+  });
+  let finalizadas=0, pendentes=0;
+  const claimed=new Set();
+  const reais=(state.historicoViagens||[]).filter(v=>v.empId&&v.rotaId&&v.saida)
+    .slice().sort((a,b)=>(a.saida||'').localeCompare(b.saida||''));
+  reais.forEach(real=>{
+    const emp=empById(real.empId); if(!emp) return;
+    const saidaT=new Date(real.saida).getTime(); if(isNaN(saidaT)) return;
+    // candidatas: mesmo empurrador/trecho/condição, não finalizadas manualmente, ainda não reivindicadas
+    const cands=state.viagens.filter(v=>!claimed.has(v.id)
+      && v.empId===real.empId && v.rotaId===real.rotaId && v.condicao===real.condicao
+      && v.status!=='Finalizada');
+    if(!cands.length) return;
+    // escolhe a viagem programada com saída mais próxima (até 7 dias de diferença)
+    let best=null, bestDiff=Infinity;
+    cands.forEach(v=>{
+      const t=new Date(v.dataSaida+'T'+(v.horaSaida||'08:00')+':00').getTime();
+      const d=Math.abs(t-saidaT);
+      if(d<bestDiff){ bestDiff=d; best=v; }
+    });
+    if(!best || bestDiff>7*86400000) return;
+    claimed.add(best.id);
+    // ---- preenche os realizados ----
+    const combPorto=emp.combustiveis.find(c=>c==='MGO'||c==='Diesel')||'MGO';
+    const usaHFO=emp.combustiveis.includes('HFO');
+    let tempo=real.tempo>0?real.tempo:0;
+    if(!tempo && real.chegada) tempo=(new Date(real.chegada)-new Date(real.saida))/3600000;
+    if(tempo>0) best.tempoRealizado=tempo;
+    const cons={};
+    cons[combPorto]=real.consumo&&real.consumo.MGO?real.consumo.MGO:0;
+    if(usaHFO) cons.HFO=real.consumo&&real.consumo.HFO?real.consumo.HFO:0;
+    best.consumoRealizado=cons;
+    if(best.condicao==='Carregada' && real.volume>0) best.volumeRealizado=real.volume;
+    best.saidaReal=real.saida; best.chegadaReal=real.chegada; best.realImportId=real.id;
+    // ---- finaliza só se o consumo de TODOS os combustíveis do barco veio (> 0) ----
+    const consumoCompleto=emp.combustiveis.every(cb=>(cons[cb]||0)>0);
+    if(consumoCompleto){
+      best.status='Finalizada'; best.autoFinalizada=true; best.finalizadaEm=todayStr();
+      finalizadas++;
+    }else{
+      best.status='Realizada'; best.consumoPendente=true; // aguardando consumo p/ finalizar
+      pendentes++;
+    }
+  });
+  return {finalizadas, pendentes};
+}
+
 /* ---- Histórico de Viagens (real) ---- */
 function processHistViagRows(rows){
   if(!rows.length){ alert('Arquivo vazio.'); return; }
@@ -4050,9 +4117,12 @@ function processHistViagRows(rows){
   }
   state.historicoViagens=novos;
   const nOver=overlappingTripIds().size;
-  save(); renderHistViagTable(); renderImpStatus(); renderRot(); renderEmp();
+  const sync=sincronizarViagensProgramadas();
+  save(); renderHistViagTable(); renderImpStatus(); renderRot(); renderEmp(); renderViagens();
   alert(`Histórico de Viagens importado.\nViagens aplicadas: ${ok}\nIgnoradas (sem empurrador/saída): ${skip}`+
-    (nOver?`\n⚠ ${nOver} viagem(ns) com sobreposição de horário no mesmo empurrador (marcadas na tabela). No Mapa, o trecho sobreposto entra só na viagem principal — sem dupla contagem.`:'')+
+    `\n\nViagens programadas finalizadas automaticamente: ${sync.finalizadas}`+
+    (sync.pendentes?`\nViagens atualizadas aguardando consumo (não finalizadas): ${sync.pendentes}`:'')+
+    (nOver?`\n\n⚠ ${nOver} viagem(ns) com sobreposição de horário no mesmo empurrador (marcadas na tabela). No Mapa, o trecho sobreposto entra só na viagem principal — sem dupla contagem.`:'')+
     `\n\nA base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
 }
 function renderHistViagTable(){

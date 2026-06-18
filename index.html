@@ -670,7 +670,7 @@
         <div class="spacer"></div>
         <button class="btn secondary danger" id="btnClearHistViag">Limpar base</button>
       </div>
-      <div class="hint">Colunas esperadas: <b>Empurrador, Comand, Condição, Produto, Volume, Barcaças, Saída</b> (DD/MM/AAAA HH:MM), <b>Chegada</b> (DD/MM/AAAA HH:MM), <b>Trecho, Tempo, Diesel, HFO</b>. Diesel e HFO são o <b>consumo real</b> (litros) da viagem — "Diesel" é tratado como MGO. Cria automaticamente trechos/empurradores inexistentes.</div>
+      <div class="hint">Colunas esperadas: <b>Empurrador, Comand, Condição, Produto, Volume, Barcaças, Saída</b> (DD/MM/AAAA HH:MM), <b>Chegada</b> (DD/MM/AAAA HH:MM), <b>Trecho, Tempo, Diesel, HFO</b>. Diesel e HFO são o <b>consumo real</b> (litros) da viagem — "Diesel" é tratado como MGO. Cria automaticamente trechos/empurradores inexistentes.<br><b>Consumo zerado</b> (base ainda não atualizada): o Mapa usa a <b>estimativa</b> da média por barco/trecho/condição (marcada com <span style="color:var(--warn)">~</span>); quando o consumo real for importado, ele <b>substitui</b> a estimativa (marca <span style="color:var(--ok)">●</span>). HFO não é estimado para barcos que só usam MGO.</div>
       <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblHistViag"></table></div>
     </div>
 
@@ -942,7 +942,14 @@ function clearManualEstoque(empId, comb, dataStr){
 // Rateia o consumo da viagem pelas horas navegadas no dia (saída→chegada). Quando duas viagens do
 // mesmo empurrador se SOBREPÕEM no tempo, a viagem PRINCIPAL (mais longa) fica com o trecho sobreposto,
 // evitando dupla contagem de consumo.
+// Se o consumo REAL da viagem vier zerado (base ainda não atualizada), usa a ESTIMATIVA por
+// barco/trecho/condição (a mesma média das programações). HFO só é estimado para barcos que usam HFO.
 function realConsumoDia(empId, day){
+  const e = empById(empId);
+  const vazio = {has:false, byComb:{MGO:0,HFO:0,Diesel:0}, horasNav:0, estByComb:{MGO:false,HFO:false}};
+  if(!e) return vazio;
+  const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel') || 'MGO';
+  const usaHFO = e.combustiveis.includes('HFO');
   const dayStart = day.getTime(), dayEnd = dayStart + 86400000;
   const segs=[];
   (state.historicoViagens||[]).forEach(v=>{
@@ -952,12 +959,26 @@ function realConsumoDia(empId, day){
     const ini=Math.max(s,dayStart), fim=Math.min(c,dayEnd);
     if(fim<=ini) return;
     const totalH=(c-s)/3600000;
-    segs.push({ini,fim,dur:c-s,
-      rMGO:(v.consumo&&v.consumo.MGO?v.consumo.MGO:0)/totalH,
-      rHFO:(v.consumo&&v.consumo.HFO?v.consumo.HFO:0)/totalH});
+    const realLight = v.consumo && v.consumo.MGO ? v.consumo.MGO : 0;
+    const realHFO   = v.consumo && v.consumo.HFO ? v.consumo.HFO : 0;
+    // estimativa (L/h) pela média barco/trecho/condição; se não houver a condição, usa a média geral do trecho
+    let med = getMedia(v.rotaId, empId, v.condicao);
+    if(!med || !med.consumo) med = mediaGeral(v.rotaId, empId, e.combustiveis);
+    const estLightLh = med && med.consumo ? (med.consumo[combPorto]||0) : 0;
+    const estHFOLh   = med && med.consumo ? (med.consumo.HFO||0) : 0;
+    // taxa L/h: usa o REAL quando informado; senão cai na estimativa
+    const rMGO = realLight>0 ? realLight/totalH : estLightLh;
+    const eMGO = !(realLight>0) && rMGO>0;            // luz veio de estimativa
+    let rHFO=0, eHFO=false;
+    if(usaHFO){                                        // não estima HFO p/ barco que só usa MGO
+      if(realHFO>0) rHFO = realHFO/totalH;
+      else { rHFO = estHFOLh; eHFO = rHFO>0; }
+    }
+    segs.push({ini,fim,dur:c-s, rMGO, rHFO, eMGO, eHFO});
   });
   const byComb={MGO:0,HFO:0,Diesel:0}; let horasNav=0;
-  if(!segs.length) return {has:false, byComb, horasNav};
+  const temEst={MGO:false,HFO:false}, temReal={MGO:false,HFO:false};
+  if(!segs.length) return vazio;
   segs.sort((a,b)=>b.dur-a.dur); // principal (mais longa) primeiro
   const covered=[]; // intervalos já atribuídos a uma viagem
   segs.forEach(sg=>{
@@ -973,10 +994,28 @@ function realConsumoDia(empId, day){
     });
     let h=0;
     pieces.forEach(([pi,pf])=>{ if(pf>pi){ h+=(pf-pi)/3600000; covered.push([pi,pf]); } });
+    if(h<=0) return;
     horasNav+=h; byComb.MGO+=sg.rMGO*h; byComb.HFO+=sg.rHFO*h;
+    if(sg.rMGO>0){ (sg.eMGO?temEst:temReal).MGO=true; }
+    if(sg.rHFO>0){ (sg.eHFO?temEst:temReal).HFO=true; }
   });
   if(horasNav>24) horasNav=24;
-  return {has:true, byComb, horasNav};
+  // marca como "estimado" o combustível cuja navegação no dia não teve nenhum dado real
+  const estByComb={MGO: temEst.MGO && !temReal.MGO, HFO: temEst.HFO && !temReal.HFO};
+  return {has:true, byComb, horasNav, estByComb};
+}
+// Estimativa de consumo TOTAL (L) de uma viagem real pela média do trecho/condição (para exibição/conferência)
+function tripConsumoEstimado(v){
+  const e=empById(v.empId); if(!e) return {MGO:0,HFO:0};
+  const combPorto=e.combustiveis.find(c=>c==='MGO'||c==='Diesel')||'MGO';
+  const usaHFO=e.combustiveis.includes('HFO');
+  const s=v.saida?new Date(v.saida).getTime():NaN, c=v.chegada?new Date(v.chegada).getTime():NaN;
+  const horas=(!isNaN(s)&&!isNaN(c)&&c>s)?(c-s)/3600000:(v.tempo||0);
+  let med=getMedia(v.rotaId,v.empId,v.condicao);
+  if(!med||!med.consumo) med=mediaGeral(v.rotaId,v.empId,e.combustiveis);
+  const lh=med&&med.consumo?(med.consumo[combPorto]||0):0;
+  const hh=usaHFO&&med&&med.consumo?(med.consumo.HFO||0):0;
+  return {MGO:lh*horas, HFO:hh*horas};
 }
 // Ids das viagens reais que se sobrepõem no tempo com outra do MESMO empurrador
 function overlappingTripIds(){
@@ -1870,6 +1909,7 @@ function renderMapa(){
           <td>${cond}</td><td>${statusCell}</td>`;
       // consumo do dia — respeita a SOBERANIA dos dados reais (viagem real importada > estimativa do mapa)
       const realDia = realConsumoDia(e.id, day);
+      const combPorto = e.combustiveis.find(x=>x==='MGO'||x==='Diesel');
       // colunas por combustível
       e.combustiveis.forEach((c,ci)=>{
         const last = ci===e.combustiveis.length-1;
@@ -1920,7 +1960,11 @@ function renderMapa(){
         const stockTxt = beforeAnchors && !isAnchorDay ? `<span class="pct ${pctCls}">— L</span>`
                        : `<span class="pct ${pctCls}">${fmt(estoque[e.id][c])} L · ${pct.toFixed(0)}%</span>`;
         const barWidth = beforeAnchors && !isAnchorDay ? 0 : Math.max(0,Math.min(100,pct));
-        const realMark = realDia.has ? '<span title="Consumo real importado (soberano sobre a estimativa)" style="color:var(--ok);font-size:9px;margin-left:3px;vertical-align:middle;">●</span>' : '';
+        const estFuel = realDia.has && (c==='HFO' ? realDia.estByComb.HFO : (c===combPorto ? realDia.estByComb.MGO : false));
+        const realMark = !realDia.has ? ''
+          : (estFuel
+              ? '<span title="Viagem real importada, mas sem consumo informado na base — usando a ESTIMATIVA da média do trecho/condição. Quando a base for atualizada, o real substitui." style="color:var(--warn);font-size:9px;margin-left:3px;vertical-align:middle;">~</span>'
+              : '<span title="Consumo real importado (soberano sobre a estimativa)" style="color:var(--ok);font-size:9px;margin-left:3px;vertical-align:middle;">●</span>');
         h+=`<td class="num">${consumoDia?fmt(consumoDia)+realMark:''}</td>
             <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abastChip}</td>
             <td class="${cellClasses.join(' ')}" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" title="${tipCell}">
@@ -4022,11 +4066,13 @@ function renderHistViagTable(){
   h+=`<tr><th>Empurrador</th><th>Trecho</th><th>Cond.</th><th>Produto</th><th class="num">Vol (t)</th><th class="num">Barc.</th><th>Saída</th><th>Chegada</th><th class="num">Tempo (h)</th><th class="num">MGO (L)</th><th class="num">HFO (L)</th><th></th></tr>`;
   list.slice(0,400).forEach(v=>{
     const over=overSet.has(v.id)?'<span title="Sobrepõe outra viagem do mesmo empurrador" style="color:var(--warn);cursor:help;">⚠ </span>':'';
+    const est=tripConsumoEstimado(v);
+    const estCell=(real,e)=> real ? fmt(real) : (e>0 ? `<span class="muted" title="Sem consumo real na base — estimativa pela média do trecho/condição. Quando a base for atualizada, o real substitui." style="font-style:italic">~${fmt(e)}</span>` : '—');
     h+=`<tr${over?' style="background:rgba(245,158,11,.06);"':''}><td>${over}${v.empNome||'—'}</td><td>${v.trecho||'—'}</td><td>${v.condicao||'—'}</td><td>${v.produto||'—'}</td>
       <td class="num">${v.volume?fmt(v.volume):'—'}</td><td class="num">${v.barcacas||'—'}</td>
       <td>${fmtDT(v.saida)}</td><td>${fmtDT(v.chegada)}</td><td class="num">${v.tempo?fmt1(v.tempo):'—'}</td>
-      <td class="num">${v.consumo&&v.consumo.MGO?fmt(v.consumo.MGO):'—'}</td>
-      <td class="num">${v.consumo&&v.consumo.HFO?fmt(v.consumo.HFO):'—'}</td>
+      <td class="num">${estCell(v.consumo&&v.consumo.MGO, est.MGO)}</td>
+      <td class="num">${estCell(v.consumo&&v.consumo.HFO, est.HFO)}</td>
       <td><button class="btn sm secondary" title="Editar / corrigir" onclick="openEditImp('histViag','${v.id}')">✏️</button></td></tr>`;
   });
   if(list.length>400) h+=`<tr><td class="empty" colspan="12">… e mais ${list.length-400} viagens (exibindo as 400 mais recentes).</td></tr>`;

@@ -626,6 +626,26 @@
       </div>
 
       <div class="chart-card full">
+        <div class="chart-card-header" title="Mapeia as viagens finalizadas cujo TEMPO ou CONSUMO ficou mais de 5% fora da média cadastrada, e ranqueia os motivos (Pareto: barras = nº de viagens, linha = % acumulado — os poucos motivos à esquerda explicam a maioria dos desvios)." style="cursor:help"><h3>Gestão de Desvios — Tempo & Consumo <span class="sub">— principais motivos de atrasos e consumo fora da média (Pareto) ⓘ</span></h3></div>
+        <div class="kpi-row" id="dashDesvioKpis" style="margin-bottom:10px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="chart-card" style="margin:0">
+            <div class="chart-card-header"><h3 style="font-size:13px;margin:0">Pareto — Motivos de desvio de TEMPO <span class="sub">— atrasos</span></h3></div>
+            <div class="chart-wrap"><svg id="dashParetoTempo" class="chart-svg" preserveAspectRatio="none"></svg></div>
+          </div>
+          <div class="chart-card" style="margin:0">
+            <div class="chart-card-header"><h3 style="font-size:13px;margin:0">Pareto — Motivos de desvio de CONSUMO</h3></div>
+            <div class="chart-wrap"><svg id="dashParetoConsumo" class="chart-svg" preserveAspectRatio="none"></svg></div>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="chart-card-header" title="Nº de viagens com desvio (tempo ou consumo) acima de 5% da média, agrupadas por comandante." style="cursor:help"><h3 style="font-size:13px;margin:0">Desvios por Comandante <span class="sub">— nº de viagens fora da média ⓘ</span></h3></div>
+          <div id="dashDesvioComandante" class="hbars"></div>
+        </div>
+        <div style="overflow:auto;margin-top:10px;"><table id="dashTblDesvios"></table></div>
+      </div>
+
+      <div class="chart-card full">
         <div class="chart-card-header"><h3>Resumo por Empurrador <span class="sub">— período filtrado</span></h3></div>
         <div style="overflow:auto;"><table id="dashTblEmp"></table></div>
       </div>
@@ -724,6 +744,10 @@
         <select id="mvCond" style="width:100%">
           <option>Carregada</option><option>Vazia</option><option>Scort Tug</option><option>Escoteiro</option>
         </select>
+      </div>
+      <div class="field" style="flex:1;"><label>Comandante</label>
+        <input id="mvComandante" list="mvComandList" style="width:100%" placeholder="Nome do comandante" autocomplete="off">
+        <datalist id="mvComandList"></datalist>
       </div>
     </div>
     <div class="row">
@@ -832,6 +856,10 @@ const COMBS = ['MGO','HFO','Diesel'];
 const COMB_LABEL = {MGO:'MGO', HFO:'HFO', Diesel:'Diesel Terceiro'};
 const STATUS = ['Previsto','Solicitado','Realizado','Cancelado'];
 const VSTATUS = ['Previsto','Navegando','Realizada','Finalizada'];
+// Gestão de desvios: viagem realizada fora da média (consumo/tempo) acima deste %
+const DESVIO_PCT = 5;
+const MOTIVOS_TEMPO = ['Espera/fila no porto','Aguardando carga/descarga','Manobra/atracação','Nível do rio/seca/maré','Corrente/clima adverso','Defeito/manutenção','Aguardando comboio/logística','Documentação/inspeção','Outros'];
+const MOTIVOS_CONSUMO = ['Corrente/maré contrária','Carga acima do previsto','Manobras extras','Espera com motor ligado','Defeito de máquina','Rota/desvio mais longo','Clima adverso','Casco/limpeza','Outros'];
 
 let state = {
   empurradores: [],
@@ -2127,6 +2155,8 @@ function openViagemModal(vid, empId, dateStr_){
   mEmp.innerHTML = empList.map(e=>`<option value="${e.id}">${e.nome}${ativo(e)?'':' (inativo)'}</option>`).join('');
   document.getElementById('mvRotaList').innerHTML =
     rotList.map(r=>`<option value="${r.nome.replace(/"/g,'&quot;')}">`).join('');
+  const comands=[...new Set([...(state.historicoViagens||[]).map(v=>v.comandante), ...state.viagens.map(v=>v.comandante)].filter(Boolean))].sort();
+  document.getElementById('mvComandList').innerHTML = comands.map(c=>`<option value="${String(c).replace(/"/g,'&quot;')}">`).join('');
   if(!empList.length||!rotList.length){
     alert('Cadastre empurradores e rotas nas Premissas primeiro.'); return;
   }
@@ -2136,6 +2166,7 @@ function openViagemModal(vid, empId, dateStr_){
     mEmp.value=v.empId;
     mRota.value=rotaById(v.rotaId)?.nome || '';
     document.getElementById('mvCond').value=v.condicao;
+    document.getElementById('mvComandante').value=v.comandante||'';
     document.getElementById('mvData').value=v.dataSaida;
     document.getElementById('mvHora').value=v.horaSaida||'08:00';
     document.getElementById('mvVol').value=v.volumeCarregada||'';
@@ -2148,6 +2179,7 @@ function openViagemModal(vid, empId, dateStr_){
     if(empId) mEmp.value=empId;
     mRota.value='';
     document.getElementById('mvCond').value='Carregada';
+    document.getElementById('mvComandante').value='';
     document.getElementById('mvData').value=dateStr_||dateStr(new Date());
     document.getElementById('mvHora').value='08:00';
     document.getElementById('mvVol').value='';
@@ -2198,6 +2230,7 @@ document.getElementById('mvSave').addEventListener('click', ()=>{
     empId:document.getElementById('mvEmp').value,
     rotaId:rotaId,
     condicao:document.getElementById('mvCond').value,
+    comandante:document.getElementById('mvComandante').value.trim(),
     dataSaida:document.getElementById('mvData').value,
     horaSaida:hora,
     volumeCarregada: (document.getElementById('mvCond').value==='Carregada')
@@ -2583,6 +2616,29 @@ function isViagemPendente(v){
   // Realizada mas não Finalizada: aguarda finalização
   return v.status==='Realizada';
 }
+// Desvios da viagem vs média cadastrada (tempo e consumo). Retorna {tempo,consumo} com {prev,real,pct,flag}.
+function viagemDesvios(v){
+  const out={tempo:null, consumo:null};
+  const c=calcViagem(v);
+  if(c.incompleto) return out;
+  if(v.tempoRealizado>0 && c.horas>0){
+    const pct=(v.tempoRealizado-c.horas)/c.horas*100;
+    out.tempo={prev:c.horas, real:v.tempoRealizado, pct, flag:Math.abs(pct)>DESVIO_PCT};
+  }
+  const prevCons=Object.values(c.consumoTotal||{}).reduce((s,x)=>s+(x||0),0);
+  const realCons=Object.values(v.consumoRealizado||{}).reduce((s,x)=>s+(x||0),0);
+  if(realCons>0 && prevCons>0){
+    const pct=(realCons-prevCons)/prevCons*100;
+    out.consumo={prev:prevCons, real:realCons, pct, flag:Math.abs(pct)>DESVIO_PCT};
+  }
+  return out;
+}
+function viagemTemDesvio(v){ const d=viagemDesvios(v); return !!((d.tempo&&d.tempo.flag)||(d.consumo&&d.consumo.flag)); }
+// Desvio sem justificativa preenchida (pendência de gestão)
+function viagemDesvioPendente(v){
+  const d=viagemDesvios(v); const j=v.justificativas||{};
+  return !!((d.tempo&&d.tempo.flag&&!j.tempo)||(d.consumo&&d.consumo.flag&&!j.consumo));
+}
 
 function renderViagens(){
   initViagFilters();
@@ -2604,9 +2660,11 @@ function renderViagens(){
   const counts={};
   VSTATUS.forEach(s=>counts[s]=list.filter(v=>v.status===s).length);
   const pendentes = list.filter(isViagemPendente).length;
+  const desviosPend = list.filter(viagemDesvioPendente).length;
   kpis.innerHTML=
     VSTATUS.map(s=>`<div class="kpi"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
-    (pendentes ? `<div class="kpi"><div class="v" style="color:var(--bad)">${pendentes}</div><div class="l">⚠ Aguardando Finalizar</div></div>`:'');
+    (pendentes ? `<div class="kpi"><div class="v" style="color:var(--bad)">${pendentes}</div><div class="l">⚠ Aguardando Finalizar</div></div>`:'')+
+    (desviosPend ? `<div class="kpi" title="Viagens com consumo ou tempo mais de ${DESVIO_PCT}% fora da média e ainda SEM justificativa. Abra a viagem (Finalizar / Ver-Editar) para justificar." style="cursor:help"><div class="v" style="color:var(--warn)">${desviosPend}</div><div class="l">Δ Desvios a justificar</div></div>`:'');
 
   const t=document.getElementById('tblViag');
   if(!list.length){
@@ -2627,8 +2685,19 @@ function renderViagens(){
       ? '<span class="alerta" title="Dados reais importados — aguardando o consumo na base para finalizar automaticamente">⚠</span>'
       : (pend?'<span class="alerta" title="Viagem realizada — aguarda finalização">⚠</span>':'');
     const autoMark = v.autoFinalizada ? ' <span title="Finalizada automaticamente pela importação do real" style="color:var(--ok);font-size:10px;">⤓</span>' : '';
+    const dv = viagemDesvios(v);
+    let desvMark='';
+    if((dv.tempo&&dv.tempo.flag)||(dv.consumo&&dv.consumo.flag)){
+      const parts=[];
+      if(dv.tempo&&dv.tempo.flag) parts.push(`Tempo ${dv.tempo.pct>0?'+':''}${fmt1(dv.tempo.pct)}% (prev ${fmt1(dv.tempo.prev)}h → real ${fmt1(dv.tempo.real)}h)`);
+      if(dv.consumo&&dv.consumo.flag) parts.push(`Consumo ${dv.consumo.pct>0?'+':''}${fmt1(dv.consumo.pct)}% (prev ${fmt(dv.consumo.prev)} → real ${fmt(dv.consumo.real)} L)`);
+      const pendente=viagemDesvioPendente(v);
+      const cor=pendente?'var(--warn)':'var(--muted)';
+      const tit=(pendente?'Desvio acima de '+DESVIO_PCT+'% SEM justificativa — abra a viagem para justificar.\n':'Desvio justificado.\n')+parts.join('\n');
+      desvMark=` <span title="${tit.replace(/"/g,'&quot;')}" style="color:${cor};cursor:help;font-weight:700;">Δ${pendente?'':'✓'}</span>`;
+    }
     h+=`<tr class="${pend?'row-alert':''}">
-      <td>${alerta}</td>
+      <td>${alerta}${desvMark}</td>
       <td>${v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—'} ${v.horaSaida||''}</td>
       <td>${e?e.nome:'—'}</td>
       <td>${r?r.nome:'—'}</td>
@@ -2841,6 +2910,18 @@ function openFinalizarViagem(vid){
   }
   h+=`</div>
     <div class="hint">A finalização gravará tempo, consumo e volume realizados; estes dados alimentam as métricas e as sugestões de atualização das Médias.</div>`;
+  // Bloco de justificativa de desvio (aparece quando tempo/consumo fogem >${DESVIO_PCT}% da média)
+  const j=v.justificativas||{};
+  const optMot=(arr,sel)=>['<option value="">— selecione o motivo —</option>'].concat(arr.map(m=>`<option${sel===m?' selected':''}>${m}</option>`)).join('');
+  h+=`<div id="fvDesvioBox" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid var(--warn);border-radius:8px;background:rgba(245,158,11,.08)">
+      <div style="font-weight:600;color:var(--warn);margin-bottom:8px">⚠ <span id="fvDesvioMsg"></span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div id="fvWrapTempo"><label style="font-size:12px">Motivo do desvio de TEMPO</label><select id="fvMotTempo" style="width:100%">${optMot(MOTIVOS_TEMPO,j.tempo)}</select></div>
+        <div id="fvWrapCons"><label style="font-size:12px">Motivo do desvio de CONSUMO</label><select id="fvMotConsumo" style="width:100%">${optMot(MOTIVOS_CONSUMO,j.consumo)}</select></div>
+      </div>
+      <label style="font-size:12px;margin-top:6px;display:block">Observações</label>
+      <textarea id="fvJustObs" rows="2" style="width:100%" placeholder="Detalhe o motivo (opcional)">${(j.obs||'').replace(/</g,'&lt;')}</textarea>
+    </div>`;
   document.getElementById('fvBody').innerHTML=h;
 
   // Para Tempo e Consumo: realizar menos que o previsto é BOM (verde).
@@ -2869,8 +2950,26 @@ function openFinalizarViagem(vid){
       const vr = parseFloat(document.getElementById('fvVolReal').value)||0;
       document.getElementById('fvVolDiff').innerHTML = diffSpan(vp, vr, true);
     }
+    // desvio de tempo/consumo vs média (mostra o bloco de justificativa)
+    const trv = parseFloat(document.getElementById('fvTempoReal').value)||0;
+    let realConsTot=0; document.querySelectorAll('[data-fv-cons]').forEach(inp=>{ realConsTot+=parseFloat(inp.value)||0; });
+    const prevConsTot = combs.reduce((s,cb)=>s+(c.incompleto?0:(c.consumoTotal[cb]||0)),0);
+    const tPct = (tempoPrev>0 && trv>0) ? (trv-tempoPrev)/tempoPrev*100 : 0;
+    const cPct = (prevConsTot>0 && realConsTot>0) ? (realConsTot-prevConsTot)/prevConsTot*100 : 0;
+    const tFlag=Math.abs(tPct)>DESVIO_PCT, cFlag=Math.abs(cPct)>DESVIO_PCT;
+    const box=document.getElementById('fvDesvioBox');
+    if(box){
+      if(tFlag||cFlag){
+        box.style.display='block';
+        const msgs=[]; if(tFlag) msgs.push(`Tempo ${tPct>0?'+':''}${tPct.toFixed(1)}%`); if(cFlag) msgs.push(`Consumo ${cPct>0?'+':''}${cPct.toFixed(1)}%`);
+        document.getElementById('fvDesvioMsg').textContent=`Desvio acima de ${DESVIO_PCT}% da média (${msgs.join(' · ')}) — justifique para a gestão`;
+        document.getElementById('fvWrapTempo').style.display=tFlag?'':'none';
+        document.getElementById('fvWrapCons').style.display=cFlag?'':'none';
+      } else box.style.display='none';
+    }
   }
   document.getElementById('fvBody').addEventListener('input', recalcDiffs);
+  document.getElementById('fvBody').addEventListener('change', recalcDiffs);
   recalcDiffs();
   document.getElementById('modalFinViagem').classList.add('show');
 }
@@ -2888,6 +2987,9 @@ document.getElementById('fvSave').addEventListener('click', ()=>{
     const vr=document.getElementById('fvVolReal');
     v.volumeRealizado = vr ? (parseFloat(vr.value)||0) : 0;
   }
+  // justificativa de desvio (tempo/consumo fora da média)
+  const jt=document.getElementById('fvMotTempo'), jc=document.getElementById('fvMotConsumo'), jo=document.getElementById('fvJustObs');
+  v.justificativas={ tempo: jt&&jt.value?jt.value:'', consumo: jc&&jc.value?jc.value:'', obs: jo?jo.value.trim():'' };
   v.status='Finalizada';
   v.finalizadaEm = todayStr();
   // finalização manual: desvincula da importação para não ser revertida em futuras importações
@@ -4069,6 +4171,7 @@ function sincronizarViagensProgramadas(){
     best.consumoRealizado=cons;
     if(best.condicao==='Carregada' && real.volume>0) best.volumeRealizado=real.volume;
     best.saidaReal=real.saida; best.chegadaReal=real.chegada; best.realImportId=real.id;
+    if(real.comandante && !best.comandante) best.comandante=real.comandante;
     // ---- finaliza só se o consumo de TODOS os combustíveis do barco veio (> 0) ----
     const consumoCompleto=emp.combustiveis.every(cb=>(cons[cb]||0)>0);
     if(consumoCompleto){
@@ -4643,6 +4746,38 @@ function renderHBars(elId, items, color, unit){
     return `<div class="hbar"><div class="nm" title="${String(x.name||'').replace(/"/g,'&quot;')}">${x.name}</div><div class="track"><div class="fill" style="width:${w}%;background:${col}"></div></div><div class="val">${fmt(x.value)} ${unit||''}</div></div>`;
   }).join('');
 }
+// Pareto: barras (valor, desc) + linha de % acumulado e eixo direito 0–100%.
+function drawPareto(svgId, items, opts){
+  opts=opts||{};
+  const svg=document.getElementById(svgId); if(!svg) return;
+  const data=(items||[]).filter(d=>d.value>0).sort((a,b)=>b.value-a.value);
+  const W=svg.clientWidth||820, H=opts.height||300, padL=44, padR=46, padT=16, padB=70;
+  if(!data.length){ svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="currentColor" opacity="0.5" font-size="12">${opts.empty||'Sem desvios no período.'}</text>`; svg.setAttribute('viewBox',`0 0 ${W} ${H}`); return; }
+  const total=data.reduce((s,d)=>s+d.value,0);
+  const innerW=W-padL-padR, innerH=H-padT-padB;
+  const n=data.length, slot=innerW/n, bw=Math.min(slot*0.6, 60);
+  const maxV=data[0].value;
+  const yBar=v=> padT+innerH-(maxV>0?v/maxV*innerH:0);
+  const yPct=p=> padT+innerH-(p/100*innerH);
+  let s='';
+  // grades / eixo direito %
+  [0,25,50,75,100].forEach(p=>{ const yy=yPct(p); s+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${(W-padR).toFixed(1)}" y2="${yy.toFixed(1)}" stroke="currentColor" stroke-opacity="0.08"/><text x="${(W-padR+6)}" y="${(yy+3).toFixed(1)}" font-size="9" fill="#f59e0b" opacity="0.8">${p}%</text>`; });
+  if(opts.unit) s+=`<text x="${padL-6}" y="${(padT-5)}" font-size="9" text-anchor="end" fill="currentColor" opacity="0.55">${opts.unit}</text>`;
+  // barras + rótulos
+  let cum=0; const pts=[];
+  data.forEach((d,i)=>{
+    const cx=padL+slot*i+slot/2, x=cx-bw/2, yb=yBar(d.value), h=padT+innerH-yb;
+    s+=`<rect x="${x.toFixed(1)}" y="${yb.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" fill="${opts.color||'#0ea5e9'}" fill-opacity="0.9" rx="2"><title>${String(d.name).replace(/"/g,'&quot;')}: ${fmt(d.value)} (${(d.value/total*100).toFixed(0)}%)</title></rect>`;
+    s+=`<text x="${cx.toFixed(1)}" y="${(yb-4).toFixed(1)}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.8">${fmt(d.value)}</text>`;
+    cum+=d.value; pts.push([cx, yPct(cum/total*100), cum/total*100]);
+    const lbl=String(d.name).length>16?String(d.name).slice(0,15)+'…':String(d.name);
+    s+=`<text x="${cx.toFixed(1)}" y="${(padT+innerH+12).toFixed(1)}" text-anchor="end" font-size="9" fill="currentColor" opacity="0.7" transform="rotate(-28 ${cx.toFixed(1)} ${(padT+innerH+12).toFixed(1)})">${lbl}</text>`;
+  });
+  // linha acumulada
+  s+=`<polyline points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="#f59e0b" stroke-width="2"/>`;
+  pts.forEach(p=>{ s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="#f59e0b"><title>${p[2].toFixed(0)}% acumulado</title></circle>`; });
+  svg.innerHTML=s; svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+}
 function kpiCard(v,l,o){
   o=o||{}; let dh=''; const d=o.delta;
   if(d!=null && isFinite(d)){ const dir=d>0?'up':(d<0?'down':''); const cls=o.neutral?'':dir; const arrow=d>0?'▲':(d<0?'▼':'•'); dh=`<div class="d ${cls}">${arrow} ${fmt1(Math.abs(d))}% <span style="opacity:.6;font-weight:400">vs ant.</span></div>`; }
@@ -4733,6 +4868,46 @@ function renderEfeito(el, eff){
   el.innerHTML=h;
 }
 
+// Gestão de desvios no Dashboard: Pareto de motivos + tabela das viagens fora da média
+function renderDashDesvios(viagens){
+  const desv=[];
+  viagens.forEach(v=>{ const dv=viagemDesvios(v); if((dv.tempo&&dv.tempo.flag)||(dv.consumo&&dv.consumo.flag)) desv.push({v,dv}); });
+  const total=desv.length;
+  const justificados=desv.filter(({v,dv})=>{ const j=v.justificativas||{}; const tOk=!(dv.tempo&&dv.tempo.flag)||j.tempo; const cOk=!(dv.consumo&&dv.consumo.flag)||j.consumo; return tOk&&cOk; }).length;
+  const motTempo={}, motCons={};
+  desv.forEach(({v,dv})=>{
+    const j=v.justificativas||{};
+    if(dv.tempo&&dv.tempo.flag){ const m=j.tempo||'(sem justificativa)'; motTempo[m]=(motTempo[m]||0)+1; }
+    if(dv.consumo&&dv.consumo.flag){ const m=j.consumo||'(sem justificativa)'; motCons[m]=(motCons[m]||0)+1; }
+  });
+  drawPareto('dashParetoTempo', Object.entries(motTempo).map(([name,value])=>({name,value})), {color:'#f59e0b', unit:'viagens', empty:'Sem desvios de tempo no período. 👍'});
+  drawPareto('dashParetoConsumo', Object.entries(motCons).map(([name,value])=>({name,value})), {color:'#0ea5e9', unit:'viagens', empty:'Sem desvios de consumo no período. 👍'});
+  const byCmd={};
+  desv.forEach(({v})=>{ const c=v.comandante||'(não informado)'; byCmd[c]=(byCmd[c]||0)+1; });
+  renderHBars('dashDesvioComandante', Object.entries(byCmd).map(([name,value])=>({name,value})), '#a78bfa', 'viagens');
+  const topT=Object.entries(motTempo).sort((a,b)=>b[1]-a[1])[0];
+  const topC=Object.entries(motCons).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('dashDesvioKpis').innerHTML=[
+    kpiCard(String(total),'Viagens com desvio >'+DESVIO_PCT+'%',{neutral:true,tip:'Viagens finalizadas no período com tempo e/ou consumo mais de '+DESVIO_PCT+'% fora da média cadastrada.'}),
+    kpiCard(total?fmt1(justificados/total*100)+'%':'—','Desvios justificados',{neutral:true,tip:'Percentual das viagens com desvio que já têm motivo informado na finalização.'}),
+    kpiCard(topT?topT[0]:'—','Top motivo de TEMPO',{neutral:true,tip:topT?topT[1]+' viagem(ns) com este motivo de atraso.':'Sem desvios de tempo no período.'}),
+    kpiCard(topC?topC[0]:'—','Top motivo de CONSUMO',{neutral:true,tip:topC?topC[1]+' viagem(ns) com este motivo de consumo.':'Sem desvios de consumo no período.'}),
+  ].join('');
+  const t=document.getElementById('dashTblDesvios'); if(!t) return;
+  if(!desv.length){ t.innerHTML=`<tr><td class="empty">Nenhuma viagem com desvio acima de ${DESVIO_PCT}% no período. 👍</td></tr>`; return; }
+  desv.sort((a,b)=> (b.v.dataSaida||'').localeCompare(a.v.dataSaida||''));
+  let h=`<tr><th>Saída</th><th>Empurrador</th><th>Comandante</th><th>Trecho</th><th>Cond.</th><th class="num">Tempo prev→real</th><th class="num">Δ tempo</th><th class="num">Consumo prev→real</th><th class="num">Δ cons.</th><th>Motivo(s)</th></tr>`;
+  desv.forEach(({v,dv})=>{
+    const e=empById(v.empId), r=rotaById(v.rotaId); const j=v.justificativas||{};
+    const tcell = dv.tempo? `${fmt1(dv.tempo.prev)}→${fmt1(dv.tempo.real)} h` : '—';
+    const tpct = dv.tempo&&dv.tempo.flag? `<span style="color:${dv.tempo.pct>0?'var(--bad)':'var(--ok)'}">${dv.tempo.pct>0?'+':''}${fmt1(dv.tempo.pct)}%</span>`:'—';
+    const ccell = dv.consumo? `${fmt(dv.consumo.prev)}→${fmt(dv.consumo.real)} L` : '—';
+    const cpct = dv.consumo&&dv.consumo.flag? `<span style="color:${dv.consumo.pct>0?'var(--bad)':'var(--ok)'}">${dv.consumo.pct>0?'+':''}${fmt1(dv.consumo.pct)}%</span>`:'—';
+    const mots=[]; if(dv.tempo&&dv.tempo.flag) mots.push('Tempo: '+(j.tempo||'<span style="color:var(--warn)">a justificar</span>')); if(dv.consumo&&dv.consumo.flag) mots.push('Consumo: '+(j.consumo||'<span style="color:var(--warn)">a justificar</span>'));
+    h+=`<tr><td>${v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—'}</td><td>${e?e.nome:'—'}</td><td>${v.comandante||'—'}</td><td>${r?r.nome:'—'}</td><td>${v.condicao||''}</td><td class="num">${tcell}</td><td class="num">${tpct}</td><td class="num">${ccell}</td><td class="num">${cpct}</td><td style="font-size:11px">${mots.join('<br>')||'—'}</td></tr>`;
+  });
+  t.innerHTML=h;
+}
 function renderDashboard(){
   initDashFilters();
   renderDashEmpFilter(); renderDashRotaFilter();
@@ -4891,6 +5066,14 @@ function renderDashboard(){
     rotaRows.forEach(([id,o])=>{ h+=`<tr><td>${id==='(sem)'?'(sem trecho)':((rotaById(id)||{}).nome||id)}</td><td class="num">${o.n}</td><td class="num">${fmt(o.vol)}</td><td class="num">${fmt(o.cons)}</td><td class="num">${o.vol>0?fmt1(o.consCar/o.vol):'—'}</td><td class="num">${o.horas>0?fmt1(o.cons/o.horas):'—'}</td><td class="num">${o.n>0?fmt1(o.tempoSum/o.n):'—'}</td></tr>`; });
     tr.innerHTML=h;
   }
+  // Gestão de Desvios (viagens programadas finalizadas no período, respeitando filtros)
+  const baseOkV=v=>{
+    if(!empAll && !(v.empId && empSet.has(v.empId))) return false;
+    if(!rotaAll && !(v.rotaId && rotaSet.has(v.rotaId))) return false;
+    return true;
+  };
+  const viagensFin=state.viagens.filter(v=>v.status==='Finalizada' && baseOkV(v) && (!ini||v.dataSaida>=ini) && (!fim||v.dataSaida<=fim));
+  renderDashDesvios(viagensFin);
 }
 
 /* ---- Wiring dos controles do Dashboard ---- */

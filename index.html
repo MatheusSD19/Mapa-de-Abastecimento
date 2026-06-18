@@ -4525,8 +4525,9 @@ function dashRotaList(){
 }
 function initDashFilters(){
   const ini=document.getElementById('dashIni'), fim=document.getElementById('dashFim');
-  if(!fim.value){ fim.value=dateStr(new Date()); }
-  if(!ini.value){ ini.value=dateStr(firstDayOfMonth(addMonths(new Date(),-11))); }
+  const now=new Date();
+  if(!fim.value){ fim.value=dateStr(now); }
+  if(!ini.value){ ini.value=dateStr(new Date(now.getFullYear(),0,1)); } // padrão: ano atual (01/01 → hoje)
 }
 function dashBuckets(ini, fim, gran){
   if(!ini||!fim) return [];

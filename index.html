@@ -583,24 +583,17 @@
       </div>
 
       <div class="chart-card">
-        <div class="chart-card-header"><h3>L/Ton <span class="sub">— litros por tonelada transportada (carregada)</span></h3></div>
+        <div class="chart-card-header" title="L/Ton (estoque): reconciliação física = (Estoque inicial − Estoque atual + Abastecimentos) ÷ Volume navegado, por mês.&#10;L/Ton (viagens): consumo lançado nas viagens carregadas ÷ volume carregado." style="cursor:help"><h3>L/Ton <span class="sub">— por estoque (físico) vs por viagens ⓘ</span></h3></div>
         <div class="chart-wrap"><svg id="dashChartLTon" class="chart-svg" preserveAspectRatio="none"></svg>
           <div id="dashTipLTon" class="chart-tooltip" style="display:none;"></div>
           <div id="dashLegLTon" class="chart-legend"></div></div>
       </div>
 
       <div class="chart-card">
-        <div class="chart-card-header"><h3>L/h navegada <span class="sub">— litros por hora de navegação</span></h3></div>
+        <div class="chart-card-header" title="Litros por hora navegada. Geral = MGO+HFO. Fórmula: consumo ÷ horas navegadas." style="cursor:help"><h3>L/h navegada <span class="sub">— Geral · MGO · HFO ⓘ</span></h3></div>
         <div class="chart-wrap"><svg id="dashChartLh" class="chart-svg" preserveAspectRatio="none"></svg>
           <div id="dashTipLh" class="chart-tooltip" style="display:none;"></div>
           <div id="dashLegLh" class="chart-legend"></div></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-card-header"><h3>Horas de Máquina <span class="sub">— horas trabalhadas MCP / MCA</span></h3></div>
-        <div class="chart-wrap"><svg id="dashChartHoras" class="chart-svg" preserveAspectRatio="none"></svg>
-          <div id="dashTipHoras" class="chart-tooltip" style="display:none;"></div>
-          <div id="dashLegHoras" class="chart-legend"></div></div>
       </div>
 
       <div class="chart-card">
@@ -3248,14 +3241,14 @@ function renderPrecos(){
   const lTon = totVolFin>0 ? totConsCarregada/totVolFin : 0;
 
   const kpis=document.getElementById('precosKpis');
-  kpis.innerHTML=`
-    <div class="kpi"><div class="v">${fmt(totalLitros)}</div><div class="l">Litros (período)</div></div>
-    <div class="kpi"><div class="v">${fmtMoney(totalR$)}</div><div class="l">R$ pago</div></div>
-    <div class="kpi"><div class="v">${precoMedio?fmt2(precoMedio):'—'}</div><div class="l">R$/L médio</div></div>
-    <div class="kpi"><div class="v">${lh?fmt1(lh):'—'}</div><div class="l">Consumo médio L/h</div></div>
-    <div class="kpi"><div class="v">${lTon?fmt1(lTon):'—'}</div><div class="l">L/Ton (Carregada)</div></div>
-    <div class="kpi"><div class="v">${finPeriodo.length}</div><div class="l">Viagens finalizadas</div></div>
-  `;
+  const tipKpi=(v,l,t)=>`<div class="kpi" title="${String(t).replace(/"/g,'&quot;')}" style="cursor:help"><div class="v">${v}</div><div class="l">${l} <span style="opacity:.45;font-size:10px">ⓘ</span></div></div>`;
+  kpis.innerHTML=
+    tipKpi(fmt(totalLitros),'Litros (período)','Soma dos litros dos abastecimentos REALIZADOS no período (todos os combustíveis).')+
+    tipKpi(fmtMoney(totalR$),'R$ pago','Soma de (litros × preço) dos abastecimentos realizados no período.')+
+    tipKpi(precoMedio?fmt2(precoMedio):'—','R$/L médio','Preço médio ponderado: R$ pago ÷ litros abastecidos no período.')+
+    tipKpi(lh?fmt1(lh):'—','Consumo médio L/h','Consumo realizado ÷ horas realizadas das viagens FINALIZADAS no período.')+
+    tipKpi(lTon?fmt1(lTon):'—','L/Ton (Carregada)','Consumo realizado das viagens carregadas ÷ volume realizado (toneladas) — viagens finalizadas no período.')+
+    tipKpi(finPeriodo.length,'Viagens finalizadas','Quantidade de viagens com status Finalizada e saída no período.');
 
   renderPrecosChart({chartId:1, comb:prChartCombs[1], style:prChartStyles[1], ini, fim});
   renderPrecosChart({chartId:2, comb:prChartCombs[2], style:prChartStyles[2], ini, fim});
@@ -3418,8 +3411,16 @@ function renderMediasPorEmpurrador(ini, fim){
   const t=document.getElementById('tblMediasEmp');
   const emps=state.empurradores.slice();
   if(!emps.length){ t.innerHTML='<tr><td class="empty">Cadastre empurradores.</td></tr>'; return; }
-  let h=`<tr><th>Empurrador</th><th class="num">Horas navegadas</th><th class="num">Consumo total (L)</th>
-    <th class="num">L/h</th><th class="num">Volume navegado (Ton)</th><th class="num">L/Ton</th><th class="num">Viagens</th></tr>`;
+  const eIni=ini||((fim||dateStr(new Date())).slice(0,4)+'-01-01'), eFim=fim||dateStr(new Date());
+  const th=(lbl,tip)=>`<th class="num" title="${String(tip).replace(/"/g,'&quot;')}" style="cursor:help">${lbl} <span style="opacity:.45;font-size:10px">ⓘ</span></th>`;
+  let h=`<tr><th>Empurrador</th>`+
+    th('Horas navegadas','Soma do tempo realizado (h) das viagens finalizadas do empurrador no período.')+
+    th('Consumo total (L)','Soma do consumo realizado (todos os combustíveis) das viagens finalizadas.')+
+    th('L/h','Consumo total ÷ horas navegadas (viagens finalizadas).')+
+    th('Volume navegado (Ton)','Soma do volume realizado das viagens carregadas finalizadas.')+
+    th('L/Ton','Consumo das viagens carregadas ÷ volume carregado (viagens finalizadas).')+
+    th('L/Ton (estoque)','Reconciliação física no período: (Estoque inicial − Estoque atual + Abastecimentos) ÷ Volume navegado. Independe das viagens — usa as leituras reais de estoque.')+
+    th('Viagens','Quantidade de viagens finalizadas no período.')+`</tr>`;
   let gH=0,gC=0,gV=0,gCC=0,gN=0;
   emps.forEach(e=>{
     const fin = state.viagens.filter(v=>{
@@ -3438,20 +3439,26 @@ function renderMediasPorEmpurrador(ini, fim){
     });
     const lh = hh>0 ? cc/hh : 0;
     const lT = vv>0 ? ccCarregada/vv : 0;
+    const est = lTonEstoqueEmp(e.id, eIni, eFim);
+    const estTip = est ? `(${fmt(est.s0)} − ${fmt(est.s1)} + ${fmt(est.refuel)}) ÷ ${fmt(est.vol)} t  ·  ${est.d0?est.d0.split('-').reverse().join('/'):''}→${est.d1?est.d1.split('-').reverse().join('/'):''}` : 'Sem leituras de estoque suficientes no período.';
+    const estCell = (est&&est.lton!=null) ? `<span title="${estTip.replace(/"/g,'&quot;')}" style="cursor:help">${fmt1(est.lton)}</span>` : '—';
     gH+=hh; gC+=cc; gV+=vv; gCC+=ccCarregada; gN+=fin.length;
     h+=`<tr><td>${e.nome}</td><td class="num">${fmt1(hh)}</td><td class="num">${fmt(cc)}</td>
       <td class="num">${lh?fmt1(lh):'—'}</td>
       <td class="num">${vv?fmt(vv):'—'}</td>
       <td class="num">${lT?fmt1(lT):'—'}</td>
+      <td class="num">${estCell}</td>
       <td class="num">${fin.length}</td></tr>`;
   });
   const lhG = gH>0?gC/gH:0;
   const lTG = gV>0?gCC/gV:0;
+  const estG = lTonEstoqueFrota(eIni, eFim);
   h+=`<tr style="font-weight:700;background:var(--panel2);">
     <td>Geral</td><td class="num">${fmt1(gH)}</td><td class="num">${fmt(gC)}</td>
     <td class="num">${lhG?fmt1(lhG):'—'}</td>
     <td class="num">${gV?fmt(gV):'—'}</td>
     <td class="num">${lTG?fmt1(lTG):'—'}</td>
+    <td class="num">${estG.lton!=null?fmt1(estG.lton):'—'}</td>
     <td class="num">${gN}</td></tr>`;
   t.innerHTML=h;
 }
@@ -4507,6 +4514,56 @@ function bucketRange(k, gran){
   return gran==='day' ? {i:k, f:k} : {i:k+'-01', f:dateStr(lastDayOfMonth(parseDate(k+'-01')))};
 }
 
+/* ---- L/Ton por ESTOQUE (reconciliação física de combustível) ----
+   Consumo do período = Estoque inicial − Estoque final + Abastecimentos,
+   usando as leituras/âncoras REAIS de estoque que cercam o período.
+   L/Ton = consumo (todos os combustíveis) ÷ volume navegado (carregada). */
+function nextDayStr(d){ return dateStr(addDays(parseDate(d),1)); }
+function refuelRangeReal(empId, comb, iniStr, fimStr){
+  return (state.abastecimentos||[]).filter(a=>a.empId===empId&&a.comb===comb&&a.status!=='Cancelado'&&a.data>=iniStr&&a.data<=fimStr).reduce((s,a)=>s+(a.qtd||0),0);
+}
+// Reconciliação de um empurrador/combustível entre as âncoras reais que cercam [iniStr, fimStr]
+function reconcEstoque(empId, comb, iniStr, fimStr){
+  const anchors=getAnchors(empId,comb);
+  const dates=Object.keys(anchors).sort();
+  if(!dates.length) return null;
+  // estoque inicial: última âncora <= início; se não houver, a 1ª âncora do período
+  let d0=null; for(let i=dates.length-1;i>=0;i--){ if(dates[i]<=iniStr){ d0=dates[i]; break; } }
+  if(d0===null) d0=dates.find(d=>d<=fimStr)||null;
+  if(d0===null) return null;
+  // estoque final: última âncora <= fim
+  let d1=null; for(let i=dates.length-1;i>=0;i--){ if(dates[i]<=fimStr){ d1=dates[i]; break; } }
+  if(d1===null||d1<=d0) return null;
+  const s0=anchors[d0], s1=anchors[d1];
+  const refuel=refuelRangeReal(empId,comb,nextDayStr(d0),d1); // abastecimentos após a leitura inicial até a final
+  return {d0,d1,s0,s1,refuel,consumo:s0-s1+refuel};
+}
+// L/Ton por estoque de UM empurrador (soma dos combustíveis) no período
+function lTonEstoqueEmp(empId, iniStr, fimStr){
+  const e=empById(empId); if(!e) return null;
+  let litros=0, ok=false, s0=0,s1=0,refuel=0,d0=null,d1=null;
+  (e.combustiveis||[]).forEach(comb=>{
+    const r=reconcEstoque(empId,comb,iniStr,fimStr);
+    if(r){ litros+=r.consumo; s0+=r.s0; s1+=r.s1; refuel+=r.refuel; ok=true;
+      if(d0===null||r.d0<d0) d0=r.d0; if(d1===null||r.d1>d1) d1=r.d1; }
+  });
+  if(!ok) return null;
+  let vol=0;
+  (state.historicoViagens||[]).forEach(v=>{ if(v.empId===empId&&v.data&&v.data>=iniStr&&v.data<=fimStr&&isCarregada(v.condicao)&&v.volume) vol+=v.volume; });
+  return {litros, vol, lton: vol>0?litros/vol:null, s0,s1,refuel,d0,d1};
+}
+// L/Ton por estoque da FROTA (só barcos com estoque conhecido E volume no período)
+function lTonEstoqueFrota(iniStr, fimStr, empIds){
+  const ids = empIds || state.empurradores.map(e=>e.id);
+  let litros=0, vol=0, comp={s0:0,s1:0,refuel:0}, nEmp=0;
+  ids.forEach(id=>{
+    const r=lTonEstoqueEmp(id,iniStr,fimStr);
+    if(!r || !(r.vol>0)) return;
+    litros+=r.litros; vol+=r.vol; comp.s0+=r.s0; comp.s1+=r.s1; comp.refuel+=r.refuel; nEmp++;
+  });
+  return {litros, vol, lton: vol>0?litros/vol:null, comp, nEmp};
+}
+
 /* ---- Renderizador genérico de gráfico (linhas / barras agrupadas ou empilhadas) ---- */
 function drawChart(cfg){
   const svg=document.getElementById(cfg.svgId);
@@ -4589,7 +4646,9 @@ function renderHBars(elId, items, color, unit){
 function kpiCard(v,l,o){
   o=o||{}; let dh=''; const d=o.delta;
   if(d!=null && isFinite(d)){ const dir=d>0?'up':(d<0?'down':''); const cls=o.neutral?'':dir; const arrow=d>0?'▲':(d<0?'▼':'•'); dh=`<div class="d ${cls}">${arrow} ${fmt1(Math.abs(d))}% <span style="opacity:.6;font-weight:400">vs ant.</span></div>`; }
-  return `<div class="kpi ${o.cls||''}"><div class="v">${v}</div><div class="l">${l}</div>${dh}</div>`;
+  const tip = o.tip ? ` title="${String(o.tip).replace(/"/g,'&quot;')}" style="cursor:help"` : '';
+  const info = o.tip ? '<span style="opacity:.45;font-size:10px;margin-left:3px;">ⓘ</span>' : '';
+  return `<div class="kpi ${o.cls||''}"${tip}><div class="v">${v}</div><div class="l">${l}${info}</div>${dh}</div>`;
 }
 
 /* ---- Filtros (dropdowns) ---- */
@@ -4715,13 +4774,12 @@ function renderDashboard(){
   const consHFOraw=buckets.map(k=>agg[k]?agg[k].consHFO:0);
   const lineNull=arr=>arr.map((v,i)=>has(buckets[i])?v:null);
   const lton=buckets.map(k=>{ const o=agg[k]; return o&&o.volCarregada>0?o.consCarregada/o.volCarregada:null; });
-  const lh=buckets.map(k=>{ const o=agg[k]; return o&&o.horas>0?o.cons/o.horas:null; });
+  const empIdsSel=empAll?null:[...empSet];
+  const ltonEst=buckets.map(k=>{ const br=bucketRange(k,gran); return lTonEstoqueFrota(br.i,br.f,empIdsSel).lton; });
+  const lhGer=buckets.map(k=>{ const o=agg[k]; return o&&o.horas>0?o.cons/o.horas:null; });
+  const lhMGO=buckets.map(k=>{ const o=agg[k]; return o&&o.horas>0?o.consMGO/o.horas:null; });
+  const lhHFO=buckets.map(k=>{ const o=agg[k]; return o&&o.horas>0?o.consHFO/o.horas:null; });
   const tempoMed=buckets.map(k=>{ const o=agg[k]; return o&&o.nViag>0?o.tempoSum/o.nViag:null; });
-
-  // máquina
-  const mh=dashMachineHoursByBucket(ini,fim,gran,empAll,empSet);
-  const mcp=buckets.map(k=>mh[k]?mh[k].MCP:0), mca=buckets.map(k=>mh[k]?mh[k].MCA:0);
-  const totMCP=mcp.reduce((a,b)=>a+b,0), totMCA=mca.reduce((a,b)=>a+b,0);
 
   const fuels=[{key:'MGO',label:'MGO',pool:['MGO','Diesel']},{key:'HFO',label:'HFO',pool:['HFO']}];
   // Custo de combustível do período (para o KPI) e da janela anterior equivalente (para o Δ)
@@ -4751,20 +4809,33 @@ function renderDashboard(){
   }
 
   // KPIs
-  const lTonTot=tot.vol>0?tot.consCar/tot.vol:0, lhTot=tot.horas>0?tot.cons/tot.horas:0;
+  const lTonTot=tot.vol>0?tot.consCar/tot.vol:0;
+  const lhGerTot=tot.horas>0?tot.cons/tot.horas:0, lhMGOTot=tot.horas>0?tot.mgo/tot.horas:0, lhHFOTot=tot.horas>0?tot.hfo/tot.horas:0;
   const prevLTon=prevTot&&prevTot.vol>0?prevTot.consCar/prevTot.vol:null;
-  const prevLh=prevTot&&prevTot.horas>0?prevTot.cons/prevTot.horas:null;
+  const prevLhGer=prevTot&&prevTot.horas>0?prevTot.cons/prevTot.horas:null;
+  const prevLhMGO=prevTot&&prevTot.horas>0?prevTot.mgo/prevTot.horas:null;
+  const prevLhHFO=prevTot&&prevTot.horas>0?prevTot.hfo/prevTot.horas:null;
   const pct=(c,p)=> (p!=null&&isFinite(p)&&p!==0)?((c-p)/p*100):null;
   const hasPrevWindow=!!prev && prevTot && prevTot.cons>0;
+  // L/Ton Ano (reconciliação por estoque) — ano do fim do filtro, até o fim do filtro
+  const anoY=(fim||dateStr(new Date())).slice(0,4);
+  const anoIni=anoY+'-01-01', anoFim=fim||dateStr(new Date());
+  const ltAno=lTonEstoqueFrota(anoIni,anoFim,empIdsSel);
+  const prevAno=lTonEstoqueFrota((+anoY-1)+'-01-01',(+anoY-1)+anoFim.slice(4),empIdsSel);
+  const ltAnoTip = ltAno.lton!=null
+    ? `L/Ton do ANO por reconciliação física de estoque.\nFórmula: (Estoque inicial − Estoque atual + Abastecimentos) ÷ Volume navegado\nPeríodo: 01/01/${anoY} a ${anoFim.split('-').reverse().join('/')}\nEstoque inicial: ${fmt(ltAno.comp.s0)} L\nEstoque atual: ${fmt(ltAno.comp.s1)} L\nAbastecimentos: ${fmt(ltAno.comp.refuel)} L\n= Consumo: ${fmt(ltAno.litros)} L\nVolume navegado (carregada): ${fmt(ltAno.vol)} t\n${ltAno.nEmp} empurrador(es) com estoque conhecido`
+    : `L/Ton do ANO por reconciliação física de estoque.\nFórmula: (Estoque inicial − Estoque atual + Abastecimentos) ÷ Volume navegado.\nSem leituras de estoque suficientes em ${anoY} para calcular — informe estoques no Mapa ou importe Estoque & Horas (módulo Importações).`;
   document.getElementById('dashKpis').innerHTML=[
-    kpiCard(fmt(tot.vol)+' t','Volume transportado',{neutral:true,delta:pct(tot.vol,prevTot?prevTot.vol:null)}),
-    kpiCard(fmt(tot.cons)+' L','Consumo total',{delta:pct(tot.cons,prevTot?prevTot.cons:null)}),
-    kpiCard(lTonTot?fmt1(lTonTot):'—','L/Ton',{delta:pct(lTonTot,prevLTon)}),
-    kpiCard(lhTot?fmt1(lhTot):'—','L/h navegada',{delta:pct(lhTot,prevLh)}),
-    kpiCard(fmt1(tot.horas)+' h','Horas navegadas',{neutral:true,delta:pct(tot.horas,prevTot?prevTot.horas:null)}),
-    kpiCard(String(tot.n),'Viagens',{neutral:true,delta:pct(tot.n,prevTot?prevTot.n:null)}),
-    kpiCard(fmt1(totMCP+totMCA)+' h','Horas máquina',{neutral:true}),
-    kpiCard(costPeriod?fmtMoney(costPeriod):'—','Custo combustível',{delta:hasPrevWindow?pct(costPeriod,costPrevWindow):null}),
+    kpiCard(fmt(tot.vol)+' t','Volume transportado',{neutral:true,delta:pct(tot.vol,prevTot?prevTot.vol:null),tip:'Soma do volume (toneladas) das viagens reais CARREGADAS no período filtrado.'}),
+    kpiCard(fmt(tot.cons)+' L','Consumo total',{delta:pct(tot.cons,prevTot?prevTot.cons:null),tip:'Soma do consumo real (MGO + HFO, em litros) de todas as viagens reais do período.'}),
+    kpiCard(lTonTot?fmt1(lTonTot):'—','L/Ton (viagens)',{delta:pct(lTonTot,prevLTon),tip:'Litros por tonelada das VIAGENS carregadas.\nFórmula: consumo das viagens carregadas ÷ volume carregado.\nUsa só o consumo lançado nas viagens (não inclui porto/manobras).'}),
+    kpiCard(ltAno.lton!=null?fmt1(ltAno.lton):'—','L/Ton Ano (estoque)',{delta:pct(ltAno.lton,prevAno.lton),tip:ltAnoTip}),
+    kpiCard(lhGerTot?fmt1(lhGerTot):'—','L/h Geral',{delta:pct(lhGerTot,prevLhGer),tip:'Litros por hora navegada (MGO + HFO).\nFórmula: consumo total ÷ horas navegadas.'}),
+    kpiCard(lhMGOTot?fmt1(lhMGOTot):'—','L/h MGO',{delta:pct(lhMGOTot,prevLhMGO),tip:'Litros de MGO por hora navegada.\nFórmula: consumo de MGO ÷ horas navegadas.'}),
+    kpiCard(lhHFOTot?fmt1(lhHFOTot):'—','L/h HFO',{delta:pct(lhHFOTot,prevLhHFO),tip:'Litros de HFO por hora navegada.\nFórmula: consumo de HFO ÷ horas navegadas.'}),
+    kpiCard(fmt1(tot.horas)+' h','Horas navegadas',{neutral:true,delta:pct(tot.horas,prevTot?prevTot.horas:null),tip:'Soma das horas de navegação (saída→chegada) das viagens reais do período.'}),
+    kpiCard(String(tot.n),'Viagens',{neutral:true,delta:pct(tot.n,prevTot?prevTot.n:null),tip:'Quantidade de viagens reais no período filtrado.'}),
+    kpiCard(costPeriod?fmtMoney(costPeriod):'—','Custo combustível',{delta:hasPrevWindow?pct(costPeriod,costPrevWindow):null,tip:'Consumo × preço do combustível no período.\nPreço: abastecimentos do período → senão Histórico de Preços.'}),
   ].join('');
 
   // Gráfico consumo
@@ -4774,9 +4845,8 @@ function renderDashboard(){
   drawChart({svgId:'dashChartConsumo',legendId:'dashLegConsumo',tipId:'dashTipConsumo',buckets,gran,series:consumoSeries,stacked:dashConsumoMode==='stack',yLabel:'L',yfmt:fmt,onBucketClick:drillToMonth,empty:'Importe o Histórico de Viagens (módulo Importações) para ver o consumo real.'});
   document.getElementById('dashConsumoSub').textContent=`— total ${fmt(tot.cons)} L (MGO ${fmt(tot.mgo)} · HFO ${fmt(tot.hfo)})`;
 
-  drawChart({svgId:'dashChartLTon',legendId:'dashLegLTon',tipId:'dashTipLTon',buckets,gran,series:[{label:'L/Ton',type:'line',color:'#0ea5e9',values:lton}],yLabel:'L/t',yfmt:fmt1,tipFmt:v=>fmt1(v)+' L/t',onBucketClick:drillToMonth,empty:'Sem viagens carregadas com volume no período.'});
-  drawChart({svgId:'dashChartLh',legendId:'dashLegLh',tipId:'dashTipLh',buckets,gran,series:[{label:'L/h navegada',type:'line',color:'#7c3aed',values:lh}],yLabel:'L/h',yfmt:fmt1,tipFmt:v=>fmt1(v)+' L/h',onBucketClick:drillToMonth,empty:'Sem horas de navegação no período.'});
-  drawChart({svgId:'dashChartHoras',legendId:'dashLegHoras',tipId:'dashTipHoras',buckets,gran,series:[{label:'Horas MCP',type:'bar',color:'#0e7490',values:mcp},{label:'Horas MCA',type:'bar',color:'#f59e0b',values:mca}],stacked:true,yLabel:'h',yfmt:fmt1,tipFmt:v=>fmt1(v)+' h',onBucketClick:drillToMonth,empty:'Importe Estoque e Horas de Máquina para ver o horímetro.'});
+  drawChart({svgId:'dashChartLTon',legendId:'dashLegLTon',tipId:'dashTipLTon',buckets,gran,series:[{label:'L/Ton (estoque)',type:'line',color:'#0ea5e9',values:ltonEst},{label:'L/Ton (viagens)',type:'line',color:'#94a3b8',values:lton}],yLabel:'L/t',yfmt:fmt1,tipFmt:v=>fmt1(v)+' L/t',onBucketClick:drillToMonth,empty:'Sem viagens carregadas com volume no período.'});
+  drawChart({svgId:'dashChartLh',legendId:'dashLegLh',tipId:'dashTipLh',buckets,gran,series:[{label:'L/h Geral',type:'line',color:'#7c3aed',values:lhGer},{label:'L/h MGO',type:'line',color:'#0ea5e9',values:lhMGO},{label:'L/h HFO',type:'line',color:'#f59e0b',values:lhHFO}],yLabel:'L/h',yfmt:fmt1,tipFmt:v=>fmt1(v)+' L/h',onBucketClick:drillToMonth,empty:'Sem horas de navegação no período.'});
   drawChart({svgId:'dashChartTempo',legendId:'dashLegTempo',tipId:'dashTipTempo',buckets,gran,series:[{label:'Tempo médio',type:'line',color:'#22c55e',values:tempoMed}],yLabel:'h',yfmt:fmt1,tipFmt:v=>fmt1(v)+' h',onBucketClick:drillToMonth,empty:'Sem viagens no período.'});
 
   // Realizado × Budget por cidade
@@ -4804,7 +4874,8 @@ function renderDashboard(){
   const empRows=Object.entries(empAgg).sort((a,b)=>b[1].cons-a[1].cons);
   if(!empRows.length){ te.innerHTML='<tr><td class="empty">Sem viagens reais no período.</td></tr>'; }
   else{
-    let h=`<tr><th>Empurrador</th><th class="num">Viagens</th><th class="num">Volume (t)</th><th class="num">Consumo (L)</th><th class="num">L/Ton</th><th class="num">L/h nav.</th><th class="num">Horas nav.</th><th class="num">Horas MCP</th><th class="num">Horas MCA</th></tr>`;
+    const thN=(l,t)=>`<th class="num" title="${String(t).replace(/"/g,'&quot;')}" style="cursor:help">${l}</th>`;
+    let h=`<tr><th>Empurrador</th>`+thN('Viagens','Nº de viagens reais do empurrador no período.')+thN('Volume (t)','Volume carregado (t) no período.')+thN('Consumo (L)','Consumo real (MGO+HFO) no período.')+thN('L/Ton','Consumo das viagens carregadas ÷ volume carregado.')+thN('L/h nav.','Consumo total ÷ horas navegadas.')+thN('Horas nav.','Soma das horas de navegação (saída→chegada).')+thN('Horas MCP','Horas do Motor de Combustão Principal (horímetro real importado).')+thN('Horas MCA','Horas do Motor de Combustão Auxiliar (horímetro real importado).')+`</tr>`;
     empRows.forEach(([id,o])=>{ const mhv=mhEmp[id]||{mcp:0,mca:0}; h+=`<tr><td>${id==='(sem)'?'(sem emp)':((empById(id)||{}).nome||id)}</td><td class="num">${o.n}</td><td class="num">${fmt(o.vol)}</td><td class="num">${fmt(o.cons)}</td><td class="num">${o.vol>0?fmt1(o.consCar/o.vol):'—'}</td><td class="num">${o.horas>0?fmt1(o.cons/o.horas):'—'}</td><td class="num">${fmt1(o.horas)}</td><td class="num">${mhv.mcp>0?fmt1(mhv.mcp):'—'}</td><td class="num">${mhv.mca>0?fmt1(mhv.mca):'—'}</td></tr>`; });
     te.innerHTML=h;
   }
@@ -4815,7 +4886,8 @@ function renderDashboard(){
   const rotaRows=Object.entries(rotaAgg).sort((a,b)=>b[1].cons-a[1].cons);
   if(!rotaRows.length){ tr.innerHTML='<tr><td class="empty">Sem viagens reais no período.</td></tr>'; }
   else{
-    let h=`<tr><th>Rota / Trecho</th><th class="num">Viagens</th><th class="num">Volume (t)</th><th class="num">Consumo (L)</th><th class="num">L/Ton</th><th class="num">L/h nav.</th><th class="num">Tempo médio (h)</th></tr>`;
+    const thR=(l,t)=>`<th class="num" title="${String(t).replace(/"/g,'&quot;')}" style="cursor:help">${l}</th>`;
+    let h=`<tr><th>Rota / Trecho</th>`+thR('Viagens','Nº de viagens reais no trecho/período.')+thR('Volume (t)','Volume carregado (t) no trecho.')+thR('Consumo (L)','Consumo real (MGO+HFO) no trecho.')+thR('L/Ton','Consumo carregado ÷ volume carregado no trecho.')+thR('L/h nav.','Consumo total ÷ horas navegadas no trecho.')+thR('Tempo médio (h)','Média de horas por viagem no trecho.')+`</tr>`;
     rotaRows.forEach(([id,o])=>{ h+=`<tr><td>${id==='(sem)'?'(sem trecho)':((rotaById(id)||{}).nome||id)}</td><td class="num">${o.n}</td><td class="num">${fmt(o.vol)}</td><td class="num">${fmt(o.cons)}</td><td class="num">${o.vol>0?fmt1(o.consCar/o.vol):'—'}</td><td class="num">${o.horas>0?fmt1(o.cons/o.horas):'—'}</td><td class="num">${o.n>0?fmt1(o.tempoSum/o.n):'—'}</td></tr>`; });
     tr.innerHTML=h;
   }

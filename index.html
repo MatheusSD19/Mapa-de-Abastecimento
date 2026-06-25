@@ -2994,7 +2994,12 @@ document.getElementById('fvSave').addEventListener('click', ()=>{
   v.finalizadaEm = todayStr();
   // finalização manual: desvincula da importação para não ser revertida em futuras importações
   v.autoFinalizada=false; v.consumoPendente=false; delete v.realImportId;
-  save(); closeModals(); renderViagens();
+  save(); closeModals();
+  // Atualiza tanto a grade do Mapa de Giros (onde a viagem pode ter sido aberta)
+  // quanto a lista de Viagens — assim a finalização aparece imediatamente em
+  // qualquer das views, sem dar a impressão de que "não salvou".
+  renderMapa();
+  renderViagens();
 });
 
 /* =========================================================

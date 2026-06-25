@@ -2623,21 +2623,22 @@ function viagemDesvios(v){
   if(c.incompleto) return out;
   if(v.tempoRealizado>0 && c.horas>0){
     const pct=(v.tempoRealizado-c.horas)/c.horas*100;
-    out.tempo={prev:c.horas, real:v.tempoRealizado, pct, flag:Math.abs(pct)>DESVIO_PCT};
+    out.tempo={prev:c.horas, real:v.tempoRealizado, pct, flag:Math.abs(pct)>DESVIO_PCT, favoravel:pct<0};
   }
   const prevCons=Object.values(c.consumoTotal||{}).reduce((s,x)=>s+(x||0),0);
   const realCons=Object.values(v.consumoRealizado||{}).reduce((s,x)=>s+(x||0),0);
   if(realCons>0 && prevCons>0){
     const pct=(realCons-prevCons)/prevCons*100;
-    out.consumo={prev:prevCons, real:realCons, pct, flag:Math.abs(pct)>DESVIO_PCT};
+    out.consumo={prev:prevCons, real:realCons, pct, flag:Math.abs(pct)>DESVIO_PCT, favoravel:pct<0};
   }
   return out;
 }
 function viagemTemDesvio(v){ const d=viagemDesvios(v); return !!((d.tempo&&d.tempo.flag)||(d.consumo&&d.consumo.flag)); }
-// Desvio sem justificativa preenchida (pendência de gestão)
+// Desvio DESFAVORÁVEL (acima do previsto) sem justificativa preenchida (pendência de gestão).
+// Desvios favoráveis (tempo/consumo abaixo da média) são positivos e não exigem justificativa.
 function viagemDesvioPendente(v){
   const d=viagemDesvios(v); const j=v.justificativas||{};
-  return !!((d.tempo&&d.tempo.flag&&!j.tempo)||(d.consumo&&d.consumo.flag&&!j.consumo));
+  return !!((d.tempo&&d.tempo.flag&&!d.tempo.favoravel&&!j.tempo)||(d.consumo&&d.consumo.flag&&!d.consumo.favoravel&&!j.consumo));
 }
 
 function renderViagens(){
@@ -2692,8 +2693,10 @@ function renderViagens(){
       if(dv.tempo&&dv.tempo.flag) parts.push(`Tempo ${dv.tempo.pct>0?'+':''}${fmt1(dv.tempo.pct)}% (prev ${fmt1(dv.tempo.prev)}h → real ${fmt1(dv.tempo.real)}h)`);
       if(dv.consumo&&dv.consumo.flag) parts.push(`Consumo ${dv.consumo.pct>0?'+':''}${fmt1(dv.consumo.pct)}% (prev ${fmt(dv.consumo.prev)} → real ${fmt(dv.consumo.real)} L)`);
       const pendente=viagemDesvioPendente(v);
-      const cor=pendente?'var(--warn)':'var(--muted)';
-      const tit=(pendente?'Desvio acima de '+DESVIO_PCT+'% SEM justificativa — abra a viagem para justificar.\n':'Desvio justificado.\n')+parts.join('\n');
+      // favorável quando todos os desvios sinalizados estão abaixo do previsto
+      const soFavoravel=(!(dv.tempo&&dv.tempo.flag)||dv.tempo.favoravel)&&(!(dv.consumo&&dv.consumo.flag)||dv.consumo.favoravel);
+      const cor=pendente?'var(--warn)':(soFavoravel?'var(--ok)':'var(--muted)');
+      const tit=(pendente?'Desvio acima de '+DESVIO_PCT+'% SEM justificativa — abra a viagem para justificar.\n':(soFavoravel?'Desvio favorável (abaixo da média) — não requer justificativa.\n':'Desvio justificado.\n'))+parts.join('\n');
       desvMark=` <span title="${tit.replace(/"/g,'&quot;')}" style="color:${cor};cursor:help;font-weight:700;">Δ${pendente?'':'✓'}</span>`;
     }
     h+=`<tr class="${pend?'row-alert':''}">
@@ -2910,17 +2913,31 @@ function openFinalizarViagem(vid){
   }
   h+=`</div>
     <div class="hint">A finalização gravará tempo, consumo e volume realizados; estes dados alimentam as métricas e as sugestões de atualização das Médias.</div>`;
-  // Bloco de justificativa de desvio (aparece quando tempo/consumo fogem >${DESVIO_PCT}% da média)
+  // Comandante — pedir aqui quando não foi informado no planejamento da viagem
+  const semComandante = !(v.comandante && String(v.comandante).trim());
+  if(semComandante){
+    const comands=[...new Set([...(state.historicoViagens||[]).map(x=>x.comandante), ...state.viagens.map(x=>x.comandante)].filter(Boolean))].sort();
+    h+=`<div id="fvComandBox" style="margin-top:10px;padding:10px 12px;border:1px solid var(--info);border-radius:8px;background:rgba(56,189,248,.08)">
+        <label style="font-size:12px;font-weight:600;color:var(--info);display:block;margin-bottom:6px">Comandante <span style="font-weight:400">— não informado no planejamento, inclua para finalizar</span></label>
+        <input id="fvComandante" list="fvComandList" placeholder="Nome do comandante" style="width:100%">
+        <datalist id="fvComandList">${comands.map(c=>`<option value="${String(c).replace(/"/g,'&quot;')}">`).join('')}</datalist>
+      </div>`;
+  }
+  // Bloco de desvio (aparece quando tempo/consumo fogem >${DESVIO_PCT}% da média).
+  // Favorável (abaixo do previsto) = apenas sinaliza; Desfavorável (acima) = pede justificativa.
   const j=v.justificativas||{};
   const optMot=(arr,sel)=>['<option value="">— selecione o motivo —</option>'].concat(arr.map(m=>`<option${sel===m?' selected':''}>${m}</option>`)).join('');
   h+=`<div id="fvDesvioBox" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid var(--warn);border-radius:8px;background:rgba(245,158,11,.08)">
-      <div style="font-weight:600;color:var(--warn);margin-bottom:8px">⚠ <span id="fvDesvioMsg"></span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div id="fvFavMsg" style="display:none;font-weight:600;color:var(--ok);margin-bottom:8px">✓ <span id="fvFavTxt"></span></div>
+      <div id="fvDesvioHead" style="display:none;font-weight:600;color:var(--warn);margin-bottom:8px">⚠ <span id="fvDesvioMsg"></span></div>
+      <div id="fvJustGrid" style="display:none;grid-template-columns:1fr 1fr;gap:10px">
         <div id="fvWrapTempo"><label style="font-size:12px">Motivo do desvio de TEMPO</label><select id="fvMotTempo" style="width:100%">${optMot(MOTIVOS_TEMPO,j.tempo)}</select></div>
         <div id="fvWrapCons"><label style="font-size:12px">Motivo do desvio de CONSUMO</label><select id="fvMotConsumo" style="width:100%">${optMot(MOTIVOS_CONSUMO,j.consumo)}</select></div>
       </div>
-      <label style="font-size:12px;margin-top:6px;display:block">Observações</label>
-      <textarea id="fvJustObs" rows="2" style="width:100%" placeholder="Detalhe o motivo (opcional)">${(j.obs||'').replace(/</g,'&lt;')}</textarea>
+      <div id="fvObsWrap" style="display:none">
+        <label style="font-size:12px;margin-top:6px;display:block">Observações</label>
+        <textarea id="fvJustObs" rows="2" style="width:100%" placeholder="Detalhe o motivo (opcional)">${(j.obs||'').replace(/</g,'&lt;')}</textarea>
+      </div>
     </div>`;
   document.getElementById('fvBody').innerHTML=h;
 
@@ -2956,15 +2973,34 @@ function openFinalizarViagem(vid){
     const prevConsTot = combs.reduce((s,cb)=>s+(c.incompleto?0:(c.consumoTotal[cb]||0)),0);
     const tPct = (tempoPrev>0 && trv>0) ? (trv-tempoPrev)/tempoPrev*100 : 0;
     const cPct = (prevConsTot>0 && realConsTot>0) ? (realConsTot-prevConsTot)/prevConsTot*100 : 0;
-    const tFlag=Math.abs(tPct)>DESVIO_PCT, cFlag=Math.abs(cPct)>DESVIO_PCT;
+    // Desfavorável = acima do previsto (pede justificativa). Favorável = abaixo (só sinaliza).
+    const tBad=tPct>DESVIO_PCT, tGood=tPct<-DESVIO_PCT;
+    const cBad=cPct>DESVIO_PCT, cGood=cPct<-DESVIO_PCT;
+    const anyBad=tBad||cBad, anyGood=tGood||cGood;
     const box=document.getElementById('fvDesvioBox');
     if(box){
-      if(tFlag||cFlag){
+      if(anyBad||anyGood){
         box.style.display='block';
-        const msgs=[]; if(tFlag) msgs.push(`Tempo ${tPct>0?'+':''}${tPct.toFixed(1)}%`); if(cFlag) msgs.push(`Consumo ${cPct>0?'+':''}${cPct.toFixed(1)}%`);
-        document.getElementById('fvDesvioMsg').textContent=`Desvio acima de ${DESVIO_PCT}% da média (${msgs.join(' · ')}) — justifique para a gestão`;
-        document.getElementById('fvWrapTempo').style.display=tFlag?'':'none';
-        document.getElementById('fvWrapCons').style.display=cFlag?'':'none';
+        box.style.borderColor = anyBad ? 'var(--warn)' : 'var(--ok)';
+        box.style.background = anyBad ? 'rgba(245,158,11,.08)' : 'rgba(34,197,94,.08)';
+        // sinal favorável (sem necessidade de justificar)
+        const favMsg=document.getElementById('fvFavMsg');
+        if(anyGood){
+          const fav=[]; if(tGood) fav.push(`Tempo ${tPct.toFixed(1)}%`); if(cGood) fav.push(`Consumo ${cPct.toFixed(1)}%`);
+          document.getElementById('fvFavTxt').textContent=`Abaixo da média (${fav.join(' · ')}) — diferença favorável, dentro do esperado. Não é necessário justificar.`;
+          favMsg.style.display='block';
+        } else favMsg.style.display='none';
+        // desvio desfavorável (pede justificativa)
+        const head=document.getElementById('fvDesvioHead');
+        const grid=document.getElementById('fvJustGrid');
+        const obs=document.getElementById('fvObsWrap');
+        if(anyBad){
+          const msgs=[]; if(tBad) msgs.push(`Tempo +${tPct.toFixed(1)}%`); if(cBad) msgs.push(`Consumo +${cPct.toFixed(1)}%`);
+          document.getElementById('fvDesvioMsg').textContent=`Desvio acima de ${DESVIO_PCT}% da média (${msgs.join(' · ')}) — justifique para a gestão`;
+          head.style.display='block'; grid.style.display='grid'; obs.style.display='block';
+          document.getElementById('fvWrapTempo').style.display=tBad?'':'none';
+          document.getElementById('fvWrapCons').style.display=cBad?'':'none';
+        } else { head.style.display='none'; grid.style.display='none'; obs.style.display='none'; }
       } else box.style.display='none';
     }
   }
@@ -2977,6 +3013,13 @@ document.getElementById('fvSave').addEventListener('click', ()=>{
   const v=state.viagens.find(x=>x.id===finViagemId); if(!v) return;
   const tempoReal = parseFloat(document.getElementById('fvTempoReal').value)||0;
   if(!tempoReal){ alert('Informe o tempo realizado (em horas).'); return; }
+  // Comandante: exigido aqui quando não veio do planejamento
+  const cmdEl=document.getElementById('fvComandante');
+  if(cmdEl){
+    const cmd=cmdEl.value.trim();
+    if(!cmd){ alert('Informe o nome do comandante.'); cmdEl.focus(); return; }
+    v.comandante=cmd;
+  }
   const cons={};
   document.querySelectorAll('[data-fv-cons]').forEach(inp=>{
     cons[inp.dataset.fvCons]=parseFloat(inp.value)||0;

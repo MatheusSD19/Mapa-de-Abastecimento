@@ -60,6 +60,12 @@
   th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;}
   tr:hover td{background:rgba(56,189,248,0.05);}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  /* Ordenação por clique no cabeçalho */
+  table.sortable th.th-sort{cursor:pointer;user-select:none;white-space:nowrap;}
+  table.sortable th.th-sort:hover{background:var(--panel);color:var(--txt);}
+  table.sortable th.th-sort::after{content:'⇅';margin-left:5px;font-size:9px;opacity:.32;}
+  table.sortable th.th-sort.sort-asc::after{content:'▲';opacity:.95;color:var(--accent);}
+  table.sortable th.th-sort.sort-desc::after{content:'▼';opacity:.95;color:var(--accent);}
   .chk-group{display:flex;gap:12px;flex-wrap:wrap;}
   .chk-group label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--txt);}
   .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;}
@@ -1461,6 +1467,29 @@ function setMedia(rotaId, empId, cond, patch){
     consumo: Object.assign({}, cur.consumo, patch.consumo||{})
   };
 }
+// Consumo médio NAVEGANDO (L/h) por combustível para um empurrador. Estima a partir de
+// todas as fontes disponíveis desse barco: médias já cadastradas (qualquer trecho/condição),
+// viagens finalizadas (consumo real ÷ tempo real) e histórico importado (consumo ÷ tempo).
+// Serve para pré-preencher o consumo esperado quando não há média para a condição/trecho.
+function avgNavConsumoBoat(empId){
+  const sums={}, counts={};
+  const add=(f,lh)=>{ if(lh>0 && isFinite(lh)){ sums[f]=(sums[f]||0)+lh; counts[f]=(counts[f]||0)+1; } };
+  Object.values(state.medias||{}).forEach(byEmp=>{
+    const recs = byEmp && byEmp[empId]; if(!recs) return;
+    Object.values(recs).forEach(rec=>{ if(rec && rec.consumo) Object.entries(rec.consumo).forEach(([f,lh])=>add(f,lh)); });
+  });
+  (state.viagens||[]).forEach(v=>{
+    if(v.empId!==empId || v.status!=='Finalizada' || !(v.tempoRealizado>0) || !v.consumoRealizado) return;
+    Object.entries(v.consumoRealizado).forEach(([f,l])=>add(f,(l||0)/v.tempoRealizado));
+  });
+  (state.historicoViagens||[]).forEach(v=>{
+    if(v.empId!==empId || !(v.tempo>0) || !v.consumo) return;
+    Object.entries(v.consumo).forEach(([f,l])=>add(f,(l||0)/v.tempo));
+  });
+  const out={};
+  Object.keys(sums).forEach(f=>{ out[f]=sums[f]/counts[f]; });
+  return out;
+}
 // estado de expansão da tela de médias
 const medExpanded = new Set();      // empIds expandidos
 const medRowExpanded = new Set();   // chaves "empId|rotaId" expandidas
@@ -2246,14 +2275,35 @@ function updateMvMediaBox(){
   if(key===mvMediaKey) return; // mesmo contexto: preserva o que o usuário já digitou
   mvMediaKey=key;
   const combs=e.combustiveis||[];
-  let h=`<div style="font-weight:600;color:var(--warn);margin-bottom:6px">⚠ Sem média para este trecho · condição. Informe o <b>tempo</b> e o <b>consumo esperados</b> — ficam salvos como média para as próximas viagens e são refinados ao finalizar.</div>
+  // Consumo médio navegando do barco (L/h) — pré-preenche o esperado (editável).
+  const avg=avgNavConsumoBoat(empId);
+  const temHist=combs.some(cb=>avg[cb]>0);
+  let h=`<div style="font-weight:600;color:var(--warn);margin-bottom:6px">⚠ Sem média para este trecho · condição. Informe o <b>tempo esperado (h)</b>. ${temHist?'O <b>consumo esperado (L/h)</b> abaixo já vem calculado pela média do barco navegando — ajuste se quiser.':'Informe também o <b>consumo esperado (L/h)</b>.'} Esses valores ficam salvos como média para as próximas viagens e são refinados ao finalizar.</div>
     <div style="display:grid;grid-template-columns:repeat(${combs.length+1},minmax(0,1fr));gap:8px">
       <div><label style="font-size:12px">Tempo esperado (h)</label><input type="number" step="any" id="mvMedTempo" placeholder="horas" style="width:100%"></div>`;
   combs.forEach(cb=>{
-    h+=`<div><label style="font-size:12px">Consumo ${COMB_LABEL[cb]||cb} (L/h)</label><input type="number" step="any" data-mvmed-cons="${cb}" placeholder="L/h" style="width:100%"></div>`;
+    const pre = avg[cb]>0 ? (Math.round(avg[cb]*100)/100) : '';
+    const auto = avg[cb]>0 ? ` <span style="color:var(--accent);font-size:10px" title="Média do barco navegando (médias cadastradas, viagens finalizadas e histórico)">⌀ auto</span>` : '';
+    h+=`<div><label style="font-size:12px">Consumo ${COMB_LABEL[cb]||cb} (L/h)${auto}</label><input type="number" step="any" data-mvmed-cons="${cb}" value="${pre}" placeholder="L/h" style="width:100%"></div>`;
   });
-  h+=`</div>`;
+  h+=`</div><div id="mvMedProj" class="hint" style="margin-top:6px"></div>`;
   box.innerHTML=h; box.style.display='block';
+  box.oninput=updateMvMedProj; // recalcula o consumo total esperado ao digitar
+  updateMvMedProj();
+}
+// Mostra o consumo total esperado (L) = consumo L/h × tempo esperado, ao vivo.
+function updateMvMedProj(){
+  const proj=document.getElementById('mvMedProj'); if(!proj) return;
+  const tEl=document.getElementById('mvMedTempo');
+  const tempo=parseFloat(tEl&&tEl.value)||0;
+  const parts=[];
+  document.querySelectorAll('[data-mvmed-cons]').forEach(inp=>{
+    const lh=parseFloat(inp.value)||0;
+    if(lh>0 && tempo>0) parts.push(`${COMB_LABEL[inp.dataset.mvmedCons]||inp.dataset.mvmedCons}: ${fmt(lh*tempo)} L`);
+  });
+  proj.innerHTML = (tempo>0 && parts.length)
+    ? `<b>Consumo esperado total:</b> ${parts.join(' · ')} <span class="muted">(${fmt1(tempo)} h navegando)</span>`
+    : '';
 }
 function updateMvCalc(){
   const v={
@@ -5485,6 +5535,166 @@ document.getElementById('btnSidebar').addEventListener('click', ()=>{
   localStorage.setItem(SIDEBAR_KEY, document.body.classList.contains('sidebar-collapsed')?'1':'0');
 });
 if(localStorage.getItem(SIDEBAR_KEY)==='1') document.body.classList.add('sidebar-collapsed');
+
+/* =========================================================
+   ORDENAÇÃO DE TABELAS POR CLIQUE NO CABEÇALHO
+   Genérico: vale para (quase) todas as tabelas do app. Clique num
+   cabeçalho para ordenar (1º clique crescente, 2º decrescente).
+   Detecta automaticamente números (pt-BR), datas (dd/mm/aaaa) e texto.
+   Tabelas com cabeçalho composto (colspan / 2 linhas, ex.: Mapa) e
+   tabelas com linhas-detalhe expansíveis (colspan no corpo, ex.: Médias)
+   são ignoradas para não quebrar o layout.
+   ========================================================= */
+(function(){
+  // Linha de cabeçalho "simples": só <th>, sem colspan/rowspan
+  function headerRowOf(tr){
+    if(!tr || tr.tagName!=='TR') return null;
+    const cells=[...tr.children];
+    if(!cells.length || cells.some(c=>c.tagName!=='TH')) return null;
+    if(cells.some(c=>(c.colSpan>1)||(c.rowSpan>1))) return null;
+    return cells;
+  }
+  // Linha que NÃO deve ser reordenada (rodapé de total / linha-detalhe com colspan)
+  function isPinnedRow(tr){
+    if([...tr.children].some(c=>c.colSpan>1)) return true;
+    const first=tr.cells[0];
+    if(first && /^total/i.test(first.textContent.trim())) return true;
+    const fw=tr.style&&tr.style.fontWeight;
+    if(fw==='700'||fw==='bold') return true;
+    return false;
+  }
+  function sortableContext(th){
+    const tr=th.parentNode;
+    const header=headerRowOf(tr);
+    if(!header) return null;
+    const table=th.closest('table');
+    if(!table || table.classList.contains('mapa')) return null;
+    const container=tr.parentNode; // tbody (auto) ou table
+    const allRows=[...container.children].filter(r=>r.tagName==='TR');
+    if(allRows.indexOf(tr)!==0) return null;            // cabeçalho deve ser a 1ª linha
+    if(allRows.filter(r=>headerRowOf(r)).length>1) return null; // cabeçalho composto/multi-linha
+    const rest=allRows.slice(1);
+    if(rest.some(r=>[...r.children].some(c=>c.colSpan>1))) return null; // linhas-detalhe → ignora
+    const dataRows=rest.filter(r=>r.querySelector('td') && !isPinnedRow(r));
+    if(dataRows.length<2) return null;
+    return {table, header, container, dataRows, idx:header.indexOf(th)};
+  }
+  function cellText(cell){
+    return cell ? (cell.getAttribute('data-sort') ?? cell.textContent).trim() : '';
+  }
+  const RE_DATE=/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ ,]+(\d{1,2}):(\d{2}))?/;
+  const RE_NUM=/^[+\-]?[\d.]*\d(?:,\d+)?\s*%?$/;
+  function parseNum(t){
+    const cleaned=t.replace(/[^\d,.\-]/g,'').replace(/\./g,'').replace(',', '.');
+    const n=parseFloat(cleaned);
+    return isNaN(n)?NaN:n;
+  }
+  function parseDate(t){
+    const m=t.match(RE_DATE); if(!m) return NaN;
+    const yyyy=m[3].length===2?('20'+m[3]):m[3].padStart(4,'0');
+    return Number(yyyy+m[2].padStart(2,'0')+m[1].padStart(2,'0')+(m[4]||'00').padStart(2,'0')+(m[5]||'00'));
+  }
+  function columnType(th, dataRows, idx){
+    if(th.classList.contains('num')) return 'num';
+    let any=false, allDate=true, allNum=true;
+    for(const r of dataRows){
+      const t=cellText(r.cells[idx]);
+      if(t===''||t==='—'||t==='-') continue;
+      any=true;
+      if(!RE_DATE.test(t)) allDate=false;
+      if(!(RE_NUM.test(t) && !isNaN(parseNum(t)))) allNum=false;
+      if(!allDate && !allNum) break;
+    }
+    if(!any) return 'str';
+    if(allDate) return 'date';
+    if(allNum) return 'num';
+    return 'str';
+  }
+  function valueOf(cell, type){
+    const t=cellText(cell);
+    if(t===''||t==='—'||t==='-') return type==='str'?'':NaN;
+    if(type==='num') return parseNum(t);
+    if(type==='date') return parseDate(t);
+    return t;
+  }
+  function doSort(th){
+    const ctx=sortableContext(th);
+    if(!ctx) return;
+    const {table, header, container, dataRows, idx}=ctx;
+    if(idx<0) return;
+    const type=columnType(th, dataRows, idx);
+    const prevCol=table.getAttribute('data-sort-col');
+    const prevDir=table.getAttribute('data-sort-dir');
+    const dir=(prevCol===String(idx)&&prevDir==='asc')?'desc':'asc';
+    const factor=dir==='asc'?1:-1;
+    dataRows.sort((ra,rb)=>{
+      const a=valueOf(ra.cells[idx], type), b=valueOf(rb.cells[idx], type);
+      let cmp;
+      if(type==='str'){
+        cmp=String(a).localeCompare(String(b),'pt-BR',{numeric:true,sensitivity:'base'});
+      }else{
+        const an=isNaN(a), bn=isNaN(b);
+        if(an&&bn) cmp=0; else if(an) return 1; else if(bn) return -1; // vazios sempre por último
+        else cmp=a-b;
+      }
+      return cmp*factor;
+    });
+    // reinsere as linhas ordenadas logo após o cabeçalho (rodapé/total ficam no lugar)
+    let ref=header[0].parentNode; // a <tr> do cabeçalho
+    dataRows.forEach(r=>{ ref.after(r); ref=r; });
+    table.setAttribute('data-sort-col', idx);
+    table.setAttribute('data-sort-dir', dir);
+    header.forEach(c=>c.classList.remove('sort-asc','sort-desc'));
+    th.classList.add(dir==='asc'?'sort-asc':'sort-desc');
+  }
+  // Marca cabeçalhos ordenáveis (cursor + indicador) após cada (re)render
+  function markTable(table){
+    if(table.classList.contains('mapa')) return;
+    const container=table.tBodies[0]||table;
+    const rows=[...container.children].filter(r=>r.tagName==='TR');
+    if(!rows.length) return;
+    const header=headerRowOf(rows[0]);
+    if(!header) { table.classList.remove('sortable'); return; }
+    if(rows.filter(r=>headerRowOf(r)).length>1){ table.classList.remove('sortable'); return; }
+    if(rows.slice(1).some(r=>[...r.children].some(c=>c.colSpan>1))){ table.classList.remove('sortable'); return; }
+    if(rows.slice(1).filter(r=>r.querySelector('td') && !isPinnedRow(r)).length<2){ table.classList.remove('sortable'); return; }
+    table.classList.add('sortable');
+    header.forEach(th=>{
+      const txt=th.textContent.trim();
+      if(txt==='' || /^a(ç|c)(ão|ões|oes)$/i.test(txt)){
+        th.classList.remove('th-sort'); return;
+      }
+      th.classList.add('th-sort');
+    });
+  }
+  // Delegação do clique (sobrevive a re-render via innerHTML)
+  document.addEventListener('click', function(ev){
+    const th=ev.target.closest && ev.target.closest('th');
+    if(!th) return;
+    if(ev.target.closest('button, a, input, select, textarea')) return;
+    doSort(th);
+  });
+  // Observa mudanças (render por innerHTML) e re-marca os cabeçalhos
+  const obs=new MutationObserver(muts=>{
+    const seen=new Set();
+    for(const m of muts){
+      let n=m.target;
+      const tbl=n && n.closest ? n.closest('table') : null;
+      if(tbl && !seen.has(tbl)){ seen.add(tbl); markTable(tbl); }
+      m.addedNodes && m.addedNodes.forEach(node=>{
+        if(node.nodeType!==1) return;
+        if(node.tagName==='TABLE'){ if(!seen.has(node)){seen.add(node); markTable(node);} }
+        node.querySelectorAll && node.querySelectorAll('table').forEach(t=>{ if(!seen.has(t)){seen.add(t); markTable(t);} });
+      });
+    }
+  });
+  function initSorting(){
+    document.querySelectorAll('table').forEach(markTable);
+    obs.observe(document.body, {childList:true, subtree:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initSorting);
+  else initSorting();
+})();
 
 /* =========================================================
    INIT

@@ -4285,7 +4285,7 @@ function wireImport(btnId, fileId, processFn, opts){
         if(isCsv){ rows=parseCSV(ev.target.result); }
         else{
           const wb=XLSX.read(ev.target.result,{type:'array'});
-          const picked=pickSheet(wb, opts.sheet);
+          const picked=pickSheet(wb, opts.sheet, opts.altSheets);
           if(!picked){
             const nomes=((wb.Workbook&&wb.Workbook.Names)||[]).map(x=>x.Name).filter(Boolean);
             alert('"'+opts.sheet+'" não encontrada no arquivo (nem como aba, nem como intervalo/planilha nomeada).'+
@@ -4303,16 +4303,18 @@ function wireImport(btnId, fileId, processFn, opts){
   });
 }
 // Localiza os dados a importar pelo nome desejado (case-insensitive, sem acentos).
-// O nome pode ser tanto uma ABA quanto um INTERVALO/PLANILHA NOMEADA dentro de uma aba
-// (ex.: "BD_VIAGENS" definido dentro da aba "BD"). Sem nome preferido, usa a 1ª aba.
+// O nome pode ser uma ABA, um INTERVALO/PLANILHA NOMEADA, ou uma TABELA do Excel
+// (ListObject) dentro de uma aba (ex.: "BD_VIAGENS" dentro da aba "BD"). Tabelas do
+// Excel não são expostas pela biblioteca, então caímos na aba que as contém (altSheets)
+// e o processador localiza a linha de cabeçalho. Sem nome preferido, usa a 1ª aba.
 // Retorna {ws, range} (range = recorte A1 opcional dentro da aba) ou null se não achar.
-function pickSheet(wb, preferName){
+function pickSheet(wb, preferName, altSheets){
   if(!preferName) return {ws:wb.Sheets[wb.SheetNames[0]]};
   const want=na(preferName);
   // 1) Aba com esse nome
   const sheetMatch=wb.SheetNames.find(n=>na(n)===want);
   if(sheetMatch) return {ws:wb.Sheets[sheetMatch]};
-  // 2) Intervalo/planilha nomeada (ex.: tabela "BD_VIAGENS" dentro de outra aba)
+  // 2) Intervalo/planilha nomeada (ex.: nome definido em Fórmulas → Gerenciador de Nomes)
   const nm=((wb.Workbook&&wb.Workbook.Names)||[]).find(x=>na(x.Name)===want);
   if(nm && nm.Ref){
     const ref=String(nm.Ref);
@@ -4321,6 +4323,11 @@ function pickSheet(wb, preferName){
     const rng=(bang>=0 ? ref.slice(bang+1) : ref).replace(/\$/g,'');
     const realSheet=wb.SheetNames.find(n=>na(n)===na(shName));
     if(realSheet && rng) return {ws:wb.Sheets[realSheet], range:rng};
+  }
+  // 3) Aba que contém a tabela (ex.: tabela "BD_VIAGENS" mora na aba "BD")
+  for(const alt of (altSheets||[])){
+    const m=wb.SheetNames.find(n=>na(n)===na(alt));
+    if(m) return {ws:wb.Sheets[m]};
   }
   return null;
 }
@@ -4391,7 +4398,12 @@ function sincronizarViagensProgramadas(){
 /* ---- Histórico de Viagens (real) ---- */
 function processHistViagRows(rows){
   if(!rows.length){ alert('Arquivo vazio.'); return; }
-  const header=rows[0].map(na); const find=headerFinder(header);
+  // A tabela BD_VIAGENS pode não começar na 1ª linha (lemos a aba "BD" inteira, que pode
+  // ter títulos/linhas antes). Localiza a linha de cabeçalho: a que tem Empurrador + Saída.
+  const isHeader=r=>{ if(!Array.isArray(r)) return false; const H=r.map(na);
+    return H.some(h=>h.includes('empurrador')||h.includes('embarca')) && H.some(h=>h.includes('saida')||h.includes('partida')); };
+  let hIdx=rows.findIndex(isHeader); if(hIdx<0) hIdx=0;
+  const header=(rows[hIdx]||[]).map(na); const find=headerFinder(header);
   // "Condição" precisa ser exata: existe também "Condição Viagem" (outra informação, não usada).
   const findExact=(...keys)=>header.findIndex(h=>keys.some(k=>h===na(k)));
   const idx={
@@ -4402,7 +4414,7 @@ function processHistViagRows(rows){
   };
   if(idx.emp<0 || idx.saida<0){ alert('Cabeçalho inválido. Esperado ao menos: Empurrador e Saída.'); return; }
   let ok=0, skip=0; const novos=[];
-  for(let i=1;i<rows.length;i++){
+  for(let i=hIdx+1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
     const empNome=String(r[idx.emp]||'').trim();
     const saida=parseDateTimeBR(r[idx.saida]);
@@ -4575,7 +4587,7 @@ function renderAbastRealTable(){
   t.innerHTML=h;
 }
 
-wireImport('btnImportHistViag','fileHistViag', processHistViagRows, {sheet:'BD_VIAGENS'});
+wireImport('btnImportHistViag','fileHistViag', processHistViagRows, {sheet:'BD_VIAGENS', altSheets:['BD']});
 wireImport('btnImportEstoque','fileEstoque', processEstoqueRows);
 wireImport('btnImportAbastReal','fileAbastReal', processAbastRealRows);
 function clearBase(arrName, label, renderFn){

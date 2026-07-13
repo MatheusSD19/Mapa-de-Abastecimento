@@ -4499,13 +4499,17 @@ function processHistViagRows(rows){
   // "Condição" precisa ser exata: existe também "Condição Viagem" (outra informação, não usada).
   const findExact=(...keys)=>header.findIndex(h=>keys.some(k=>h===na(k)));
   const idx={
-    emp:find('empurrador','embarca'), comand:find('comand'), cond:findExact('condicao','condição'),
+    emp:find('empurrador','embarca'), comand:find('comand','comte','cmte','cmt','mestre'), cond:findExact('condicao','condição'),
     prod:find('produto'), vol:find('volume'), barc:find('barca'),
     saida:find('saida','partida'), cheg:find('chegada'), trecho:find('trecho','rota'),
     tempo:find('tempo'), diesel:find('diesel','mgo'), hfo:find('hfo'),
     idViag:header.findIndex(h=>h.includes('id')&&h.includes('viagem')),
   };
   if(idx.emp<0 || idx.saida<0){ alert('Cabeçalho inválido. Esperado ao menos: Empurrador e Saída.'); return; }
+  // Diagnóstico: colunas esperadas que NÃO foram encontradas no cabeçalho lido
+  const colsEsperadas=[['Comandante',idx.comand],['Condição',idx.cond],['Trecho',idx.trecho],
+    ['Volume',idx.vol],['Tempo',idx.tempo],['MGO/Diesel',idx.diesel],['HFO',idx.hfo],['ID_Viagem',idx.idViag]];
+  const colsNaoAchadas=colsEsperadas.filter(([,i])=>i<0).map(([n])=>n);
   let ok=0, skip=0; const novos=[];
   for(let i=hIdx+1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
@@ -4555,6 +4559,7 @@ function processHistViagRows(rows){
     (sync.criadas?`\nViagens criadas a partir da importação (sem programação equivalente, ex.: A Contrabordo): ${sync.criadas}`:'')+
     (sync.pendentes?`\nViagens atualizadas aguardando consumo (não finalizadas): ${sync.pendentes}`:'')+
     (nOver?`\n\n⚠ ${nOver} viagem(ns) com sobreposição de horário no mesmo empurrador (marcadas na tabela). No Mapa, o trecho sobreposto entra só na viagem principal — sem dupla contagem.`:'')+
+    (colsNaoAchadas.length?`\n\n⚠ Colunas não encontradas no cabeçalho: ${colsNaoAchadas.join(', ')}. Verifique o nome exato dessas colunas na planilha BD_VIAGENS.`:'')+
     `\n\nO casamento com as viagens programadas usa o ID_Viagem (padrão NOME-EMPURRADOR_AAMMDD). A base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
 }
 function renderHistViagTable(){

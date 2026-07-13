@@ -1948,11 +1948,11 @@ function renderMapa(){
         const extra=rSaida.length>1?` +${rSaida.length-1}`:'';
         horario=horaOf(v.saida);
         const tip=`Viagem real importada&#10;Trecho: ${(v.trecho||'?')}&#10;Saída: ${fmtDT(v.saida)}&#10;Chegada: ${fmtDT(v.chegada)}&#10;Condição: ${v.condicao||'—'}&#10;Volume: ${fmt(v.volume||0)} t · Barcaças: ${v.barcacas||0}&#10;MGO: ${fmt(v.consumo&&v.consumo.MGO||0)} L · HFO: ${fmt(v.consumo&&v.consumo.HFO||0)} L`;
-        viagemCell=`<span class="trip-chip trip-real" title="${tip}" style="background:${empCor};color:${corContraste(empCor)}">${(v.trecho||'?')}${extra} ●</span>`;
+        viagemCell=`<span class="trip-chip trip-real" title="${tip}" style="background:${empCor};color:${corContraste(empCor)};cursor:pointer" onclick="openEditImp('histViag','${v.id}')">${(v.trecho||'?')}${extra} ●</span>`;
         cond=v.condicao||'';
         statusCell=`<span class="pill" style="background:rgba(34,197,94,.18);color:var(--ok);" title="Viagem real importada">Realizada</span>`;
       }else if(rAtiva){
-        viagemCell=`<span class="muted">↳ ${rAtiva.trecho||''}</span>`;
+        viagemCell=`<span class="muted" style="cursor:pointer" title="Viagem real importada — clique para ver/editar" onclick="openEditImp('histViag','${rAtiva.id}')">↳ ${rAtiva.trecho||''}</span>`;
         cond=`<span class="muted">${rAtiva.condicao||''}</span>`;
         if(rAtiva.chegada && rAtiva.chegada.slice(0,10)===dStr){
           horario=`<span class="chegada" title="Chegada real">⚓ ${horaOf(rAtiva.chegada)}</span>`;
@@ -4632,7 +4632,7 @@ const editImpDefs = {
       rec.tempo=(rec.saida&&rec.chegada)?(new Date(rec.chegada)-new Date(rec.saida))/3600000:(rec.tempo||0);
       rec.data=dateOfISO(rec.saida);
     },
-    after(){ renderHistViagTable(); renderImpStatus(); renderEmp(); renderRot(); } },
+    after(){ renderHistViagTable(); renderImpStatus(); renderEmp(); renderRot(); renderMapa(); } },
   estoque:{ title:'Editar leitura de estoque', arr:'estoqueLeituras',
     fields:[
       {k:'empNome',label:'Empurrador',type:'text'},

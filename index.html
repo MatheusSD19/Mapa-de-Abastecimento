@@ -857,7 +857,7 @@
    ESTADO E PERSISTÊNCIA
    ========================================================= */
 const STORE_KEY = 'mapaAbastecimento_v1';
-const CONDICOES = ['Carregada','Vazia','Scort Tug','Escoteiro'];
+const CONDICOES = ['Carregada','Vazia','Scort Tug','Escoteiro','A Contrabordo'];
 // Lista de condições disponíveis: padrões + cadastradas silenciosamente + as já usadas
 // em viagens/médias/importações. Mantém os padrões primeiro, sem duplicar (case-insensitive).
 function allCondicoes(){
@@ -4270,7 +4270,8 @@ function mapAdmProduto(raw){
 }
 
 // Wiring genérico de importação (botão + input file → processFn(rows))
-function wireImport(btnId, fileId, processFn){
+function wireImport(btnId, fileId, processFn, opts){
+  opts=opts||{};
   const btn=document.getElementById(btnId), inp=document.getElementById(fileId);
   if(!btn||!inp) return;
   btn.addEventListener('click', ()=>inp.click());
@@ -4282,13 +4283,26 @@ function wireImport(btnId, fileId, processFn){
       let rows=[];
       try{
         if(isCsv){ rows=parseCSV(ev.target.result); }
-        else{ const wb=XLSX.read(ev.target.result,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]]; rows=XLSX.utils.sheet_to_json(ws,{header:1}); }
+        else{
+          const wb=XLSX.read(ev.target.result,{type:'array'});
+          const ws=pickSheet(wb, opts.sheet);
+          if(!ws){ alert('Planilha "'+opts.sheet+'" não encontrada no arquivo. Abas disponíveis: '+wb.SheetNames.join(', ')); e.target.value=''; return; }
+          rows=XLSX.utils.sheet_to_json(ws,{header:1});
+        }
         processFn(rows);
       }catch(err){ alert('Falha ao ler arquivo: '+err.message); }
       e.target.value='';
     };
     if(isCsv) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
   });
+}
+// Seleciona a aba pelo nome desejado (case-insensitive, sem acentos). Se não houver
+// nome preferido, usa a primeira aba. Retorna a worksheet ou null se o nome pedido não existir.
+function pickSheet(wb, preferName){
+  if(!preferName) return wb.Sheets[wb.SheetNames[0]];
+  const want=na(preferName);
+  const match=wb.SheetNames.find(n=>na(n)===want);
+  return match ? wb.Sheets[match] : null;
 }
 const headerFinder = header => (...keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
 
@@ -4358,8 +4372,10 @@ function sincronizarViagensProgramadas(){
 function processHistViagRows(rows){
   if(!rows.length){ alert('Arquivo vazio.'); return; }
   const header=rows[0].map(na); const find=headerFinder(header);
+  // "Condição" precisa ser exata: existe também "Condição Viagem" (outra informação, não usada).
+  const findExact=(...keys)=>header.findIndex(h=>keys.some(k=>h===na(k)));
   const idx={
-    emp:find('empurrador','embarca'), comand:find('comand'), cond:find('condi'),
+    emp:find('empurrador','embarca'), comand:find('comand'), cond:findExact('condicao','condição'),
     prod:find('produto'), vol:find('volume'), barc:find('barca'),
     saida:find('saida','partida'), cheg:find('chegada'), trecho:find('trecho','rota'),
     tempo:find('tempo'), diesel:find('diesel','mgo'), hfo:find('hfo'),
@@ -4539,7 +4555,7 @@ function renderAbastRealTable(){
   t.innerHTML=h;
 }
 
-wireImport('btnImportHistViag','fileHistViag', processHistViagRows);
+wireImport('btnImportHistViag','fileHistViag', processHistViagRows, {sheet:'BD_VIAGENS'});
 wireImport('btnImportEstoque','fileEstoque', processEstoqueRows);
 wireImport('btnImportAbastReal','fileAbastReal', processAbastRealRows);
 function clearBase(arrName, label, renderFn){

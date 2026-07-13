@@ -4350,6 +4350,27 @@ function pickSheet(wb, preferName, altSheets){
 }
 const headerFinder = header => (...keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
 
+// ---- ID de viagem: padrão NOME-EMPURRADOR_AAMMDD (+ "-N" p/ saídas seguintes no mesmo dia) ----
+// Ex.: EM-NAVEGA, saída 13/07/2026 08:00 => EM-NAVEGA_260713; 22:00 => EM-NAVEGA_260713-1
+function fmtNomeEmp(nome){ return String(nome||'').trim().toUpperCase().replace(/\s+/g,'-'); }
+function viagemIdBase(nome, saidaISO){
+  const d=String(saidaISO||'');
+  if(d.length<10) return '';
+  return fmtNomeEmp(nome)+'_'+d.slice(2,4)+d.slice(5,7)+d.slice(8,10); // AA MM DD
+}
+// Recebe itens {nome, saidaISO}; devolve o ID canônico de cada um, numerando as saídas do mesmo
+// barco/dia por ordem cronológica (1ª = base, seguintes = base-1, base-2, ...).
+function atribuirViagemIds(items){
+  const seq={}; const out=new Map();
+  items.slice().sort((a,b)=>String(a.saidaISO||'').localeCompare(String(b.saidaISO||''))).forEach(it=>{
+    const base=viagemIdBase(it.nome, it.saidaISO);
+    if(!base){ out.set(it,''); return; }
+    const n=(seq[base]=(seq[base]||0)); seq[base]++;
+    out.set(it, n===0?base:base+'-'+n);
+  });
+  return out;
+}
+
 // Cruza as viagens REAIS importadas com as viagens PROGRAMADAS (state.viagens): preenche os
 // realizados (tempo, consumo, volume) e FINALIZA automaticamente quando o consumo veio na base.
 // Se faltar consumo, atualiza os dados mas deixa a viagem em "Realizada" (aguardando consumo).
@@ -4359,6 +4380,10 @@ const headerFinder = header => (...keys)=>header.findIndex(h=>keys.some(k=>h.inc
 // Viagens finalizadas MANUALMENTE (sem realImportId) são preservadas.
 function sincronizarViagensProgramadas(){
   // 1) reset do que importações anteriores aplicaram (mantém finalizações manuais intactas)
+  // Guarda as justificativas de desvio das viagens criadas do real, p/ preservá-las na recriação
+  // (o ID das criadas é estável: imp_<ID_Viagem>).
+  const justCriadas={};
+  state.viagens.forEach(v=>{ if(v.criadaDoReal && v.justificativas) justCriadas[v.id]=v.justificativas; });
   // Remove as viagens CRIADAS a partir do real (serão recriadas do histórico atual).
   state.viagens = state.viagens.filter(v=>!v.criadaDoReal);
   state.viagens.forEach(v=>{
@@ -4374,6 +4399,13 @@ function sincronizarViagensProgramadas(){
   const claimedReal=new Set();   // ids de viagens reais já vinculadas a uma programada
   const reais=(state.historicoViagens||[]).filter(v=>v.empId&&v.rotaId&&v.saida)
     .slice().sort((a,b)=>(a.saida||'').localeCompare(b.saida||''));
+  // ID canônico de cada viagem programada (mesmo padrão da base) — usado p/ casar por ID
+  const progIds=atribuirViagemIds(state.viagens.map(v=>{
+    const e=empById(v.empId);
+    return {v, nome:e?e.nome:'', saidaISO:(v.dataSaida||'')+'T'+(v.horaSaida||'08:00')};
+  }));
+  const progPorId=new Map();
+  [...progIds.keys()].forEach(it=>{ const id=progIds.get(it); if(id) progPorId.set(id, it.v); });
   // helper: converte consumo do real ({MGO,HFO}) para os combustíveis do barco e monta os realizados
   const realizadosDoReal=(real,emp)=>{
     const combPorto=emp.combustiveis.find(c=>c==='MGO'||c==='Diesel')||'MGO';
@@ -4386,16 +4418,34 @@ function sincronizarViagensProgramadas(){
     const consumoCompleto=emp.combustiveis.every(cb=>(cons[cb]||0)>0);
     return {tempo, cons, consumoCompleto};
   };
-  // 2) VÍNCULO: cada real tenta preencher uma viagem programada equivalente
+  // helper: aplica os realizados de um real numa viagem programada e finaliza/deixa pendente
+  const aplicar=(best, real, emp)=>{
+    const {tempo, cons, consumoCompleto}=realizadosDoReal(real,emp);
+    if(tempo>0) best.tempoRealizado=tempo;
+    best.consumoRealizado=cons;
+    if(isCarregada(best.condicao) && real.volume>0) best.volumeRealizado=real.volume;
+    best.saidaReal=real.saida; best.chegadaReal=real.chegada; best.realImportId=real.id;
+    if(real.comandante && !best.comandante) best.comandante=real.comandante;
+    if(consumoCompleto){ best.status='Finalizada'; best.autoFinalizada=true; best.finalizadaEm=todayStr(); finalizadas++; }
+    else{ best.status='Realizada'; best.consumoPendente=true; pendentes++; }
+  };
+  // 2a) VÍNCULO POR ID: casa a real com a programada de mesmo ID canônico (NOME-EMPURRADOR_AAMMDD)
   reais.forEach(real=>{
     const emp=empById(real.empId); if(!emp) return;
+    const best=progPorId.get(real.idCanon);
+    if(!best || claimed.has(best.id) || best.status==='Finalizada') return;
+    claimed.add(best.id); claimedReal.add(real.id);
+    aplicar(best, real, emp);
+  });
+  // 2b) VÍNCULO POR PROXIMIDADE (fallback): reais ainda sem par tentam a programada mais próxima
+  reais.forEach(real=>{
+    if(claimedReal.has(real.id)) return;
+    const emp=empById(real.empId); if(!emp) return;
     const saidaT=new Date(real.saida).getTime(); if(isNaN(saidaT)) return;
-    // candidatas: mesmo empurrador/trecho/condição, não finalizadas manualmente, ainda não reivindicadas
     const cands=state.viagens.filter(v=>!claimed.has(v.id)
       && v.empId===real.empId && v.rotaId===real.rotaId && v.condicao===real.condicao
       && v.status!=='Finalizada');
     if(!cands.length) return;
-    // escolhe a viagem programada com saída mais próxima (até 7 dias de diferença)
     let best=null, bestDiff=Infinity;
     cands.forEach(v=>{
       const t=new Date(v.dataSaida+'T'+(v.horaSaida||'08:00')+':00').getTime();
@@ -4404,36 +4454,24 @@ function sincronizarViagensProgramadas(){
     });
     if(!best || bestDiff>7*86400000) return;
     claimed.add(best.id); claimedReal.add(real.id);
-    // ---- preenche os realizados ----
-    const {tempo, cons, consumoCompleto}=realizadosDoReal(real,emp);
-    if(tempo>0) best.tempoRealizado=tempo;
-    best.consumoRealizado=cons;
-    if(best.condicao==='Carregada' && real.volume>0) best.volumeRealizado=real.volume;
-    best.saidaReal=real.saida; best.chegadaReal=real.chegada; best.realImportId=real.id;
-    if(real.comandante && !best.comandante) best.comandante=real.comandante;
-    // ---- finaliza só se o consumo de TODOS os combustíveis do barco veio (> 0) ----
-    if(consumoCompleto){
-      best.status='Finalizada'; best.autoFinalizada=true; best.finalizadaEm=todayStr();
-      finalizadas++;
-    }else{
-      best.status='Realizada'; best.consumoPendente=true; // aguardando consumo p/ finalizar
-      pendentes++;
-    }
+    aplicar(best, real, emp);
   });
   // 3) CRIAÇÃO: reais sem viagem programada equivalente viram uma viagem nova (como qualquer import)
   reais.forEach(real=>{
     if(claimedReal.has(real.id)) return;
     const emp=empById(real.empId); if(!emp) return;
-    const saidaT=new Date(real.saida).getTime(); if(isNaN(saidaT)) return;
+    if(isNaN(new Date(real.saida).getTime())) return;
     const {tempo, cons, consumoCompleto}=realizadosDoReal(real,emp);
     const carregada=isCarregada(real.condicao);
+    const novaId='imp_'+real.id; // estável entre importações (real.id = ID_Viagem)
     const nova={
-      id:uid(), empId:real.empId, rotaId:real.rotaId, condicao:real.condicao,
+      id:novaId, empId:real.empId, rotaId:real.rotaId, condicao:real.condicao,
       comandante:real.comandante||'',
       dataSaida:dateOfISO(real.saida), horaSaida:horaOf(real.saida),
       volumeCarregada: carregada ? (real.volume||0) : 0,
       saidaReal:real.saida, chegadaReal:real.chegada, realImportId:real.id, criadaDoReal:true,
     };
+    if(justCriadas[novaId]) nova.justificativas=justCriadas[novaId]; // preserva justificativas de desvio
     if(tempo>0) nova.tempoRealizado=tempo;
     nova.consumoRealizado=cons;
     if(carregada && real.volume>0) nova.volumeRealizado=real.volume;
@@ -4465,6 +4503,7 @@ function processHistViagRows(rows){
     prod:find('produto'), vol:find('volume'), barc:find('barca'),
     saida:find('saida','partida'), cheg:find('chegada'), trecho:find('trecho','rota'),
     tempo:find('tempo'), diesel:find('diesel','mgo'), hfo:find('hfo'),
+    idViag:header.findIndex(h=>h.includes('id')&&h.includes('viagem')),
   };
   if(idx.emp<0 || idx.saida<0){ alert('Cabeçalho inválido. Esperado ao menos: Empurrador e Saída.'); return; }
   let ok=0, skip=0; const novos=[];
@@ -4492,10 +4531,21 @@ function processHistViagRows(rows){
       comandante:idx.comand>=0?String(r[idx.comand]||'').trim():'',
       condicao:cond, produto, volume, barcacas, saida, chegada,
       trecho:trechoNome, rotaId:rota?rota.id:null,
-      tempo, consumo:{MGO:diesel, HFO:hfo}, data:dateOfISO(saida)
+      tempo, consumo:{MGO:diesel, HFO:hfo}, data:dateOfISO(saida),
+      _idCol: idx.idViag>=0?String(r[idx.idViag]||'').trim():''
     });
     ok++;
   }
+  // ID_Viagem: usa a coluna da base; quando ausente, gera o ID canônico NOME-EMPURRADOR_AAMMDD.
+  // idCanon (sempre calculado) é usado para "casar" com as viagens programadas no Mapa.
+  const canon=atribuirViagemIds(novos.map(v=>({v, nome:v.empNome, saidaISO:v.saida})));
+  const usados={};
+  [...canon.keys()].forEach(it=>{
+    const v=it.v; v.idCanon=canon.get(it)||'';
+    let id=v._idCol || v.idCanon || v.id;
+    while(usados[id]) id=id+'~'+((usados[id]=(usados[id]||1)+1)); // garante unicidade
+    usados[id]=1; v.id=id; v.idViagem=id; delete v._idCol;
+  });
   state.historicoViagens=novos;
   const nOver=overlappingTripIds().size;
   const sync=sincronizarViagensProgramadas();
@@ -4505,7 +4555,7 @@ function processHistViagRows(rows){
     (sync.criadas?`\nViagens criadas a partir da importação (sem programação equivalente, ex.: A Contrabordo): ${sync.criadas}`:'')+
     (sync.pendentes?`\nViagens atualizadas aguardando consumo (não finalizadas): ${sync.pendentes}`:'')+
     (nOver?`\n\n⚠ ${nOver} viagem(ns) com sobreposição de horário no mesmo empurrador (marcadas na tabela). No Mapa, o trecho sobreposto entra só na viagem principal — sem dupla contagem.`:'')+
-    `\n\nA base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
+    `\n\nO casamento com as viagens programadas usa o ID_Viagem (padrão NOME-EMPURRADOR_AAMMDD). A base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
 }
 function renderHistViagTable(){
   const t=document.getElementById('tblHistViag'); if(!t) return;

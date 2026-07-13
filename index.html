@@ -4285,9 +4285,15 @@ function wireImport(btnId, fileId, processFn, opts){
         if(isCsv){ rows=parseCSV(ev.target.result); }
         else{
           const wb=XLSX.read(ev.target.result,{type:'array'});
-          const ws=pickSheet(wb, opts.sheet);
-          if(!ws){ alert('Planilha "'+opts.sheet+'" não encontrada no arquivo. Abas disponíveis: '+wb.SheetNames.join(', ')); e.target.value=''; return; }
-          rows=XLSX.utils.sheet_to_json(ws,{header:1});
+          const picked=pickSheet(wb, opts.sheet);
+          if(!picked){
+            const nomes=((wb.Workbook&&wb.Workbook.Names)||[]).map(x=>x.Name).filter(Boolean);
+            alert('"'+opts.sheet+'" não encontrada no arquivo (nem como aba, nem como intervalo/planilha nomeada).'+
+              '\n\nAbas disponíveis: '+wb.SheetNames.join(', ')+
+              (nomes.length?('\n\nIntervalos nomeados: '+nomes.join(', ')):''));
+            e.target.value=''; return;
+          }
+          rows=XLSX.utils.sheet_to_json(picked.ws,{header:1,range:picked.range});
         }
         processFn(rows);
       }catch(err){ alert('Falha ao ler arquivo: '+err.message); }
@@ -4296,13 +4302,27 @@ function wireImport(btnId, fileId, processFn, opts){
     if(isCsv) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
   });
 }
-// Seleciona a aba pelo nome desejado (case-insensitive, sem acentos). Se não houver
-// nome preferido, usa a primeira aba. Retorna a worksheet ou null se o nome pedido não existir.
+// Localiza os dados a importar pelo nome desejado (case-insensitive, sem acentos).
+// O nome pode ser tanto uma ABA quanto um INTERVALO/PLANILHA NOMEADA dentro de uma aba
+// (ex.: "BD_VIAGENS" definido dentro da aba "BD"). Sem nome preferido, usa a 1ª aba.
+// Retorna {ws, range} (range = recorte A1 opcional dentro da aba) ou null se não achar.
 function pickSheet(wb, preferName){
-  if(!preferName) return wb.Sheets[wb.SheetNames[0]];
+  if(!preferName) return {ws:wb.Sheets[wb.SheetNames[0]]};
   const want=na(preferName);
-  const match=wb.SheetNames.find(n=>na(n)===want);
-  return match ? wb.Sheets[match] : null;
+  // 1) Aba com esse nome
+  const sheetMatch=wb.SheetNames.find(n=>na(n)===want);
+  if(sheetMatch) return {ws:wb.Sheets[sheetMatch]};
+  // 2) Intervalo/planilha nomeada (ex.: tabela "BD_VIAGENS" dentro de outra aba)
+  const nm=((wb.Workbook&&wb.Workbook.Names)||[]).find(x=>na(x.Name)===want);
+  if(nm && nm.Ref){
+    const ref=String(nm.Ref);
+    const bang=ref.lastIndexOf('!');
+    const shName=bang>=0 ? ref.slice(0,bang).replace(/^'|'$/g,'').replace(/''/g,"'") : '';
+    const rng=(bang>=0 ? ref.slice(bang+1) : ref).replace(/\$/g,'');
+    const realSheet=wb.SheetNames.find(n=>na(n)===na(shName));
+    if(realSheet && rng) return {ws:wb.Sheets[realSheet], range:rng};
+  }
+  return null;
 }
 const headerFinder = header => (...keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
 

@@ -427,8 +427,8 @@
     </div>
 
     <div class="card">
-      <h2>Sugestões de Atualização de Médias <span class="sub">— a partir das viagens finalizadas</span></h2>
-      <div class="hint">As médias sugeridas usam a média do realizado das viagens finalizadas por trecho/empurrador/condição. Você pode editar antes de aplicar.</div>
+      <h2>Sugestões de Atualização de Médias <span class="sub">— a partir das viagens finalizadas e do histórico importado</span></h2>
+      <div class="hint">As médias sugeridas usam a média do realizado por trecho/empurrador/condição — das viagens finalizadas e do Histórico de Viagens importado (inclusive condições novas como "A Contrabordo"). Você pode editar antes de aplicar.</div>
       <div id="viagSugestoes" style="margin-top:8px;"></div>
     </div>
   </section>
@@ -2926,20 +2926,37 @@ function renderViagemMetricas(){
 }
 
 function sugestoesMediasAggregadas(){
-  // por (rotaId, empId, condicao): média do realizado nas viagens Finalizadas
+  // por (rotaId, empId, condicao): média do realizado. Considera tanto as viagens
+  // programadas Finalizadas quanto o Histórico de Viagens REAL importado (para condições
+  // como "A Contrabordo", que ainda não têm viagem programada equivalente).
   const agg={};
+  const push=(rotaId,empId,cond,tempo,consPorH)=>{
+    if(!rotaId||!empId||!cond||!(tempo>0)) return;
+    const k=rotaId+'|'+empId+'|'+cond;
+    if(!agg[k]) agg[k]={rotaId,empId,cond,tempos:[],consumos:{}};
+    agg[k].tempos.push(tempo);
+    Object.entries(consPorH||{}).forEach(([c,lh])=>{
+      if(!lh) return; (agg[k].consumos[c]=agg[k].consumos[c]||[]).push(lh); // L/h
+    });
+  };
+  // 1) viagens programadas Finalizadas
   state.viagens.filter(v=>v.status==='Finalizada').forEach(v=>{
-    if(!v.rotaId||!v.empId||!v.condicao) return;
-    const k=v.rotaId+'|'+v.empId+'|'+v.condicao;
-    if(!agg[k]) agg[k]={rotaId:v.rotaId,empId:v.empId,cond:v.condicao,tempos:[],consumos:{}};
-    if(v.tempoRealizado>0) agg[k].tempos.push(v.tempoRealizado);
-    if(v.consumoRealizado && v.tempoRealizado>0){
-      Object.entries(v.consumoRealizado).forEach(([c,l])=>{
-        if(!l) return;
-        agg[k].consumos[c]=agg[k].consumos[c]||[];
-        agg[k].consumos[c].push((l||0)/v.tempoRealizado); // L/h
-      });
-    }
+    if(!(v.tempoRealizado>0)) return;
+    const cons={};
+    if(v.consumoRealizado) Object.entries(v.consumoRealizado).forEach(([c,l])=>{ if(l) cons[c]=(l||0)/v.tempoRealizado; });
+    push(v.rotaId,v.empId,v.condicao,v.tempoRealizado,cons);
+  });
+  // 2) Histórico de Viagens real ainda NÃO vinculado a uma viagem programada (evita contagem dupla)
+  const claimed=new Set(state.viagens.map(v=>v.realImportId).filter(Boolean));
+  (state.historicoViagens||[]).forEach(v=>{
+    if(claimed.has(v.id) || !(v.tempo>0)) return;
+    const emp=empById(v.empId); if(!emp) return;
+    const combPorto=emp.combustiveis.find(c=>c==='MGO'||c==='Diesel')||'MGO';
+    const mgo=v.consumo&&v.consumo.MGO?v.consumo.MGO:0, hfo=v.consumo&&v.consumo.HFO?v.consumo.HFO:0;
+    const cons={};
+    if(mgo>0) cons[combPorto]=mgo/v.tempo;
+    if(hfo>0 && emp.combustiveis.includes('HFO')) cons.HFO=hfo/v.tempo;
+    push(v.rotaId,v.empId,v.condicao,v.tempo,cons);
   });
   return Object.values(agg).map(a=>{
     const tempoMed = a.tempos.length ? a.tempos.reduce((s,x)=>s+x,0)/a.tempos.length : 0;

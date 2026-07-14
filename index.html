@@ -286,6 +286,7 @@
     <button data-view="mapa">Mapa de Giros</button>
     <button data-view="abastecimentos">Abastecimentos</button>
     <button data-view="viagens">Viagens</button>
+    <button data-view="apontamentos">📝 Apontamentos</button>
     <button data-view="precos">Preços e Desempenho</button>
     <button data-view="importacoes">📥 Importações</button>
   </nav>
@@ -537,6 +538,89 @@
     </div>
   </section>
 
+  <!-- ================= APONTAMENTOS ================= -->
+  <section class="view" id="view-apontamentos">
+    <div class="card">
+      <h2>Apontamentos de Viagens <span class="sub">— consulta e gestão dos apontamentos operacionais</span></h2>
+      <div class="hint">Filtre por período, empurrador, indicador ou item (escolha um ou vários de cada), ou pesquise por <b>ID da viagem / texto</b>. Os KPIs e gráficos (Pareto, evolução) recalculam conforme os filtros. O tempo é somado em horas; a coluna <b>Calcular</b> só afeta o cômputo do OEE — na gestão de apontamentos <b>tudo é considerado</b>.</div>
+      <div class="row" style="margin-top:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="field"><label>De</label><input type="date" id="apontIni"></div>
+        <div class="field"><label>Até</label><input type="date" id="apontFim"></div>
+        <div class="field"><label>Empurradores</label>
+          <div class="dropdown" id="apontEmpDrop">
+            <button type="button" class="dropdown-btn" id="apontEmpBtn">Todos ▾</button>
+            <div class="dropdown-panel" id="apontEmpPanel"></div>
+          </div>
+        </div>
+        <div class="field"><label>Indicadores</label>
+          <div class="dropdown" id="apontIndDrop">
+            <button type="button" class="dropdown-btn" id="apontIndBtn">Todos ▾</button>
+            <div class="dropdown-panel" id="apontIndPanel"></div>
+          </div>
+        </div>
+        <div class="field"><label>Itens</label>
+          <div class="dropdown" id="apontItemDrop">
+            <button type="button" class="dropdown-btn" id="apontItemBtn">Todos ▾</button>
+            <div class="dropdown-panel" id="apontItemPanel"></div>
+          </div>
+        </div>
+        <div class="field" style="flex:1 1 200px;"><label>Pesquisar (ID viagem, item, descrição)</label><input type="text" id="apontBusca" placeholder="Ex.: LDC-PARA_260607, Desligamento MCP..."></div>
+      </div>
+      <div class="row" style="margin-top:8px;align-items:flex-end;">
+        <button class="btn secondary" id="btnApontMesAtual">Mês atual</button>
+        <button class="btn secondary" id="btnApontYtd">Ano (YTD)</button>
+        <button class="btn secondary" id="btnApont12m">12 meses</button>
+        <button class="btn secondary" id="btnApontReset">Limpar filtros</button>
+        <div class="spacer"></div>
+        <div class="field"><label>Métrica dos gráficos</label>
+          <div class="seg" id="apontMetricSeg">
+            <button data-metric="horas" class="active">Horas</button>
+            <button data-metric="qtd">Nº de apontamentos</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-row" id="apontKpis"></div>
+
+    <div class="dash-grid">
+      <div class="chart-card full">
+        <div class="chart-card-header"><h3>Evolução dos Apontamentos <span class="sub" id="apontMesSub">— por mês</span></h3></div>
+        <div class="chart-wrap"><svg id="apontChartMes" class="chart-svg" preserveAspectRatio="none"></svg>
+          <div id="apontTipMes" class="chart-tooltip" style="display:none;"></div>
+          <div id="apontLegMes" class="chart-legend"></div></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header" title="Ranqueia os INDICADORES por horas (ou nº de apontamentos). Barras = valor; linha = % acumulado — os poucos indicadores à esquerda concentram a maior parte." style="cursor:help"><h3>Pareto — Indicadores <span class="sub">ⓘ</span></h3></div>
+        <div class="chart-wrap"><svg id="apontParetoInd" class="chart-svg" preserveAspectRatio="none"></svg></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header" title="Ranqueia os ITENS de apontamento por horas (ou nº de apontamentos)." style="cursor:help"><h3>Pareto — Itens <span class="sub">ⓘ</span></h3></div>
+        <div class="chart-wrap"><svg id="apontParetoItem" class="chart-svg" preserveAspectRatio="none"></svg></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header"><h3>Por Empurrador <span class="sub" id="apontEmpSub">— horas no período</span></h3></div>
+        <div id="apontEmpBars" class="hbars"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header"><h3>Por Indicador <span class="sub" id="apontIndSub">— horas no período</span></h3></div>
+        <div id="apontIndBars" class="hbars"></div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-card-header">
+          <h3>Apontamentos <span class="sub" id="apontTblSub"></span></h3>
+          <div class="ch-tools"><button class="btn secondary sm" id="btnApontExport">Exportar CSV</button></div>
+        </div>
+        <div style="overflow:auto;max-height:520px;"><table id="apontTbl"></table></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= DASHBOARD ================= -->
   <section class="view" id="view-dashboard">
     <div class="card">
@@ -715,6 +799,18 @@
       </div>
       <div class="hint">Colunas esperadas: <b>ADM_Empurrador, Início</b> (DD/MM/AAAA HH:MM), <b>ADM_Fim</b> (DD/MM/AAAA HH:MM), <b>ADM_Produto</b>. Produto: "Água Potável", "Diesel" = MGO, "Óleo Pesado" = HFO. Registra os eventos reais de abastecimento (janela de início/fim).</div>
       <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblAbastReal"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Apontamentos de Viagens <span class="sub src-tag real">dado real</span></h2>
+      <div class="row">
+        <button class="tool-btn" id="btnImportApont">Importar Excel / CSV</button>
+        <input type="file" id="fileApont" accept=".csv,.xlsx,.xls,.xlsm" style="display:none">
+        <div class="spacer"></div>
+        <button class="btn secondary danger" id="btnClearApont">Limpar base</button>
+      </div>
+      <div class="hint">Aba <b>Apontamentos</b> / tabela <b>BD_APONT_VIAGENS</b>. Colunas esperadas: <b>ID Viagem, Empurrador, Início, Fim, Tempo, Tempo 2</b> (horas em decimal), <b>Indicador, Item, Descrição, OEE, Mês, Calcular, M, Ano, Data Ref.</b> Cada apontamento é vinculado à viagem pelo <b>ID Viagem</b> — ao abrir uma viagem finalizada, os apontamentos aparecem como justificativas (ex.: para consumo/tempo). A coluna <b>Calcular</b> (Sim/Não) indica se o tempo entra no OEE, mas todos os apontamentos são considerados na gestão geral.</div>
+      <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblApont"></table></div>
     </div>
 
     <div class="card">
@@ -903,6 +999,7 @@ let state = {
   historicoViagens: [],    // viagens REAIS importadas: {id,empId,empNome,comandante,condicao,produto,volume,barcacas,saida,chegada,trecho,rotaId,tempo,consumo:{MGO,HFO},data}
   estoqueLeituras: [],     // leituras REAIS de estoque+horas: {id,empId,empNome,data,datetime,estoqueMGO,estoqueHFO,horasMCP,horasMCA}
   abastecimentosReais: [], // abastecimentos REAIS: {id,empId,empNome,inicio,fim,produto,data}
+  apontamentos: [],  // apontamentos REAIS das viagens: {id,idViagem,empId,empNome,inicio,fim,tempo(h),indicador,item,descricao,oee,calcula(bool),data,mesRef('YYYY-MM'),ano}
   mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
 };
 
@@ -916,6 +1013,7 @@ function ensureState(){
   if(!state.historicoViagens) state.historicoViagens=[];
   if(!state.estoqueLeituras) state.estoqueLeituras=[];
   if(!state.abastecimentosReais) state.abastecimentosReais=[];
+  if(!state.apontamentos) state.apontamentos=[];
   state.viagens.forEach(v=>{ if(!v.status) v.status='Previsto'; });
   state.abastecimentos.forEach(a=>{
     if(!('cidade' in a)) a.cidade='';
@@ -1213,6 +1311,7 @@ function renderView(v){
   if(v==='mapa'){ renderMapa(); }
   if(v==='abastecimentos'){ renderAbast(); }
   if(v==='viagens'){ renderViagens(); }
+  if(v==='apontamentos'){ renderApontamentos(); }
   if(v==='precos'){ renderPrecos(); }
   if(v==='dashboard'){ renderDashboard(); }
   if(v==='importacoes'){ renderImportacoes(); }
@@ -3077,6 +3176,8 @@ function openFinalizarViagem(vid){
         <textarea id="fvJustObs" rows="2" style="width:100%" placeholder="Detalhe o motivo (opcional)">${(j.obs||'').replace(/</g,'&lt;')}</textarea>
       </div>
     </div>`;
+  // Apontamentos da viagem (vinculados por ID Viagem) — servem de justificativa (ex.: consumo/tempo)
+  h+=apontamentosBlocoHTML(v);
   document.getElementById('fvBody').innerHTML=h;
 
   // Para Tempo e Consumo: realizar menos que o previsto é BOM (verde).
@@ -4697,9 +4798,97 @@ function renderAbastRealTable(){
   t.innerHTML=h;
 }
 
+/* ---- Apontamentos de Viagens (real) ---- */
+// Converte "HH:MM:SS" (ou "H:MM") em horas decimais.
+function parseHHMMSS(v){
+  const s=String(v==null?'':v).trim();
+  const m=s.match(/^(\d{1,4}):(\d{1,2})(?::(\d{1,2}))?$/);
+  if(m) return (+m[1])+(+m[2])/60+(m[3]!==undefined?+m[3]:0)/3600;
+  return NaN;
+}
+// Tempo do apontamento em horas: prioriza "Tempo 2" (decimal); cai p/ "Tempo" (HH:MM:SS
+// texto, ou fração-de-dia do Excel).
+function apontHoras(t2, t1){
+  let h=parseNum(t2);
+  if(!isNaN(h) && h>=0) return h;
+  h=parseHHMMSS(t1);
+  if(!isNaN(h)) return h;
+  if(typeof t1==='number' && t1>0 && t1<10) return t1*24; // fração-de-dia (Excel)
+  const n=parseNum(t1);
+  return isNaN(n)?0:n;
+}
+function processApontamentosRows(rows){
+  if(!rows.length){ alert('Arquivo vazio.'); return; }
+  // A tabela BD_APONT_VIAGENS pode não começar na 1ª linha. Localiza o cabeçalho:
+  // linha que tem "ID Viagem" (ou "ID"+"Viagem") e algum de Indicador/Item.
+  const isHeader=r=>{ if(!Array.isArray(r)) return false; const H=r.map(na);
+    return H.some(h=>h.includes('viagem')) && H.some(h=>h.includes('indicador')||h.includes('item')); };
+  let hIdx=rows.findIndex(isHeader); if(hIdx<0) hIdx=0;
+  const header=(rows[hIdx]||[]).map(na); const find=headerFinder(header);
+  const idx={
+    idViag:header.findIndex(h=>h.includes('viagem')),
+    emp:find('empurrador','embarca'),
+    inicio:find('inicio','início','start'), fim:find('fim','termino','término','end'),
+    tempo:header.findIndex(h=>h==='tempo'), tempo2:header.findIndex(h=>h.includes('tempo 2')||h.includes('tempo2')),
+    indicador:find('indicador'), item:find('item'),
+    descricao:find('descricao','descrição','descr'), oee:find('oee'),
+    calcula:find('calcula'), ano:header.findIndex(h=>h==='ano'), dataRef:find('data ref','dataref','data ref.'),
+  };
+  if(idx.idViag<0 && idx.item<0){ alert('Cabeçalho inválido. Esperado ao menos: ID Viagem e Item/Indicador.'); return; }
+  let ok=0, skip=0; const novos=[];
+  for(let i=hIdx+1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const idViagem=idx.idViag>=0?String(r[idx.idViag]||'').trim():'';
+    const indicador=idx.indicador>=0?String(r[idx.indicador]||'').trim():'';
+    const item=idx.item>=0?String(r[idx.item]||'').trim():'';
+    const descricao=idx.descricao>=0?String(r[idx.descricao]||'').trim():'';
+    if(!idViagem && !indicador && !item && !descricao){ skip++; continue; }
+    const empNome=idx.emp>=0?String(r[idx.emp]||'').trim():'';
+    const inicio=idx.inicio>=0?parseDateTimeBR(r[idx.inicio]):'';
+    const fim=idx.fim>=0?parseDateTimeBR(r[idx.fim]):'';
+    const tempo=apontHoras(idx.tempo2>=0?r[idx.tempo2]:'', idx.tempo>=0?r[idx.tempo]:'');
+    const calcRaw=idx.calcula>=0?na(r[idx.calcula]):'';
+    const calcula=calcRaw.startsWith('s'); // "Sim" = entra no OEE
+    // Data de referência: Data Ref. > Início. Deriva mês (YYYY-MM) e ano.
+    const dRef=(idx.dataRef>=0?parseDateTimeBR(r[idx.dataRef]):'')||inicio||'';
+    const data=dateOfISO(dRef);
+    const mesRef=data?data.slice(0,7):'';
+    let ano=idx.ano>=0?(parseNum(r[idx.ano])||0):0;
+    if(!ano && data) ano=+data.slice(0,4);
+    const emp=empNome?ensureEmpByName(empNome, []):null;
+    novos.push({
+      id:uid(), idViagem, empId:emp?emp.id:null, empNome:emp?emp.nome:empNome,
+      inicio, fim, tempo:tempo>0?tempo:0, indicador, item, descricao,
+      oee:idx.oee>=0?String(r[idx.oee]||'').trim():'', calcula, data, mesRef, ano,
+    });
+    ok++;
+  }
+  state.apontamentos=novos;
+  save(); renderApontImpTable(); renderImpStatus(); renderEmp();
+  const nViag=new Set(novos.map(a=>na(a.idViagem)).filter(Boolean)).size;
+  alert(`Apontamentos importados.\nApontamentos aplicados: ${ok}\nIgnorados (linhas vazias): ${skip}\nViagens distintas com apontamento: ${nViag}\n\nA base anterior foi substituída. Os apontamentos aparecem nas viagens finalizadas (vínculo por ID Viagem) e no módulo 📝 Apontamentos.`);
+}
+function renderApontImpTable(){
+  const t=document.getElementById('tblApont'); if(!t) return;
+  const list=(state.apontamentos||[]).slice().sort((a,b)=>(b.inicio||b.data||'').localeCompare(a.inicio||a.data||''));
+  if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum apontamento importado.</td></tr>'; return; }
+  let h=`<tr><th>ID Viagem</th><th>Empurrador</th><th>Início</th><th>Fim</th><th class="num">Tempo (h)</th><th>Indicador</th><th>Item</th><th>Descrição</th><th>OEE</th><th>Calc.</th><th></th></tr>`;
+  list.slice(0,400).forEach(o=>{
+    const desc=(o.descricao||'').length>80?(o.descricao.slice(0,80)+'…'):(o.descricao||'—');
+    h+=`<tr><td>${o.idViagem||'—'}</td><td>${o.empNome||'—'}</td><td>${fmtDT(o.inicio)}</td><td>${fmtDT(o.fim)}</td>
+      <td class="num">${o.tempo?fmt1(o.tempo):'—'}</td><td>${o.indicador||'—'}</td><td>${o.item||'—'}</td>
+      <td title="${String(o.descricao||'').replace(/"/g,'&quot;')}">${desc.replace(/</g,'&lt;')}</td>
+      <td>${o.oee||'—'}</td><td>${o.calcula?'Sim':'Não'}</td>
+      <td><button class="btn sm secondary" title="Editar / corrigir" onclick="openEditImp('apont','${o.id}')">✏️</button></td></tr>`;
+  });
+  if(list.length>400) h+=`<tr><td class="empty" colspan="11">… e mais ${list.length-400} apontamentos (exibindo os 400 mais recentes).</td></tr>`;
+  t.innerHTML=h;
+}
+
 wireImport('btnImportHistViag','fileHistViag', processHistViagRows, {sheet:'BD_VIAGENS', altSheets:['BD']});
 wireImport('btnImportEstoque','fileEstoque', processEstoqueRows);
 wireImport('btnImportAbastReal','fileAbastReal', processAbastRealRows);
+wireImport('btnImportApont','fileApont', processApontamentosRows, {sheet:'BD_APONT_VIAGENS', altSheets:['Apontamentos']});
 function clearBase(arrName, label, renderFn){
   if(!confirm('Limpar toda a base de '+label+' importada?')) return;
   state[arrName]=[]; save(); renderFn(); renderImpStatus();
@@ -4707,6 +4896,7 @@ function clearBase(arrName, label, renderFn){
 document.getElementById('btnClearHistViag').addEventListener('click', ()=>clearBase('historicoViagens','Histórico de Viagens', renderHistViagTable));
 document.getElementById('btnClearEstoque').addEventListener('click', ()=>clearBase('estoqueLeituras','Estoque e Horas de Máquina', renderEstoqueTable));
 document.getElementById('btnClearAbastReal').addEventListener('click', ()=>clearBase('abastecimentosReais','Abastecimentos (reais)', renderAbastRealTable));
+document.getElementById('btnClearApont').addEventListener('click', ()=>clearBase('apontamentos','Apontamentos de Viagens', renderApontImpTable));
 
 function lastDateOf(list, key){
   let mx='';
@@ -4776,6 +4966,30 @@ const editImpDefs = {
       rec.produto=v.produto; rec.data=dateOfISO(rec.inicio);
     },
     after(){ renderAbastRealTable(); renderImpStatus(); } },
+  apont:{ title:'Editar apontamento', arr:'apontamentos',
+    fields:[
+      {k:'idViagem',label:'ID Viagem',type:'text'},
+      {k:'empNome',label:'Empurrador',type:'text'},
+      {k:'inicio',label:'Início',type:'datetime-local'},
+      {k:'fim',label:'Fim',type:'datetime-local'},
+      {k:'tempo',label:'Tempo (h)',type:'number'},
+      {k:'indicador',label:'Indicador',type:'text'},
+      {k:'item',label:'Item',type:'text'},
+      {k:'descricao',label:'Descrição',type:'text'},
+      {k:'oee',label:'OEE',type:'text'},
+      {k:'calcula',label:'Calcular (OEE)',type:'select',options:['Sim','Não']},
+    ],
+    apply(rec,v){
+      const emp=v.empNome?ensureEmpByName(v.empNome,[]):null;
+      rec.idViagem=v.idViagem; rec.empNome=emp?emp.nome:v.empNome; rec.empId=emp?emp.id:rec.empId;
+      rec.inicio=normDtLocal(v.inicio); rec.fim=normDtLocal(v.fim);
+      rec.tempo=parseNum(v.tempo)||0;
+      rec.indicador=v.indicador; rec.item=v.item; rec.descricao=v.descricao; rec.oee=v.oee;
+      rec.calcula=na(v.calcula).startsWith('s');
+      const dRef=rec.inicio||rec.data||''; rec.data=dateOfISO(dRef);
+      rec.mesRef=rec.data?rec.data.slice(0,7):''; if(rec.data) rec.ano=+rec.data.slice(0,4);
+    },
+    after(){ renderApontImpTable(); renderImpStatus(); renderEmp(); if(document.getElementById('view-apontamentos').classList.contains('active')) renderApontamentos(); } },
 };
 let editImpCtx=null;
 function openEditImp(type, id){
@@ -4813,13 +5027,15 @@ document.getElementById('meiDelete').addEventListener('click', ()=>{
 });
 function renderImpStatus(){
   const el=document.getElementById('impStatus'); if(!el) return;
-  const hv=state.historicoViagens||[], es=state.estoqueLeituras||[], ar=state.abastecimentosReais||[];
+  const hv=state.historicoViagens||[], es=state.estoqueLeituras||[], ar=state.abastecimentosReais||[], ap=state.apontamentos||[];
   const nMed=Object.keys(state.medias||{}).length;
   const nBudget=Object.values(state.budgetVolume||{}).reduce((s,m)=>s+Object.keys(m||{}).length,0);
+  const nViagApont=new Set(ap.map(a=>na(a.idViagem)).filter(Boolean)).size;
   el.innerHTML=`
     <div class="box"><div class="v">${hv.length}</div><div class="l">Viagens reais</div><div class="s">última saída: ${lastDateOf(hv,'saida')}</div></div>
     <div class="box"><div class="v">${es.length}</div><div class="l">Leituras de estoque</div><div class="s">última: ${lastDateOf(es,'data')}</div></div>
     <div class="box"><div class="v">${ar.length}</div><div class="l">Abastec. reais</div><div class="s">último: ${lastDateOf(ar,'inicio')}</div></div>
+    <div class="box"><div class="v">${ap.length}</div><div class="l">Apontamentos</div><div class="s">${nViagApont} viagem(ns) · última: ${lastDateOf(ap,'data')}</div></div>
     <div class="box"><div class="v">${nBudget}</div><div class="l">Budget (mês×cidade)</div><div class="s">${Object.keys(state.budgetVolume||{}).length} cidade(s)</div></div>
     <div class="box"><div class="v">${nMed}</div><div class="l">Trechos com médias</div><div class="s">base de estimativas</div></div>`;
 }
@@ -4828,6 +5044,7 @@ function renderImportacoes(){
   renderHistViagTable();
   renderEstoqueTable();
   renderAbastRealTable();
+  renderApontImpTable();
   renderBudget();
 }
 
@@ -5416,6 +5633,194 @@ document.getElementById('btnDash12m').addEventListener('click',()=>{ const now=n
   d.querySelector('.dropdown-btn').addEventListener('click', e=>{ e.stopPropagation(); d.classList.toggle('open'); });
 });
 document.addEventListener('click', e=>{ ['dashEmpDrop','dashRotaDrop'].forEach(id=>{ const d=document.getElementById(id); if(d && !d.contains(e.target)) d.classList.remove('open'); }); });
+
+/* =========================================================
+   MÓDULO DE APONTAMENTOS
+   ========================================================= */
+let apontEmpFilter=null;   // Set de empNomes, ou null = todos
+let apontIndFilter=null;   // Set de indicadores, ou null = todos
+let apontItemFilter=null;  // Set de itens, ou null = todos
+let apontMetric='horas';   // 'horas' | 'qtd'
+
+// Cores para categorias (rotativas)
+const APONT_PALETTE=['#0ea5e9','#22c55e','#f59e0b','#a855f7','#ef4444','#14b8a6','#eab308','#ec4899','#6366f1','#84cc16'];
+const apontColor=i=>APONT_PALETTE[i%APONT_PALETTE.length];
+
+function apontEmpList(){ return [...new Set((state.apontamentos||[]).map(a=>a.empNome).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
+function apontIndList(){ return [...new Set((state.apontamentos||[]).map(a=>a.indicador||'—'))].sort((a,b)=>a.localeCompare(b)); }
+function apontItemListVals(){ return [...new Set((state.apontamentos||[]).map(a=>a.item||'—'))].sort((a,b)=>a.localeCompare(b)); }
+
+function apontInitFilters(){
+  const ini=document.getElementById('apontIni'), fim=document.getElementById('apontFim');
+  if(ini && fim && !ini.value && !fim.value){
+    // padrão: abrange todos os apontamentos existentes (ou ano atual se não houver base)
+    const datas=(state.apontamentos||[]).map(a=>a.data).filter(Boolean).sort();
+    if(datas.length){ ini.value=datas[0]; fim.value=datas[datas.length-1]; }
+    else { const now=new Date(); ini.value=dateStr(new Date(now.getFullYear(),0,1)); fim.value=dateStr(now); }
+  }
+}
+function apontFiltrados(){
+  const ini=document.getElementById('apontIni').value;
+  const fim=document.getElementById('apontFim').value;
+  const busca=na(document.getElementById('apontBusca').value.trim());
+  let list=(state.apontamentos||[]).slice();
+  if(ini) list=list.filter(a=>!a.data || a.data>=ini);
+  if(fim) list=list.filter(a=>!a.data || a.data<=fim);
+  if(apontEmpFilter) list=list.filter(a=>apontEmpFilter.has(a.empNome||''));
+  if(apontIndFilter) list=list.filter(a=>apontIndFilter.has(a.indicador||'—'));
+  if(apontItemFilter) list=list.filter(a=>apontItemFilter.has(a.item||'—'));
+  if(busca) list=list.filter(a=> na(a.idViagem).includes(busca)||na(a.item).includes(busca)||na(a.indicador).includes(busca)||na(a.descricao).includes(busca)||na(a.empNome).includes(busca));
+  return list;
+}
+// Dropdown multi-seleção genérico do módulo (mesmo padrão dos filtros do Dashboard)
+function apontDropdown(cfg){
+  const lista=cfg.listFn();
+  const cur=cfg.get();
+  const sel = cur===null ? new Set(lista) : cur;
+  const panel=document.getElementById(cfg.panel); if(!panel) return;
+  panel.innerHTML=`<div class="dd-actions"><button type="button" data-act="all">Todos</button><button type="button" data-act="none">Nenhum</button></div>`+
+    (lista.map(x=>`<label><input type="checkbox" value="${String(x).replace(/"/g,'&quot;')}" ${sel.has(x)?'checked':''}> ${String(x).replace(/</g,'&lt;')}</label>`).join('')||'<div class="empty">Sem dados.</div>');
+  const allSel = cur===null || sel.size>=lista.length;
+  document.getElementById(cfg.btn).textContent=(allSel?cfg.allLabel:sel.size+' de '+lista.length)+' ▾';
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.addEventListener('change',()=>{
+    const s=new Set(); panel.querySelectorAll('input[type=checkbox]:checked').forEach(x=>s.add(x.value));
+    cfg.set(s.size>=lista.length?null:s); renderApontamentos();
+  }));
+  panel.querySelector('[data-act=all]').addEventListener('click',()=>{ cfg.set(null); renderApontamentos(); });
+  panel.querySelector('[data-act=none]').addEventListener('click',()=>{ cfg.set(new Set()); renderApontamentos(); });
+}
+function renderApontFilters(){
+  apontDropdown({panel:'apontEmpPanel', btn:'apontEmpBtn', allLabel:'Todos', listFn:apontEmpList,
+    get:()=>apontEmpFilter, set:v=>apontEmpFilter=v});
+  apontDropdown({panel:'apontIndPanel', btn:'apontIndBtn', allLabel:'Todos', listFn:apontIndList,
+    get:()=>apontIndFilter, set:v=>apontIndFilter=v});
+  apontDropdown({panel:'apontItemPanel', btn:'apontItemBtn', allLabel:'Todos', listFn:apontItemListVals,
+    get:()=>apontItemFilter, set:v=>apontItemFilter=v});
+}
+// Agrupa somando a métrica ativa (horas ou nº de apontamentos)
+function apontAgg(list, keyFn){
+  const m={};
+  list.forEach(a=>{ const k=keyFn(a)||'—'; m[k]=(m[k]||0)+(apontMetric==='horas'?(a.tempo||0):1); });
+  return Object.entries(m).map(([name,value])=>({name,value}));
+}
+function renderApontamentos(){
+  if(!document.getElementById('apontIni')) return;
+  apontInitFilters();
+  renderApontFilters();
+  setSegActiveByData('#apontMetricSeg','metric',apontMetric);
+  const list=apontFiltrados();
+  const metricLabel = apontMetric==='horas' ? 'Horas' : 'Nº de apontamentos';
+  const unit = apontMetric==='horas' ? 'h' : '';
+  const vfmt = apontMetric==='horas' ? fmt1 : fmt;
+
+  // KPIs
+  const totH=list.reduce((s,a)=>s+(a.tempo||0),0);
+  const horasOEE=list.filter(a=>a.calcula).reduce((s,a)=>s+(a.tempo||0),0);
+  const horasFora=totH-horasOEE;
+  const nViag=new Set(list.map(a=>na(a.idViagem)).filter(Boolean)).size;
+  const indAgg=apontAgg(list,a=>a.indicador).sort((a,b)=>b.value-a.value);
+  const itemAgg=apontAgg(list,a=>a.item).sort((a,b)=>b.value-a.value);
+  const topInd=indAgg[0]?indAgg[0].name:'—';
+  const topItem=itemAgg[0]?itemAgg[0].name:'—';
+  document.getElementById('apontKpis').innerHTML=
+    kpiCard(fmt(list.length),'Apontamentos',{tip:'Total de apontamentos no filtro atual.'})+
+    kpiCard(fmt1(totH)+' h','Horas apontadas',{tip:'Soma do tempo (h) de todos os apontamentos filtrados.'})+
+    kpiCard(fmt1(horasOEE)+' h','Horas p/ OEE',{cls:'good',tip:'Apontamentos com "Calcular = Sim" — entram no cômputo do OEE.'})+
+    kpiCard(fmt1(horasFora)+' h','Horas fora do OEE',{tip:'Apontamentos com "Calcular = Não" — não entram no OEE, mas contam na gestão geral.'})+
+    kpiCard(fmt(nViag),'Viagens c/ apontamento',{tip:'Nº de viagens distintas (ID Viagem) com pelo menos um apontamento.'})+
+    kpiCard(topInd,'Indicador top',{tip:`Maior ${metricLabel.toLowerCase()} — ${topInd}`})+
+    kpiCard(topItem,'Item top',{tip:`Maior ${metricLabel.toLowerCase()} — ${topItem}`});
+
+  // Evolução mensal
+  const byMonth={};
+  list.forEach(a=>{ if(!a.mesRef) return; byMonth[a.mesRef]=(byMonth[a.mesRef]||0)+(apontMetric==='horas'?(a.tempo||0):1); });
+  const buckets=Object.keys(byMonth).sort();
+  drawChart({svgId:'apontChartMes', legendId:'apontLegMes', tipId:'apontTipMes', buckets, gran:'month',
+    series:[{type:'bar', label:metricLabel, color:'#0ea5e9', values:buckets.map(b=>byMonth[b])}],
+    yfmt:vfmt, height:280, empty:'Sem apontamentos no período/filtro.'});
+  document.getElementById('apontMesSub').textContent='— '+metricLabel.toLowerCase()+' por mês';
+
+  // Paretos
+  drawPareto('apontParetoInd', indAgg, {color:'#0ea5e9', unit, empty:'Sem apontamentos no filtro.'});
+  drawPareto('apontParetoItem', itemAgg, {color:'#a855f7', unit, empty:'Sem apontamentos no filtro.'});
+
+  // HBars
+  renderHBars('apontEmpBars', apontAgg(list,a=>a.empNome||'—'), apontColor, unit);
+  renderHBars('apontIndBars', indAgg, apontColor, unit);
+  document.getElementById('apontEmpSub').textContent='— '+metricLabel.toLowerCase()+' no período';
+  document.getElementById('apontIndSub').textContent='— '+metricLabel.toLowerCase()+' no período';
+
+  // Tabela
+  const tbl=document.getElementById('apontTbl');
+  const sorted=list.slice().sort((a,b)=>(b.inicio||b.data||'').localeCompare(a.inicio||a.data||''));
+  document.getElementById('apontTblSub').textContent=`— ${fmt(list.length)} registro(s) · ${fmt1(totH)} h`;
+  if(!sorted.length){ tbl.innerHTML='<tr><td class="empty">Nenhum apontamento no filtro.</td></tr>'; return; }
+  let h=`<tr><th>ID Viagem</th><th>Empurrador</th><th>Início</th><th class="num">Tempo (h)</th><th>Indicador</th><th>Item</th><th>OEE</th><th>Calc.</th><th>Descrição</th></tr>`;
+  sorted.slice(0,600).forEach(a=>{
+    const desc=(a.descricao||'').length>110?(a.descricao.slice(0,110)+'…'):(a.descricao||'—');
+    h+=`<tr><td>${a.idViagem||'—'}</td><td>${a.empNome||'—'}</td><td>${fmtDT(a.inicio)}</td>
+      <td class="num">${a.tempo?fmt1(a.tempo):'—'}</td><td>${a.indicador||'—'}</td><td>${a.item||'—'}</td>
+      <td>${a.oee||'—'}</td><td>${a.calcula?'<span style="color:var(--ok)">Sim</span>':'<span class="muted">Não</span>'}</td>
+      <td title="${String(a.descricao||'').replace(/"/g,'&quot;')}" style="font-size:11px">${desc.replace(/</g,'&lt;')}</td></tr>`;
+  });
+  if(sorted.length>600) h+=`<tr><td class="empty" colspan="9">… e mais ${sorted.length-600} apontamentos.</td></tr>`;
+  tbl.innerHTML=h;
+}
+function apontExportCSV(){
+  const list=apontFiltrados().slice().sort((a,b)=>(a.inicio||a.data||'').localeCompare(b.inicio||b.data||''));
+  if(!list.length){ alert('Sem apontamentos no filtro para exportar.'); return; }
+  const esc=s=>{ s=String(s==null?'':s); return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const head=['ID Viagem','Empurrador','Início','Fim','Tempo (h)','Indicador','Item','Descrição','OEE','Calcular','Mês','Ano'];
+  const lines=[head.join(';')];
+  list.forEach(a=>lines.push([a.idViagem,a.empNome,fmtDT(a.inicio),fmtDT(a.fim),fmt1(a.tempo||0),a.indicador,a.item,a.descricao,a.oee,a.calcula?'Sim':'Não',a.mesRef,a.ano].map(esc).join(';')));
+  const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob); const link=document.createElement('a');
+  link.href=url; link.download='apontamentos.csv'; link.click(); URL.revokeObjectURL(url);
+}
+// Apontamentos vinculados a uma viagem (por ID Viagem, em várias formas possíveis)
+function apontamentosDaViagem(v){
+  if(!v || !(state.apontamentos||[]).length) return [];
+  const ids=new Set();
+  const add=x=>{ x=na(x); if(x) ids.add(x); };
+  add(v.realImportId); add(v.idViagem); add(v.idCanon);
+  if(v.id && String(v.id).startsWith('imp_')) add(String(v.id).slice(4));
+  const e=empById(v.empId);
+  if(e && v.dataSaida) add(viagemIdBase(e.nome, v.dataSaida+'T'+(v.horaSaida||'08:00')));
+  if(e && v.saidaReal) add(viagemIdBase(e.nome, v.saidaReal));
+  if(!ids.size) return [];
+  return (state.apontamentos||[]).filter(a=>ids.has(na(a.idViagem)))
+    .sort((a,b)=>(a.inicio||'').localeCompare(b.inicio||''));
+}
+function apontamentosBlocoHTML(v){
+  const aps=apontamentosDaViagem(v);
+  if(!aps.length) return '';
+  const totH=aps.reduce((s,a)=>s+(a.tempo||0),0);
+  const rows=aps.map(a=>`<tr><td>${fmtDT(a.inicio)}</td><td>${a.indicador||'—'}</td><td>${a.item||'—'}</td><td class="num">${a.tempo?fmt1(a.tempo):'—'}</td><td>${a.calcula?'OEE':'<span class="muted">—</span>'}</td><td style="font-size:11px">${(a.descricao||'—').replace(/</g,'&lt;')}</td></tr>`).join('');
+  return `<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--info);border-radius:8px;background:rgba(56,189,248,.06)">
+    <div style="font-weight:600;color:var(--info);margin-bottom:6px">📝 Apontamentos da viagem <span style="font-weight:400">— ${aps.length} registro(s) · ${fmt1(totH)} h no total · servem de justificativa (ex.: consumo/tempo)</span></div>
+    <div style="overflow:auto;max-height:220px"><table><tr><th>Início</th><th>Indicador</th><th>Item</th><th class="num">Tempo (h)</th><th>OEE</th><th>Descrição</th></tr>${rows}</table></div>
+  </div>`;
+}
+// Wiring do módulo de Apontamentos
+['apontIni','apontFim'].forEach(id=>document.getElementById(id)&&document.getElementById(id).addEventListener('change', renderApontamentos));
+document.getElementById('apontBusca')&&document.getElementById('apontBusca').addEventListener('input', renderApontamentos);
+document.querySelectorAll('#apontMetricSeg button').forEach(b=>b.addEventListener('click',()=>{ apontMetric=b.dataset.metric; renderApontamentos(); }));
+document.getElementById('btnApontMesAtual')&&document.getElementById('btnApontMesAtual').addEventListener('click',()=>{ document.getElementById('apontIni').value=dateStr(firstDayOfMonth()); document.getElementById('apontFim').value=dateStr(lastDayOfMonth()); renderApontamentos(); });
+document.getElementById('btnApontYtd')&&document.getElementById('btnApontYtd').addEventListener('click',()=>{ const now=new Date(); document.getElementById('apontIni').value=dateStr(new Date(now.getFullYear(),0,1)); document.getElementById('apontFim').value=dateStr(now); renderApontamentos(); });
+document.getElementById('btnApont12m')&&document.getElementById('btnApont12m').addEventListener('click',()=>{ const now=new Date(); document.getElementById('apontIni').value=dateStr(firstDayOfMonth(addMonths(now,-11))); document.getElementById('apontFim').value=dateStr(now); renderApontamentos(); });
+document.getElementById('btnApontReset')&&document.getElementById('btnApontReset').addEventListener('click',()=>{
+  apontEmpFilter=null; apontIndFilter=null; apontItemFilter=null;
+  document.getElementById('apontBusca').value='';
+  const datas=(state.apontamentos||[]).map(a=>a.data).filter(Boolean).sort();
+  if(datas.length){ document.getElementById('apontIni').value=datas[0]; document.getElementById('apontFim').value=datas[datas.length-1]; }
+  renderApontamentos();
+});
+document.getElementById('btnApontExport')&&document.getElementById('btnApontExport').addEventListener('click', apontExportCSV);
+['apontEmpDrop','apontIndDrop','apontItemDrop'].forEach(id=>{
+  const d=document.getElementById(id); if(!d) return;
+  d.querySelector('.dropdown-btn').addEventListener('click', e=>{ e.stopPropagation(); d.classList.toggle('open'); });
+});
+document.addEventListener('click', e=>{ ['apontEmpDrop','apontIndDrop','apontItemDrop'].forEach(id=>{ const d=document.getElementById(id); if(d && !d.contains(e.target)) d.classList.remove('open'); }); });
 
 /* =========================================================
    MODAIS — fechar

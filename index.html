@@ -1021,6 +1021,7 @@ function ensureState(){
     if(!('saving' in a)) a.saving=false;
     if(!('precoEvitado' in a)) a.precoEvitado=0;
     if(!('justificativaId' in a)) a.justificativaId=null;
+    if(!('criadoEm' in a)) a.criadoEm=''; // data em que a programação foi criada (vazio p/ registros antigos, ficam fora do KPI de antecedência)
   });
   // Migração: tanques sem data do estoque inicial → assume hoje, para não regredir comportamento existente
   const today = todayStr();
@@ -2227,7 +2228,7 @@ function renderMapa(){
         // CTRL pressionado: copia o abastecimento, sem alterar o original
         state.abastecimentos.push({
           id:uid(), empId:a.empId, comb:a.comb, data:td.dataset.date,
-          qtd:a.qtd, status:a.status, obs:a.obs||''
+          qtd:a.qtd, status:a.status, obs:a.obs||'', criadoEm:todayStr()
         });
       }else{
         // arrasto normal: move o abastecimento
@@ -2700,7 +2701,8 @@ document.getElementById('maSave').addEventListener('click', ()=>{
   if(editAbastId){
     Object.assign(state.abastecimentos.find(x=>x.id===editAbastId), data);
   }else{
-    state.abastecimentos.push(Object.assign({id:uid()}, data));
+    // criadoEm registra a data em que a programação foi feita (base do KPI de antecedência)
+    state.abastecimentos.push(Object.assign({id:uid(), criadoEm:todayStr()}, data));
   }
   save(); closeModals(); renderAbast(); renderMapa();
 });
@@ -5545,7 +5547,24 @@ function renderDashboard(){
   const ltAnoTip = ltAno.lton!=null
     ? `L/Ton do ANO por reconciliação física de estoque.\nFórmula: (Estoque inicial − Estoque atual + Abastecimentos) ÷ Volume navegado\nPeríodo: 01/01/${anoY} a ${anoFim.split('-').reverse().join('/')}\nEstoque inicial: ${fmt(ltAno.comp.s0)} L\nEstoque atual: ${fmt(ltAno.comp.s1)} L\nAbastecimentos: ${fmt(ltAno.comp.refuel)} L\n= Consumo: ${fmt(ltAno.litros)} L\nVolume navegado (carregada): ${fmt(ltAno.vol)} t\n${ltAno.nEmp} empurrador(es) com estoque conhecido`
     : `L/Ton do ANO por reconciliação física de estoque.\nFórmula: (Estoque inicial − Estoque atual + Abastecimentos) ÷ Volume navegado.\nSem leituras de estoque suficientes em ${anoY} para calcular — informe estoques no Mapa ou importe Estoque & Horas (módulo Importações).`;
+  // KPI: Dias de Programação Antecipada — média de dias entre a criação da programação e a data do abastecimento.
+  // Respeita o período (por data do abastecimento) e o filtro de empurrador. Abastecimentos têm empId, mas não rotaId,
+  // então o filtro de rota não se aplica aqui. Registros antigos sem 'criadoEm' e cancelados ficam de fora.
+  const absProg=(state.abastecimentos||[]).filter(a=>
+    a.status!=='Cancelado' && a.criadoEm && a.data &&
+    (!ini||a.data>=ini) && (!fim||a.data<=fim) &&
+    (empAll || (a.empId && empSet.has(a.empId)))
+  );
+  let antecSum=0, antecN=0;
+  absProg.forEach(a=>{
+    // Antecedência em dias, contagem inclusiva do intervalo (ex.: 01/07 → 15/07 = 15 dias, conforme definição do KPI)
+    const dias=Math.round((parseDate(a.data)-parseDate(a.criadoEm))/86400000)+1;
+    if(isFinite(dias)){ antecSum+=dias; antecN++; }
+  });
+  const antecMedia = antecN>0 ? antecSum/antecN : null;
+
   document.getElementById('dashKpis').innerHTML=[
+    kpiCard(antecMedia!=null?fmt1(antecMedia)+' d':'—','Programação antecipada',{neutral:true,tip:'Média de dias de antecedência com que as programações de abastecimento foram feitas.\nFórmula: média de (data do abastecimento − data em que a programação foi criada), em contagem inclusiva.\nEx.: programado em 01/07 para abastecer em 15/07 = 15 dias.\nConsidera abastecimentos não cancelados cuja data cai no período e respeita o filtro de empurrador (não há filtro por rota em abastecimentos).\nProgramações antigas sem data de criação registrada não entram na média.\n'+antecN+' programação(ões) considerada(s).'}),
     kpiCard(fmt(tot.vol)+' t','Volume transportado',{neutral:true,delta:pct(tot.vol,prevTot?prevTot.vol:null),tip:'Soma do volume (toneladas) das viagens reais CARREGADAS no período filtrado.'}),
     kpiCard(fmt(tot.cons)+' L','Consumo total',{delta:pct(tot.cons,prevTot?prevTot.cons:null),tip:'Soma do consumo real (MGO + HFO, em litros) de todas as viagens reais do período.'}),
     kpiCard(lTonTot?fmt1(lTonTot):'—','L/Ton (viagens)',{delta:pct(lTonTot,prevLTon),tip:'Litros por tonelada das VIAGENS carregadas.\nFórmula: consumo das viagens carregadas ÷ volume carregado.\nUsa só o consumo lançado nas viagens (não inclui porto/manobras).'}),
@@ -5902,13 +5921,13 @@ function seedData(){
   const f2={id:uid(),nome:'Bunker Cidade A',cidade:'Cidade A'};
   state.fornecedores=[f1,f2];
   state.abastecimentos=[
-    {id:uid(),empId:e1.id,comb:'Diesel',data:dateStr(addDays(today,-15)),qtd:30000,status:'Realizado',obs:'',cidade:'Cidade B',preco:6.85,fornecedorId:f1.id},
-    {id:uid(),empId:e1.id,comb:'HFO',data:dateStr(addDays(today,-15)),qtd:200000,status:'Realizado',obs:'',cidade:'Cidade B',preco:4.20,fornecedorId:f1.id},
-    {id:uid(),empId:e1.id,comb:'Diesel',data:dateStr(addDays(today,5)),qtd:30000,status:'Solicitado',obs:'Porto B',cidade:'Cidade B',preco:0,fornecedorId:null},
-    {id:uid(),empId:e1.id,comb:'HFO',data:dateStr(addDays(today,5)),qtd:200000,status:'Previsto',obs:'',cidade:'',preco:0,fornecedorId:null},
-    {id:uid(),empId:e2.id,comb:'MGO',data:dateStr(addDays(today,7)),qtd:30000,status:'Previsto',obs:'',cidade:'Cidade A',preco:0,fornecedorId:null},
+    {id:uid(),empId:e1.id,comb:'Diesel',data:dateStr(addDays(today,-15)),qtd:30000,status:'Realizado',obs:'',cidade:'Cidade B',preco:6.85,fornecedorId:f1.id,criadoEm:dateStr(addDays(today,-27))},
+    {id:uid(),empId:e1.id,comb:'HFO',data:dateStr(addDays(today,-15)),qtd:200000,status:'Realizado',obs:'',cidade:'Cidade B',preco:4.20,fornecedorId:f1.id,criadoEm:dateStr(addDays(today,-27))},
+    {id:uid(),empId:e1.id,comb:'Diesel',data:dateStr(addDays(today,5)),qtd:30000,status:'Solicitado',obs:'Porto B',cidade:'Cidade B',preco:0,fornecedorId:null,criadoEm:dateStr(addDays(today,-9))},
+    {id:uid(),empId:e1.id,comb:'HFO',data:dateStr(addDays(today,5)),qtd:200000,status:'Previsto',obs:'',cidade:'',preco:0,fornecedorId:null,criadoEm:dateStr(addDays(today,-9))},
+    {id:uid(),empId:e2.id,comb:'MGO',data:dateStr(addDays(today,7)),qtd:30000,status:'Previsto',obs:'',cidade:'Cidade A',preco:0,fornecedorId:null,criadoEm:dateStr(addDays(today,-3))},
     // Atrasado: data passada e ainda Solicitado
-    {id:uid(),empId:e2.id,comb:'MGO',data:dateStr(addDays(today,-2)),qtd:20000,status:'Solicitado',obs:'',cidade:'Cidade B',preco:0,fornecedorId:null}
+    {id:uid(),empId:e2.id,comb:'MGO',data:dateStr(addDays(today,-2)),qtd:20000,status:'Solicitado',obs:'',cidade:'Cidade B',preco:0,fornecedorId:null,criadoEm:dateStr(addDays(today,-6))}
   ];
   // Histórico de preços
   state.historicoPrecos=[];

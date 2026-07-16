@@ -249,6 +249,34 @@
   .kpi.good .v{color:var(--ok);} .kpi.bad .v{color:var(--bad);}
   .kpi .d{font-size:11px;margin-top:2px;font-weight:600;}
   .kpi .d.up{color:var(--bad);} .kpi .d.down{color:var(--ok);}
+  /* ===== Detalhes da Viagem (modal resumo) ===== */
+  .vd-dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;margin-right:5px;border:1px solid rgba(255,255,255,.25);}
+  .vd-hero{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(135deg,var(--panel2),var(--panel));margin-bottom:6px;}
+  .vd-hero .trecho{font-size:16px;font-weight:700;color:var(--txt);}
+  .vd-hero .emp{font-size:12px;color:var(--muted);}
+  .vd-hero .grow{flex:1;}
+  .vd-section{margin-top:16px;}
+  .vd-section>.t{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .vd-section>.t .sub{font-size:11px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;}
+  .vd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+  .vd-item{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+  .vd-item .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .vd-item .val{font-size:14px;font-weight:600;margin-top:3px;line-height:1.25;}
+  .vd-item .val small{font-size:11px;font-weight:400;color:var(--muted);}
+  .vd-note{background:rgba(56,189,248,.06);border:1px solid var(--info);border-radius:8px;padding:10px 12px;font-size:12px;}
+  .vd-note.warn{background:rgba(245,158,11,.08);border-color:var(--warn);}
+  .vd-note.good{background:rgba(34,197,94,.08);border-color:var(--ok);}
+  .vd-just{display:grid;gap:6px;margin-top:6px;}
+  .vd-just .row{display:flex;gap:8px;font-size:12px;}
+  .vd-just .row .lab{min-width:90px;color:var(--muted);}
+  .vd-apont-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .vd-chip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:3px 10px;font-size:11px;display:inline-flex;align-items:center;gap:5px;}
+  .vd-chip b{color:var(--txt);}
+  .vd-apont-wrap{overflow:auto;max-height:260px;border:1px solid var(--line);border-radius:8px;}
+  .vd-apont-wrap table{font-size:11.5px;}
+  .vd-apont-wrap th{position:sticky;top:0;z-index:2;}
+  .vd-empty{color:var(--muted);font-style:italic;font-size:12px;padding:10px 2px;}
+  tr.viag-row:hover td{background:rgba(56,189,248,.08);}
   .bridge{display:flex;align-items:flex-end;gap:6px;height:150px;margin-top:10px;padding:0 4px;}
   .bridge .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
   .bridge .bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;}
@@ -931,6 +959,19 @@
     <div class="modal-actions">
       <button class="btn secondary" data-close>Cancelar</button>
       <button class="btn" id="fvSave">Finalizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL DETALHES / RESUMO DA VIAGEM ===== -->
+<div class="modal-bg" id="modalViagemDet">
+  <div class="modal xwide">
+    <h3 id="vdTitle">Detalhes da Viagem</h3>
+    <div id="vdBody"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" data-close>Fechar</button>
+      <button class="btn secondary" id="vdEditar">Editar</button>
+      <button class="btn" id="vdFinalizar" style="background:var(--info);color:#1a103d;">Finalizar</button>
     </div>
   </div>
 </div>
@@ -2062,9 +2103,9 @@ function renderMapa(){
         const r=rotaById(v.rotaId);
         horario=v.horaSaida||'';
         viagemCell=`<span class="trip-chip vstat-${v.status||'Previsto'}" draggable="true" data-vid="${v.id}"
-          title="${v.status||'Previsto'}${v.status==='Realizada'?' — aguarda finalização':''}"
+          title="${v.status||'Previsto'} — clique para ver o resumo e os detalhes da viagem"
           style="background:${empCor};color:${corContraste(empCor)}"
-          onclick="openViagemModal('${v.id}')">${r?r.nome:'?'}</span>`;
+          onclick="openViagemDetalhe('${v.id}')">${r?r.nome:'?'}</span>`;
         cond=v.condicao;
       }else if(vAtiva){
         const r=rotaById(vAtiva.rotaId);
@@ -2921,7 +2962,7 @@ function renderViagens(){
       const tit=(pendente?'Desvio acima de '+DESVIO_PCT+'% SEM justificativa — abra a viagem para justificar.\n':(soFavoravel?'Desvio favorável (abaixo da média) — não requer justificativa.\n':'Desvio justificado.\n'))+parts.join('\n');
       desvMark=` <span title="${tit.replace(/"/g,'&quot;')}" style="color:${cor};cursor:help;font-weight:700;">Δ${pendente?'':'✓'}</span>`;
     }
-    h+=`<tr class="${pend?'row-alert':''}">
+    h+=`<tr class="viag-row ${pend?'row-alert':''}" style="cursor:pointer" title="Clique para ver o resumo e os detalhes da viagem" onclick="openViagemDetalhe('${v.id}')">
       <td>${alerta}${desvMark}</td>
       <td>${v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—'} ${v.horaSaida||''}</td>
       <td>${e?e.nome:'—'}</td>
@@ -2930,7 +2971,8 @@ function renderViagens(){
       <td>${chegada}</td>
       <td class="num">${tempo}</td>
       <td><span class="pill ${v.status}">${v.status}</span>${autoMark}</td>
-      <td>
+      <td onclick="event.stopPropagation()">
+        <button class="btn sm" onclick="openViagemDetalhe('${v.id}')">Detalhes</button>
         <button class="btn sm secondary" onclick="openViagemModal('${v.id}')">Editar</button>
         ${v.status==='Realizada'?`<button class="btn sm" onclick="openFinalizarViagem('${v.id}')">Finalizar</button>`:''}
         ${v.status==='Finalizada'?`<button class="btn sm secondary" onclick="openFinalizarViagem('${v.id}')">Ver/Editar</button>`:''}
@@ -3284,6 +3326,151 @@ document.getElementById('fvSave').addEventListener('click', ()=>{
   // qualquer das views, sem dar a impressão de que "não salvou".
   renderMapa();
   renderViagens();
+});
+
+/* =========================================================
+   DETALHES / RESUMO DA VIAGEM (modal de leitura)
+   ========================================================= */
+let detViagemId=null;
+function openViagemDetalhe(vid){
+  const v=state.viagens.find(x=>x.id===vid);
+  if(!v){ openViagemModal(vid); return; }   // fallback seguro
+  detViagemId=vid;
+  refreshViagemStatuses();
+  const e=empById(v.empId), r=rotaById(v.rotaId);
+  const c=calcViagem(v);
+  const cor=(e&&e.cor)?e.cor:'#38bdf8';
+  const isCarregada = v.condicao==='Carregada';
+  const temReal = !!(v.tempoRealizado>0) || v.status==='Finalizada' || v.status==='Realizada';
+
+  // diferença Realizado x Previsto (para tempo/consumo, MENOR é melhor; volume, MAIOR é melhor)
+  function diffSpan(prev, real, higherIsBetter){
+    if(!prev || !real) return '<span class="muted">—</span>';
+    const d=real-prev, pct=d/prev*100;
+    let cls;
+    if(Math.abs(pct)<3) cls='muted';
+    else if(higherIsBetter) cls = d>=0?'diff-pos':'diff-neg';
+    else                    cls = d<=0?'diff-pos':'diff-neg';
+    return `<span class="${cls}">${(d>=0?'+':'')+fmt1(d)} (${(pct>=0?'+':'')+pct.toFixed(1)}%)</span>`;
+  }
+
+  // ---- Cabeçalho / hero ----
+  document.getElementById('vdTitle').innerHTML =
+    `<span class="vd-dot" style="background:${cor}"></span> Resumo da Viagem`;
+  let h=`<div class="vd-hero">
+      <div>
+        <div class="trecho">${r?r.nome:'Trecho não definido'}</div>
+        <div class="emp"><span class="vd-dot" style="background:${cor}"></span>${e?e.nome:'—'} · ${v.condicao||'—'}</div>
+      </div>
+      <div class="grow"></div>
+      <div style="text-align:right">
+        <span class="pill ${v.status||'Previsto'}">${v.status||'Previsto'}</span>
+        ${v.autoFinalizada?'<div class="emp" style="margin-top:4px">⤓ finalizada pela importação do real</div>':''}
+      </div>
+    </div>`;
+
+  // ---- Resumo (dados principais) ----
+  const chegada = (c && !c.incompleto)
+    ? c.chegada.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  const dias = (c && !c.incompleto) ? c.horas/24 : 0;
+  h+=`<div class="vd-section"><div class="t">📋 Resumo</div><div class="vd-grid">
+      <div class="vd-item"><div class="k">Saída</div><div class="val">${v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—'} <small>${v.horaSaida||''}</small></div></div>
+      <div class="vd-item"><div class="k">Chegada prevista</div><div class="val" style="font-size:12.5px">${chegada}</div></div>
+      <div class="vd-item"><div class="k">Tempo previsto</div><div class="val">${(c&&!c.incompleto)?fmt1(c.horas)+' h':'—'} <small>${(c&&!c.incompleto)?'('+fmt1(dias)+' dias)':''}</small></div></div>
+      <div class="vd-item"><div class="k">Comandante</div><div class="val" style="font-size:13px">${v.comandante||'<span class="muted">não informado</span>'}</div></div>
+      ${isCarregada?`<div class="vd-item"><div class="k">Volume previsto</div><div class="val">${v.volumeCarregada?fmt(v.volumeCarregada)+' <small>t</small>':'—'}</div></div>`:''}
+      ${(temReal&&isCarregada&&v.volumeRealizado)?`<div class="vd-item"><div class="k">Volume navegado</div><div class="val">${fmt(v.volumeRealizado)} <small>t</small></div></div>`:''}
+    </div></div>`;
+
+  // Consumo previsto por combustível (resumo)
+  if(c && !c.incompleto){
+    const combs=Object.keys(c.consumoTotal||{});
+    const consChips=combs.filter(cb=>c.consumoTotal[cb]>0)
+      .map(cb=>`<span class="vd-chip"><b>${COMB_LABEL[cb]||cb}</b> ${fmt(c.consumoTotal[cb])} L</span>`).join('');
+    if(consChips) h+=`<div class="vd-section"><div class="t">⛽ Consumo previsto</div><div class="vd-apont-sum">${consChips}</div></div>`;
+  }
+
+  // ---- Previsto x Realizado (quando finalizada/realizada) ----
+  if(temReal){
+    const combs = e ? e.combustiveis : Object.keys(c.consumoTotal||{});
+    let rows=`<tr><th>Item</th><th class="num">Previsto</th><th class="num">Realizado</th><th class="num">Δ</th></tr>`;
+    const tPrev=(c&&!c.incompleto)?c.horas:0, tReal=v.tempoRealizado||0;
+    rows+=`<tr><td>Tempo (h)</td><td class="num">${tPrev?fmt1(tPrev):'—'}</td><td class="num">${tReal?fmt1(tReal):'—'}</td><td class="num">${diffSpan(tPrev,tReal,false)}</td></tr>`;
+    combs.forEach(cb=>{
+      const p=(c&&!c.incompleto)?(c.consumoTotal[cb]||0):0;
+      const rr=(v.consumoRealizado&&v.consumoRealizado[cb])||0;
+      if(!p && !rr) return;
+      rows+=`<tr><td>Consumo ${COMB_LABEL[cb]||cb} (L)</td><td class="num">${p?fmt(p):'—'}</td><td class="num">${rr?fmt(rr):'—'}</td><td class="num">${diffSpan(p,rr,false)}</td></tr>`;
+    });
+    if(isCarregada){
+      const vp=v.volumeCarregada||0, vr=v.volumeRealizado||0;
+      rows+=`<tr><td>Volume navegado (t)</td><td class="num">${vp?fmt(vp):'—'}</td><td class="num">${vr?fmt(vr):'—'}</td><td class="num">${diffSpan(vp,vr,true)}</td></tr>`;
+    }
+    h+=`<div class="vd-section"><div class="t">📊 Previsto × Realizado</div><table>${rows}</table></div>`;
+  }
+
+  // ---- Desvios & Justificativas ----
+  const dv=viagemDesvios(v);
+  if((dv.tempo&&dv.tempo.flag)||(dv.consumo&&dv.consumo.flag)){
+    const j=v.justificativas||{};
+    const parts=[];
+    if(dv.tempo&&dv.tempo.flag) parts.push(`<div class="row"><span class="lab">Tempo</span><span>${dv.tempo.pct>0?'+':''}${fmt1(dv.tempo.pct)}% <span class="muted">(prev ${fmt1(dv.tempo.prev)}h → real ${fmt1(dv.tempo.real)}h)</span>${j.tempo?` — <b>${j.tempo}</b>`:(dv.tempo.favoravel?'':' <span style="color:var(--warn)">⚠ sem justificativa</span>')}</span></div>`);
+    if(dv.consumo&&dv.consumo.flag) parts.push(`<div class="row"><span class="lab">Consumo</span><span>${dv.consumo.pct>0?'+':''}${fmt1(dv.consumo.pct)}% <span class="muted">(prev ${fmt(dv.consumo.prev)} → real ${fmt(dv.consumo.real)} L)</span>${j.consumo?` — <b>${j.consumo}</b>`:(dv.consumo.favoravel?'':' <span style="color:var(--warn)">⚠ sem justificativa</span>')}</span></div>`);
+    const soFav=(!(dv.tempo&&dv.tempo.flag)||dv.tempo.favoravel)&&(!(dv.consumo&&dv.consumo.flag)||dv.consumo.favoravel);
+    const cls=soFav?'good':(viagemDesvioPendente(v)?'warn':'');
+    h+=`<div class="vd-section"><div class="t">${soFav?'✓':'Δ'} Desvios vs média <span class="sub">(limite ±${DESVIO_PCT}%)</span></div>
+        <div class="vd-note ${cls}"><div class="vd-just">${parts.join('')}${j.obs?`<div class="row"><span class="lab">Observações</span><span>${String(j.obs).replace(/</g,'&lt;')}</span></div>`:''}</div></div></div>`;
+  }
+
+  // ---- Apontamentos da viagem ----
+  const aps=apontamentosDaViagem(v);
+  h+=`<div class="vd-section"><div class="t">📝 Apontamentos <span class="sub">— registros operacionais vinculados por ID da viagem</span></div>`;
+  if(!aps.length){
+    h+=`<div class="vd-empty">Nenhum apontamento vinculado a esta viagem. Importe a base <b>BD_APONT_VIAGENS</b> para vincular os apontamentos operacionais.</div>`;
+  }else{
+    const totH=aps.reduce((s,a)=>s+(a.tempo||0),0);
+    const oeeH=aps.reduce((s,a)=>s+(a.calcula?(a.tempo||0):0),0);
+    // agrupa por indicador para um pequeno resumo
+    const porInd={};
+    aps.forEach(a=>{ const k=a.indicador||'—'; porInd[k]=(porInd[k]||0)+(a.tempo||0); });
+    const topInd=Object.entries(porInd).sort((a,b)=>b[1]-a[1]).slice(0,4)
+      .map(([k,val])=>`<span class="vd-chip"><b>${k}</b> ${fmt1(val)} h</span>`).join('');
+    h+=`<div class="vd-apont-sum">
+        <span class="vd-chip">📌 <b>${aps.length}</b> apontamento(s)</span>
+        <span class="vd-chip">⏱ <b>${fmt1(totH)}</b> h no total</span>
+        <span class="vd-chip">OEE <b>${fmt1(oeeH)}</b> h computadas</span>
+      </div>`;
+    if(topInd) h+=`<div class="vd-apont-sum">${topInd}</div>`;
+    const rows=aps.map(a=>`<tr>
+        <td style="white-space:nowrap">${fmtDT(a.inicio)}</td>
+        <td style="white-space:nowrap">${fmtDT(a.fim)}</td>
+        <td>${a.indicador||'—'}</td>
+        <td>${a.item||'—'}</td>
+        <td class="num">${a.tempo?fmt1(a.tempo):'—'}</td>
+        <td>${a.calcula?'<span style="color:var(--info)">OEE</span>':'<span class="muted">—</span>'}</td>
+        <td style="font-size:11px">${(a.descricao||'—').replace(/</g,'&lt;')}</td>
+      </tr>`).join('');
+    h+=`<div class="vd-apont-wrap"><table>
+        <tr><th>Início</th><th>Fim</th><th>Indicador</th><th>Item</th><th class="num">Tempo (h)</th><th>OEE</th><th>Descrição</th></tr>
+        ${rows}</table></div>`;
+  }
+  h+=`</div>`;
+
+  document.getElementById('vdBody').innerHTML=h;
+
+  // ---- Botões de ação ----
+  const btnFin=document.getElementById('vdFinalizar');
+  if(v.status==='Finalizada'){ btnFin.style.display=''; btnFin.textContent='Ver Finalização'; }
+  else if(v.status==='Realizada'){ btnFin.style.display=''; btnFin.textContent='Finalizar Viagem'; }
+  else { btnFin.style.display=''; btnFin.textContent='Finalizar'; }
+
+  document.getElementById('modalViagemDet').classList.add('show');
+}
+document.getElementById('vdEditar').addEventListener('click', ()=>{
+  const vid=detViagemId; closeModals(); openViagemModal(vid);
+});
+document.getElementById('vdFinalizar').addEventListener('click', ()=>{
+  const vid=detViagemId; closeModals(); openFinalizarViagem(vid);
 });
 
 /* =========================================================

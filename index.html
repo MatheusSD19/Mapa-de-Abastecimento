@@ -2088,12 +2088,18 @@ function renderMapa(){
         const v=rSaida[0];
         const extra=rSaida.length>1?` +${rSaida.length-1}`:'';
         horario=horaOf(v.saida);
-        const tip=`Viagem real importada&#10;Trecho: ${(v.trecho||'?')}&#10;Saída: ${fmtDT(v.saida)}&#10;Chegada: ${fmtDT(v.chegada)}&#10;Condição: ${v.condicao||'—'}&#10;Volume: ${fmt(v.volume||0)} t · Barcaças: ${v.barcacas||0}&#10;MGO: ${fmt(v.consumo&&v.consumo.MGO||0)} L · HFO: ${fmt(v.consumo&&v.consumo.HFO||0)} L`;
-        viagemCell=`<span class="trip-chip trip-real" title="${tip}" style="background:${empCor};color:${corContraste(empCor)};cursor:pointer" onclick="openEditImp('histViag','${v.id}')">${(v.trecho||'?')}${extra} ●</span>`;
+        // Viagem programada finalizada vinculada a este real importado (soberania) —
+        // quando existe, o clique abre o Resumo da Viagem (mesma tela das Viagens).
+        const vinc = state.viagens.find(pv=>pv.realImportId===v.id);
+        const tip=`Viagem real importada&#10;Trecho: ${(v.trecho||'?')}&#10;Saída: ${fmtDT(v.saida)}&#10;Chegada: ${fmtDT(v.chegada)}&#10;Condição: ${v.condicao||'—'}&#10;Volume: ${fmt(v.volume||0)} t · Barcaças: ${v.barcacas||0}&#10;MGO: ${fmt(v.consumo&&v.consumo.MGO||0)} L · HFO: ${fmt(v.consumo&&v.consumo.HFO||0)} L${vinc?'&#10;&#10;Clique para ver o Resumo da Viagem finalizada':''}`;
+        const clickAct = vinc ? `openViagemDetalhe('${vinc.id}')` : `openEditImp('histViag','${v.id}')`;
+        viagemCell=`<span class="trip-chip trip-real" title="${tip}" style="background:${empCor};color:${corContraste(empCor)};cursor:pointer" onclick="${clickAct}">${(v.trecho||'?')}${extra} ●</span>`;
         cond=v.condicao||'';
-        statusCell=`<span class="pill" style="background:rgba(34,197,94,.18);color:var(--ok);" title="Viagem real importada">Realizada</span>`;
+        statusCell=`<span class="pill" style="background:rgba(34,197,94,.18);color:var(--ok);" title="${vinc?'Viagem finalizada — clique no trecho para ver o resumo':'Viagem real importada'}">${vinc&&vinc.status==='Finalizada'?'Finalizada':'Realizada'}</span>`;
       }else if(rAtiva){
-        viagemCell=`<span class="muted" style="cursor:pointer" title="Viagem real importada — clique para ver/editar" onclick="openEditImp('histViag','${rAtiva.id}')">↳ ${rAtiva.trecho||''}</span>`;
+        const vincA = state.viagens.find(pv=>pv.realImportId===rAtiva.id);
+        const clickActA = vincA ? `openViagemDetalhe('${vincA.id}')` : `openEditImp('histViag','${rAtiva.id}')`;
+        viagemCell=`<span class="muted" style="cursor:pointer" title="${vincA?'Viagem finalizada — clique para ver o resumo':'Viagem real importada — clique para ver/editar'}" onclick="${clickActA}">↳ ${rAtiva.trecho||''}</span>`;
         cond=`<span class="muted">${rAtiva.condicao||''}</span>`;
         if(rAtiva.chegada && rAtiva.chegada.slice(0,10)===dStr){
           horario=`<span class="chegada" title="Chegada real">⚓ ${horaOf(rAtiva.chegada)}</span>`;
@@ -3408,6 +3414,41 @@ function openViagemDetalhe(vid){
     }
     h+=`<div class="vd-section"><div class="t">📊 Previsto × Realizado</div><table>${rows}</table></div>`;
   }
+
+  // ---- Indicadores de eficiência: consumo/hora e L/Ton ----
+  (function(){
+    const tPrev=(c&&!c.incompleto)?c.horas:0, tReal=v.tempoRealizado||0;
+    const volPrev=v.volumeCarregada||0, volReal=v.volumeRealizado||0;
+    // Separa combustível de porto (MGO/Diesel) do HFO
+    function split(consObj){
+      let mgo=0,hfo=0;
+      Object.entries(consObj||{}).forEach(([cb,l])=>{ if(cb==='HFO') hfo+=(l||0); else mgo+=(l||0); });
+      return {mgo,hfo,tot:mgo+hfo};
+    }
+    const cp=split((c&&!c.incompleto)?c.consumoTotal:{});
+    const cr=split(v.consumoRealizado||{});
+    const rate=(num,den)=> (num>0&&den>0)? num/den : 0;
+    // Menor consumo por hora / por tonelada é melhor (higherIsBetter=false)
+    function effRow(label, pv, rv, fmtFn){
+      if(!pv && !rv) return '';
+      return `<tr><td>${label}</td>
+        <td class="num">${pv?fmtFn(pv):'—'}</td>
+        <td class="num">${temReal?(rv?fmtFn(rv):'—'):'<span class="muted">—</span>'}</td>
+        <td class="num">${temReal?diffSpan(pv,rv,false):'<span class="muted">—</span>'}</td></tr>`;
+    }
+    let rows='';
+    rows+=effRow('MGO / hora (L/h)', rate(cp.mgo,tPrev), rate(cr.mgo,tReal), fmt1);
+    rows+=effRow('HFO / hora (L/h)', rate(cp.hfo,tPrev), rate(cr.hfo,tReal), fmt1);
+    if(isCarregada){
+      rows+=effRow('L/Ton MGO', rate(cp.mgo,volPrev), rate(cr.mgo,volReal), fmt2);
+      rows+=effRow('L/Ton HFO', rate(cp.hfo,volPrev), rate(cr.hfo,volReal), fmt2);
+      rows+=effRow('L/Ton Geral', rate(cp.tot,volPrev), rate(cr.tot,volReal), fmt2);
+    }
+    if(rows){
+      h+=`<div class="vd-section"><div class="t">⚙️ Eficiência <span class="sub">— consumo por hora e por tonelada</span></div>
+        <table><tr><th>Indicador</th><th class="num">Previsto</th><th class="num">Realizado</th><th class="num">Δ</th></tr>${rows}</table></div>`;
+    }
+  })();
 
   // ---- Desvios & Justificativas ----
   const dv=viagemDesvios(v);

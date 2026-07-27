@@ -132,6 +132,10 @@
   td.abast-cell:hover{background:rgba(34,197,94,0.15);}
   table.mapa .hora-col{text-align:center;}
   table.mapa .chegada{color:var(--info);font-weight:600;}
+  table.mapa .turno{display:inline-flex;align-items:center;gap:2px;white-space:nowrap;justify-content:center;}
+  table.mapa .turno .sep{color:var(--muted);font-weight:700;}
+  table.mapa .turno .saida{font-weight:600;}
+  .trip-chip.turnaround::before{content:'⇄';margin-right:3px;font-size:10px;opacity:.85;}
   table.mapa tr.today td{background:rgba(56,189,248,0.13);box-shadow:inset 0 0 0 9999px rgba(56,189,248,0.07);}
   table.mapa tr.today td:first-child{background:rgba(56,189,248,0.22);}
   table.mapa .emp-sep{border-right:3px solid var(--line);}
@@ -1228,8 +1232,50 @@ function overlappingTripIds(){
   });
   return over;
 }
+// Consumo navegando ESTIMADO (L) por combustível num dado dia, a partir das viagens PROGRAMADAS.
+// Igual ao realConsumoDia, mas para o mapa de programação: soma as horas navegadas de TODAS as
+// viagens que passam pelo dia (inclusive quando o barco chega e sai no MESMO dia — viagens curtas),
+// ratear o consumo pela fração de cada viagem navegada no dia. Trechos que se sobrepõem no tempo
+// são contados uma única vez (a viagem mais longa fica com o intervalo), evitando dupla contagem.
+function estConsumoDia(e, day){
+  const dayStart = day.getTime(), dayEnd = dayStart + 86400000;
+  const byComb = {}; let horasNav = 0;
+  const segs = [];
+  state.viagens.filter(v=>v.empId===e.id).forEach(v=>{
+    const c = calcViagem(v);
+    if(c.incompleto || c.horas<=0 || !c.media || !c.media.consumo) return;
+    const s = c.saida.getTime(), cc = c.chegada.getTime();
+    const ini = Math.max(s, dayStart), fim = Math.min(cc, dayEnd);
+    if(fim<=ini) return;
+    segs.push({ini, fim, dur: cc-s, consumo: c.media.consumo});
+  });
+  if(!segs.length) return {has:false, byComb, horasNav:0};
+  segs.sort((a,b)=>b.dur-a.dur); // viagem principal (mais longa) primeiro
+  const covered=[]; // intervalos já atribuídos a uma viagem
+  segs.forEach(sg=>{
+    let pieces=[[sg.ini,sg.fim]];
+    covered.forEach(([ci,cf])=>{
+      const next=[];
+      pieces.forEach(([pi,pf])=>{
+        if(cf<=pi||ci>=pf){ next.push([pi,pf]); return; }   // sem sobreposição
+        if(ci>pi) next.push([pi,Math.min(ci,pf)]);          // pedaço antes do coberto
+        if(cf<pf) next.push([Math.max(cf,pi),pf]);          // pedaço depois do coberto
+      });
+      pieces=next;
+    });
+    let h=0;
+    pieces.forEach(([pi,pf])=>{ if(pf>pi){ h+=(pf-pi)/3600000; covered.push([pi,pf]); } });
+    if(h<=0) return;
+    horasNav+=h;
+    Object.keys(sg.consumo).forEach(comb=>{ byComb[comb] = (byComb[comb]||0) + (sg.consumo[comb]||0)*h; });
+  });
+  if(horasNav>24) horasNav=24;
+  return {has:true, byComb, horasNav};
+}
 // Consumo diário (L) de um empurrador/combustível num dado dia.
 // Soberania: se há viagem REAL importada nesse dia, usa o consumo real; senão, usa a estimativa do mapa.
+// Em ambos os casos as horas navegadas de TODAS as viagens do dia são somadas; o restante do dia
+// (24h − horas navegadas) é debitado como Consumo Porto no combustível leve (MGO/Diesel).
 function dailyConsumption(e, comb, day){
   const combPorto = e.combustiveis.find(c=>c==='MGO'||c==='Diesel');
   const real = realConsumoDia(e.id, day);
@@ -1242,14 +1288,9 @@ function dailyConsumption(e, comb, day){
     if(comb===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
     return consumoDia;
   }
-  const dStr = dateStr(day);
-  const vSaida = viagensDoDia(e.id, dStr);
-  const vAtiva = viagemAtivaNoDia(e.id, day);
-  const vRef = vAtiva || (vSaida.length ? vSaida[0] : null);
-  const cdNav = vRef ? consumoDiaViagem(vRef, day) : {};
-  const horasNav = cdNav.__horas || 0;
-  const horasPorto = Math.max(0, 24 - horasNav);
-  let consumoDia = cdNav[comb] || 0;
+  const est = estConsumoDia(e, day);
+  const horasPorto = Math.max(0, 24 - est.horasNav);
+  let consumoDia = est.byComb[comb] || 0;
   if(comb===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
   return consumoDia;
 }
@@ -2087,13 +2128,17 @@ function renderMapa(){
       if(rSaida.length){
         const v=rSaida[0];
         const extra=rSaida.length>1?` +${rSaida.length-1}`:'';
-        horario=horaOf(v.saida);
+        // Viagem curta: barco CHEGA (leg anterior) e SAI no mesmo dia — mostra ⚓chegada → saída
+        const chegHoje = (rAtiva && rAtiva.chegada && rAtiva.chegada.slice(0,10)===dStr) ? rAtiva : null;
+        horario = chegHoje
+          ? `<span class="turno"><span class="chegada" title="Chegada real de ${chegHoje.trecho||''} às ${horaOf(chegHoje.chegada)}">⚓ ${horaOf(chegHoje.chegada)}</span><span class="sep">→</span><span class="saida" title="Saída de ${v.trecho||''} às ${horaOf(v.saida)}">${horaOf(v.saida)}</span></span>`
+          : horaOf(v.saida);
         // Viagem programada finalizada vinculada a este real importado (soberania) —
         // quando existe, o clique abre o Resumo da Viagem (mesma tela das Viagens).
         const vinc = state.viagens.find(pv=>pv.realImportId===v.id);
-        const tip=`Viagem real importada&#10;Trecho: ${(v.trecho||'?')}&#10;Saída: ${fmtDT(v.saida)}&#10;Chegada: ${fmtDT(v.chegada)}&#10;Condição: ${v.condicao||'—'}&#10;Volume: ${fmt(v.volume||0)} t · Barcaças: ${v.barcacas||0}&#10;MGO: ${fmt(v.consumo&&v.consumo.MGO||0)} L · HFO: ${fmt(v.consumo&&v.consumo.HFO||0)} L${vinc?'&#10;&#10;Clique para ver o Resumo da Viagem finalizada':''}`;
+        const tip=`Viagem real importada&#10;Trecho: ${(v.trecho||'?')}&#10;Saída: ${fmtDT(v.saida)}&#10;Chegada: ${fmtDT(v.chegada)}&#10;Condição: ${v.condicao||'—'}&#10;Volume: ${fmt(v.volume||0)} t · Barcaças: ${v.barcacas||0}&#10;MGO: ${fmt(v.consumo&&v.consumo.MGO||0)} L · HFO: ${fmt(v.consumo&&v.consumo.HFO||0)} L${chegHoje?'&#10;&#10;⇄ Barco chegou e saiu no mesmo dia (viagem curta): chegada '+horaOf(chegHoje.chegada)+' de '+(chegHoje.trecho||'?'):''}${vinc?'&#10;&#10;Clique para ver o Resumo da Viagem finalizada':''}`;
         const clickAct = vinc ? `openViagemDetalhe('${vinc.id}')` : `openEditImp('histViag','${v.id}')`;
-        viagemCell=`<span class="trip-chip trip-real" title="${tip}" style="background:${empCor};color:${corContraste(empCor)};cursor:pointer" onclick="${clickAct}">${(v.trecho||'?')}${extra} ●</span>`;
+        viagemCell=`<span class="trip-chip trip-real${chegHoje?' turnaround':''}" title="${tip}" style="background:${empCor};color:${corContraste(empCor)};cursor:pointer" onclick="${clickAct}">${(v.trecho||'?')}${extra} ●</span>`;
         cond=v.condicao||'';
         statusCell=`<span class="pill" style="background:rgba(34,197,94,.18);color:var(--ok);" title="${vinc?'Viagem finalizada — clique no trecho para ver o resumo':'Viagem real importada'}">${vinc&&vinc.status==='Finalizada'?'Finalizada':'Realizada'}</span>`;
       }else if(rAtiva){
@@ -2107,9 +2152,16 @@ function renderMapa(){
       }else if(vSaida.length){
         const v=vSaida[0];
         const r=rotaById(v.rotaId);
-        horario=v.horaSaida||'';
-        viagemCell=`<span class="trip-chip vstat-${v.status||'Previsto'}" draggable="true" data-vid="${v.id}"
-          title="${v.status||'Previsto'} — clique para ver o resumo e os detalhes da viagem"
+        // Viagem curta: barco CHEGA (leg anterior programada) e SAI no mesmo dia
+        const cvAtiva = vAtiva ? calcViagem(vAtiva) : null;
+        const chegHoje = (cvAtiva && !cvAtiva.incompleto && dateStr(cvAtiva.chegada)===dStr) ? cvAtiva : null;
+        const rAnt = chegHoje ? rotaById(vAtiva.rotaId) : null;
+        const chegHora = chegHoje ? String(chegHoje.chegada.getHours()).padStart(2,'0')+':'+String(chegHoje.chegada.getMinutes()).padStart(2,'0') : '';
+        horario = chegHoje
+          ? `<span class="turno"><span class="chegada" title="Chegada prevista de ${rAnt?rAnt.nome:''} às ${chegHora}">⚓ ${chegHora}</span><span class="sep">→</span><span class="saida" title="Saída ${v.horaSaida||''}">${v.horaSaida||''}</span></span>`
+          : (v.horaSaida||'');
+        viagemCell=`<span class="trip-chip vstat-${v.status||'Previsto'}${chegHoje?' turnaround':''}" draggable="true" data-vid="${v.id}"
+          title="${v.status||'Previsto'}${chegHoje?' — ⇄ chega ('+(rAnt?rAnt.nome:'')+' às '+chegHora+') e sai no mesmo dia (viagem curta)':''} — clique para ver o resumo e os detalhes da viagem"
           style="background:${empCor};color:${corContraste(empCor)}"
           onclick="openViagemDetalhe('${v.id}')">${r?r.nome:'?'}</span>`;
         cond=v.condicao;

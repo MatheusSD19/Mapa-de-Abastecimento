@@ -36,8 +36,46 @@
   .spacer{flex:1;}
   .tool-btn{background:var(--panel2);color:var(--txt);border:1px solid var(--line);padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;}
   .tool-btn:hover{border-color:var(--accent);}
-  .fs-status{font-size:11px;color:var(--muted);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;}
-  .fs-status.linked{color:var(--ok);}
+  .fs-status{font-size:11px;color:var(--muted);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis;
+    background:transparent;border:1px solid var(--line);border-radius:6px;padding:6px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .fs-status:hover{border-color:var(--accent);}
+  .fs-status .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+  .fs-status.linked{color:var(--ok);border-color:rgba(34,197,94,.45);}
+  .fs-status.linked .dot{background:var(--ok);}
+  .fs-status.saving{color:var(--accent);border-color:rgba(56,189,248,.45);}
+  .fs-status.saving .dot{background:var(--accent);animation:fsPulse 1s infinite;}
+  .fs-status.pending{color:var(--warn);border-color:rgba(245,158,11,.55);background:rgba(245,158,11,.10);}
+  .fs-status.pending .dot{background:var(--warn);animation:fsPulse 1.4s infinite;}
+  .fs-status.error{color:var(--bad);border-color:rgba(239,68,68,.55);background:rgba(239,68,68,.10);}
+  .fs-status.error .dot{background:var(--bad);}
+  @keyframes fsPulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+  /* faixa de aviso da base */
+  #fsBanner{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 16px;font-size:12px;border-bottom:1px solid var(--line);}
+  #fsBanner.show{display:flex;}
+  #fsBanner.warn{background:rgba(245,158,11,.14);color:var(--warn);border-bottom-color:rgba(245,158,11,.45);}
+  #fsBanner.bad{background:rgba(239,68,68,.14);color:var(--bad);border-bottom-color:rgba(239,68,68,.45);}
+  #fsBanner b{color:inherit;}
+  #fsBanner button{background:transparent;border:1px solid currentColor;color:inherit;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;}
+  #fsBanner button:hover{background:rgba(255,255,255,.10);}
+  /* comparação de bases (conflito) */
+  .fs-cmp{display:flex;gap:10px;flex-wrap:wrap;}
+  .fs-cmp .side{flex:1 1 190px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--panel2);}
+  .fs-cmp .side.recommended{border-color:var(--ok);box-shadow:0 0 0 1px rgba(34,197,94,.35) inset;}
+  .fs-cmp .side h4{font-size:12px;margin-bottom:2px;color:var(--txt);}
+  .fs-cmp .side .when{font-size:10px;color:var(--muted);margin-bottom:8px;}
+  .fs-cmp .side .tot{font-size:20px;font-weight:700;color:var(--accent);}
+  .fs-cmp .side .tot small{font-size:10px;font-weight:400;color:var(--muted);display:block;}
+  .fs-cmp .side ul{list-style:none;margin-top:8px;font-size:11px;color:var(--muted);}
+  .fs-cmp .side li{display:flex;justify-content:space-between;gap:8px;padding:1px 0;}
+  .fs-cmp .side li b{color:var(--txt);font-weight:600;}
+  .fs-cmp .side li.more b{color:var(--ok);}
+  .fs-choices{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+  .fs-choices button{text-align:left;padding:10px 12px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);cursor:pointer;font-size:12px;line-height:1.45;}
+  .fs-choices button:hover{border-color:var(--accent);}
+  .fs-choices button b{display:block;font-size:12.5px;margin-bottom:2px;}
+  .fs-choices button span{color:var(--muted);font-size:11px;}
+  .fs-choices button.primary{border-color:var(--ok);background:rgba(34,197,94,.10);}
+  .fs-choices button.danger:hover{border-color:var(--bad);}
   main{padding:16px;flex:1;min-width:0;}
   .view{display:none;}
   .view.active{display:block;}
@@ -79,8 +117,9 @@
   .empty{color:var(--muted);font-style:italic;padding:8px 0;}
   .muted{color:var(--muted);}
   /* modal */
-  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:flex-start;justify-content:center;padding:40px 12px;overflow:auto;}
-  .modal-bg.show{display:flex;}
+  .modal-bg,.modal-bg2{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:flex-start;justify-content:center;padding:40px 12px;overflow:auto;}
+  .modal-bg.show,.modal-bg2.show{display:flex;}
+  .modal-bg2{z-index:120;background:rgba(0,0,0,0.75);}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;width:480px;max-width:100%;}
   .modal h3{color:var(--accent);margin-bottom:12px;font-size:15px;}
   .modal .row{margin-bottom:10px;}
@@ -165,7 +204,31 @@
   td.estoque-cell.estoque-manual .pct{color:var(--info);font-weight:700;}
   td.estoque-cell .anchor-mark{font-size:10px;color:var(--info);margin-right:3px;}
   .weekend{background:rgba(255,255,255,0.03);}
-  .status-sel{font-size:11px;padding:2px 4px;}
+  /* célula de status com pista visual por cor */
+  td.status-cell{white-space:nowrap;}
+  .status-sel{font-size:11px;padding:3px 22px 3px 9px;border-radius:999px;border:1px solid var(--line);
+    background-color:var(--panel2);color:var(--txt);font-weight:600;cursor:pointer;appearance:none;-webkit-appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+    background-position:calc(100% - 11px) 52%,calc(100% - 7px) 52%;background-size:4px 4px,4px 4px;background-repeat:no-repeat;}
+  .status-sel:hover{filter:brightness(1.15);}
+  .status-sel option{background:var(--panel);color:var(--txt);font-weight:600;}
+  .status-sel.st-Previsto{color:var(--muted);background-color:rgba(148,163,184,.16);border-color:rgba(148,163,184,.50);}
+  .status-sel.st-Solicitado{color:var(--warn);background-color:rgba(245,158,11,.16);border-color:rgba(245,158,11,.55);}
+  .status-sel.st-Realizado{color:var(--ok);background-color:rgba(34,197,94,.16);border-color:rgba(34,197,94,.55);}
+  .status-sel.st-Cancelado{color:var(--bad);background-color:rgba(239,68,68,.16);border-color:rgba(239,68,68,.55);}
+  /* legenda de status */
+  .status-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px;}
+  .status-legend .item{display:inline-flex;align-items:center;gap:5px;}
+  .status-legend .sw{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .status-legend .sw.st-Previsto{background:#94a3b8;}
+  .status-legend .sw.st-Solicitado{background:var(--warn);}
+  .status-legend .sw.st-Realizado{background:var(--ok);}
+  .status-legend .sw.st-Cancelado{background:var(--bad);}
+  /* KPIs de status com faixa colorida */
+  .kpi.kpi-Previsto{border-left:3px solid #94a3b8;}
+  .kpi.kpi-Solicitado{border-left:3px solid var(--warn);}
+  .kpi.kpi-Realizado{border-left:3px solid var(--ok);}
+  .kpi.kpi-Cancelado{border-left:3px solid var(--bad);}
   .stat-Previsto{color:var(--muted);}
   .stat-Solicitado{color:var(--warn);}
   .stat-Realizado{color:var(--ok);}
@@ -188,6 +251,16 @@
   .pill.Navegando{background:rgba(56,189,248,.22);color:var(--accent);}
   .pill.Realizada{background:rgba(34,197,94,.22);color:var(--ok);}
   .pill.Finalizada{background:rgba(167,139,250,.22);color:var(--info);}
+  .pill.orfa{background:rgba(245,158,11,.22);color:var(--warn);}
+  /* viagens programadas sem par na importação do Histórico de Viagens */
+  tr.row-orfa td{background:rgba(245,158,11,0.10);}
+  tr.row-orfa:hover td{background:rgba(245,158,11,0.18);}
+  .orfa-banner{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:12px;padding:10px 12px;
+    background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.45);border-radius:8px;}
+  .orfa-banner .txt{flex:1 1 340px;font-size:11.5px;line-height:1.55;color:var(--warn);}
+  .orfa-banner .txt b{color:var(--warn);}
+  .orfa-banner .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .kpi.kpi-orfa{border-left:3px solid var(--warn);}
   .diff-pos{color:var(--ok);font-weight:600;}
   .diff-neg{color:var(--bad);font-weight:600;}
   .diff-neu{color:var(--muted);}
@@ -300,14 +373,16 @@
   <button class="hamburger" id="btnSidebar" title="Recolher / expandir menu">☰</button>
   <h1>⛴ Mapa de Abastecimento</h1>
   <div class="spacer"></div>
-  <span id="fsStatus" class="fs-status">Base: não vinculada</span>
+  <button id="fsStatus" class="fs-status" title="Estado da base"><span class="dot"></span><span id="fsStatusTxt">Base: não vinculada</span></button>
   <button class="tool-btn" id="btnPickFolder">Selecionar pasta</button>
   <button class="tool-btn" id="btnSaveBase">Salvar base</button>
+  <button class="tool-btn" id="btnReloadBase" title="Descarta a sessão atual e recarrega o arquivo da pasta">Recarregar da pasta</button>
   <button class="tool-btn" id="btnExport">Exportar dados</button>
   <button class="tool-btn" id="btnImportData">Importar dados</button>
   <input type="file" id="fileImportData" accept="application/json" style="display:none">
   <button class="tool-btn" id="btnSeed">Dados exemplo</button>
 </header>
+<div id="fsBanner"><span id="fsBannerTxt"></span><span class="spacer"></span><button id="fsBannerBtn"></button></div>
 <div class="layout">
 <aside class="sidebar">
   <div class="side-title">Módulos</div>
@@ -427,6 +502,13 @@
         <button class="btn" id="btnNovoAbast">+ Novo Abastecimento</button>
       </div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblAbast"></table></div>
+      <div class="status-legend">
+        <span>Legenda de status:</span>
+        <span class="item" title="Programado no mapa, ainda não solicitado ao fornecedor."><span class="sw st-Previsto"></span>Previsto</span>
+        <span class="item" title="Pedido já feito ao fornecedor, aguardando o abastecimento."><span class="sw st-Solicitado"></span>Solicitado</span>
+        <span class="item" title="Abastecimento concluído; entra no estoque e no custo."><span class="sw st-Realizado"></span>Realizado</span>
+        <span class="item" title="Não aconteceu; fica no histórico mas não soma em nada."><span class="sw st-Cancelado"></span>Cancelado</span>
+      </div>
     </div>
   </section>
 
@@ -440,6 +522,7 @@
           <select id="viagFiltro">
             <option value="">Todos</option>
             <option>Previsto</option><option>Navegando</option><option>Realizada</option><option>Finalizada</option>
+            <option value="__orfas">⚠ Sem par na importação</option>
           </select>
         </div>
         <div class="field"><label>De</label><input type="date" id="viagFiltroIni"></div>
@@ -451,6 +534,7 @@
         <div class="spacer"></div>
         <button class="btn" id="btnNovaViagem2">+ Nova Viagem</button>
       </div>
+      <div id="viagOrfaBanner"></div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblViag"></table></div>
     </div>
 
@@ -865,6 +949,19 @@
 </div>
 
 <!-- ===== MODAL VIAGEM ===== -->
+<!-- ===== Conflito entre a sessão atual e o arquivo da pasta ===== -->
+<div class="modal-bg2" id="modalFsConflict">
+  <div class="modal" style="width:560px;">
+    <h3 id="fsConflictTitle">⚠ Os dados desta sessão e o arquivo da pasta são diferentes</h3>
+    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px;" id="fsConflictIntro">
+      Escolha qual versão deve prevalecer. <b>Nada é sobrescrito sem a sua confirmação</b> e uma cópia de segurança da
+      versão descartada é gravada na subpasta <code>backups/</code>.
+    </p>
+    <div class="fs-cmp" id="fsConflictCmp"></div>
+    <div class="fs-choices" id="fsConflictChoices"></div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modalViagem">
   <div class="modal">
     <h3 id="mvTitle">Nova Viagem</h3>
@@ -1023,9 +1120,19 @@ function getOrCreateCondicao(nome){
 const COMBS = ['MGO','HFO','Diesel'];
 const COMB_LABEL = {MGO:'MGO', HFO:'HFO', Diesel:'Diesel Terceiro'};
 const STATUS = ['Previsto','Solicitado','Realizado','Cancelado'];
+// pista visual: cada status tem uma cor fixa em toda a tela de abastecimentos
+const STATUS_HINT = {
+  'Previsto':'Cinza — programado no mapa, ainda não solicitado ao fornecedor.',
+  'Solicitado':'Âmbar — pedido já feito ao fornecedor, aguardando o abastecimento.',
+  'Realizado':'Verde — abastecimento concluído; entra no estoque e no custo.',
+  'Cancelado':'Vermelho — não aconteceu; fica no histórico mas não soma em nada.'
+};
 const VSTATUS = ['Previsto','Navegando','Realizada','Finalizada'];
 // Gestão de desvios: viagem realizada fora da média (consumo/tempo) acima deste %
 const DESVIO_PCT = 5;
+// Folga (dias) para trás ao procurar viagens programadas órfãs após importar o Histórico de
+// Viagens — a data de saída pode ter recuado na base, mudando o ID da viagem.
+const TOLERANCIA_ORFA_DIAS = 7;
 const MOTIVOS_TEMPO = ['Espera/fila no porto','Aguardando carga/descarga','Manobra/atracação','Nível do rio/seca/maré','Corrente/clima adverso','Defeito/manutenção','Aguardando comboio/logística','Documentação/inspeção','Outros'];
 const MOTIVOS_CONSUMO = ['Corrente/maré contrária','Carga acima do previsto','Manobras extras','Espera com motor ligado','Defeito de máquina','Rota/desvio mais longo','Clima adverso','Casco/limpeza','Outros'];
 
@@ -1323,7 +1430,11 @@ function startingBalance(empId, comb, iniDate){
 }
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function save(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  // espelha na pasta escolhida pelo usuário (autosave) — ver "BASE EM PASTA"
+  if(typeof scheduleFolderSave==='function') scheduleFolderSave();
+}
 function load(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
@@ -2852,7 +2963,7 @@ function renderAbast(){
   const totalRealValor=list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+((a.qtd||0)*(a.preco||0)),0);
   const atrasados=list.filter(isAbastAtrasado).length;
   kpis.innerHTML=
-    STATUS.map(s=>`<div class="kpi"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
+    STATUS.map(s=>`<div class="kpi kpi-${s}" title="${STATUS_HINT[s]||''}"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
     `<div class="kpi"><div class="v">${fmt(totalL)}</div><div class="l">Litros (filtro)</div></div>`+
     `<div class="kpi"><div class="v">${fmt(totalRealL)}</div><div class="l">Litros Realizados</div></div>`+
     `<div class="kpi"><div class="v">${fmtMoney(totalRealValor)}</div><div class="l">R$ Realizado</div></div>`+
@@ -2861,7 +2972,7 @@ function renderAbast(){
   const t=document.getElementById('tblAbast');
   if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum abastecimento no filtro.</td></tr>'; return; }
   let h=`<tr><th></th><th>Data</th><th>Empurrador</th><th>Cidade</th><th>Combustível</th><th class="num">Quantidade (L)</th>
-    <th class="num">Preço (R$/L)</th><th>Fornecedor</th><th>NF</th><th>Status</th><th>Observação</th><th>Ações</th></tr>`;
+    <th>Status</th><th class="num">Preço (R$/L)</th><th>Fornecedor</th><th>NF</th><th>Observação</th><th>Ações</th></tr>`;
   list.forEach(a=>{
     const e=empById(a.empId);
     const d=a.data?parseDate(a.data).toLocaleDateString('pt-BR'):'—';
@@ -2874,14 +2985,14 @@ function renderAbast(){
       <td>${a.cidade||'—'}</td>
       <td><span class="tag ${a.comb}">${COMB_LABEL[a.comb]||a.comb}</span></td>
       <td class="num">${fmt(a.qtd)}</td>
-      <td class="num">${a.preco?fmt2(a.preco):'—'}</td>
-      <td>${forn?forn.nome:'—'}</td>
-      <td>${a.nf||'—'}${a.saving?` <span class="tag" style="background:var(--ok);color:#001018;" title="Saving registrado">Saving</span>`:''}</td>
-      <td>
-        <select class="status-sel" onchange="changeAbastStatus('${a.id}',this.value)">
+      <td class="status-cell">
+        <select class="status-sel st-${a.status||'Previsto'}" title="${STATUS_HINT[a.status]||''}" onchange="changeAbastStatus('${a.id}',this.value)">
           ${STATUS.map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
         </select>
       </td>
+      <td class="num">${a.preco?fmt2(a.preco):'—'}</td>
+      <td>${forn?forn.nome:'—'}</td>
+      <td>${a.nf||'—'}${a.saving?` <span class="tag" style="background:var(--ok);color:#001018;" title="Saving registrado">Saving</span>`:''}</td>
       <td>${a.obs||''}</td>
       <td><button class="btn sm secondary" onclick="openAbastModal('${a.id}')">Editar</button></td>
     </tr>`;
@@ -2962,6 +3073,31 @@ function viagemDesvioPendente(v){
   return !!((d.tempo&&d.tempo.flag&&!d.tempo.favoravel&&!j.tempo)||(d.consumo&&d.consumo.flag&&!d.consumo.favoravel&&!j.consumo));
 }
 
+function filtrarOrfas(){
+  const s=document.getElementById('viagFiltro');
+  if(s){ s.value='__orfas'; renderViagens(); }
+}
+function renderViagOrfaBanner(soOrfas){
+  const el=document.getElementById('viagOrfaBanner'); if(!el) return;
+  const list=viagensOrfas();
+  if(!list.length){ el.innerHTML=''; return; }
+  const per=list[0].orfaImportPeriodo||'';
+  const [pi,pf]=per.split('..');
+  const periodo = pi&&pf ? ` (${parseDate(pi).toLocaleDateString('pt-BR')} a ${parseDate(pf).toLocaleDateString('pt-BR')})` : '';
+  el.innerHTML=
+    `<div class="orfa-banner">
+       <div class="txt"><b>⚠ ${list.length} viagem(ns) programada(s) sem par na última importação${periodo}.</b>
+         O Histórico de Viagens importado é a fonte principal — estas viagens ficaram para trás (normalmente porque a
+         data de saída mudou na base e o ID da viagem mudou junto). Confira e <b>exclua manualmente</b> as que forem
+         duplicatas, para não sobrepor viagem programada com viagem executada no Mapa de Giros.</div>
+       <div class="acts">
+         ${soOrfas?'<button class="btn sm secondary" onclick="document.getElementById(\'viagFiltro\').value=\'\';renderViagens();">Ver todas</button>'
+                  :'<button class="btn sm" onclick="filtrarOrfas()">Revisar só estas</button>'}
+         <button class="btn sm secondary danger" onclick="excluirTodasOrfas()">Excluir todas</button>
+         <button class="btn sm secondary" title="Some com o aviso sem excluir nada — as viagens continuam como estão" onclick="limparSinalizacaoOrfas()">Dispensar aviso</button>
+       </div>
+     </div>`;
+}
 function renderViagens(){
   initViagFilters();
   refreshViagemStatuses();
@@ -2970,12 +3106,17 @@ function renderViagens(){
   const fim=document.getElementById('viagFiltroFim').value;
   const empF=document.getElementById('viagFiltroEmp').value;
 
+  const soOrfas = filtro==='__orfas';
   let list=state.viagens.slice();
-  if(filtro) list=list.filter(v=>v.status===filtro);
-  if(ini) list=list.filter(v=>!v.dataSaida || v.dataSaida>=ini);
-  if(fim) list=list.filter(v=>!v.dataSaida || v.dataSaida<=fim);
+  if(soOrfas) list=list.filter(viagemOrfaImport);
+  else if(filtro) list=list.filter(v=>v.status===filtro);
+  // as órfãs ficam sempre visíveis: são pendências de limpeza, não podem sumir no filtro de datas
+  if(ini) list=list.filter(v=>viagemOrfaImport(v) || !v.dataSaida || v.dataSaida>=ini);
+  if(fim) list=list.filter(v=>viagemOrfaImport(v) || !v.dataSaida || v.dataSaida<=fim);
   if(empF) list=list.filter(v=>v.empId===empF);
   list.sort((a,b)=>(a.dataSaida||'').localeCompare(b.dataSaida||''));
+
+  renderViagOrfaBanner(soOrfas);
 
   // KPIs
   const kpis=document.getElementById('viagKpis');
@@ -2983,8 +3124,10 @@ function renderViagens(){
   VSTATUS.forEach(s=>counts[s]=list.filter(v=>v.status===s).length);
   const pendentes = list.filter(isViagemPendente).length;
   const desviosPend = list.filter(viagemDesvioPendente).length;
+  const nOrfas = viagensOrfas().length;
   kpis.innerHTML=
     VSTATUS.map(s=>`<div class="kpi"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
+    (nOrfas ? `<div class="kpi kpi-orfa" title="Viagens programadas que não casaram com nenhuma viagem do Histórico importado. Clique para revisar e excluir." style="cursor:pointer" onclick="filtrarOrfas()"><div class="v" style="color:var(--warn)">${nOrfas}</div><div class="l">⚠ Sem par na importação</div></div>`:'')+
     (pendentes ? `<div class="kpi"><div class="v" style="color:var(--bad)">${pendentes}</div><div class="l">⚠ Aguardando Finalizar</div></div>`:'')+
     (desviosPend ? `<div class="kpi" title="Viagens com consumo ou tempo mais de ${DESVIO_PCT}% fora da média e ainda SEM justificativa. Abra a viagem (Finalizar / Ver-Editar) para justificar." style="cursor:help"><div class="v" style="color:var(--warn)">${desviosPend}</div><div class="l">Δ Desvios a justificar</div></div>`:'');
 
@@ -3003,9 +3146,12 @@ function renderViagens(){
     const chegada = (c && !c.incompleto) ? c.chegada.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
     const tempo = (c && !c.incompleto) ? fmt1(c.horas) : '—';
     const pend = isViagemPendente(v);
-    const alerta = v.consumoPendente
+    const orfa = viagemOrfaImport(v);
+    const alerta = orfa
+      ? '<span class="alerta" style="color:var(--warn)" title="Sem par no Histórico de Viagens importado — provável duplicata de uma viagem já executada. Revise e exclua se for o caso.">⚠</span>'
+      : (v.consumoPendente
       ? '<span class="alerta" title="Dados reais importados — aguardando o consumo na base para finalizar automaticamente">⚠</span>'
-      : (pend?'<span class="alerta" title="Viagem realizada — aguarda finalização">⚠</span>':'');
+      : (pend?'<span class="alerta" title="Viagem realizada — aguarda finalização">⚠</span>':''));
     const autoMark = v.autoFinalizada ? ' <span title="Finalizada automaticamente pela importação do real" style="color:var(--ok);font-size:10px;">⤓</span>' : '';
     const dv = viagemDesvios(v);
     let desvMark='';
@@ -3020,7 +3166,7 @@ function renderViagens(){
       const tit=(pendente?'Desvio acima de '+DESVIO_PCT+'% SEM justificativa — abra a viagem para justificar.\n':(soFavoravel?'Desvio favorável (abaixo da média) — não requer justificativa.\n':'Desvio justificado.\n'))+parts.join('\n');
       desvMark=` <span title="${tit.replace(/"/g,'&quot;')}" style="color:${cor};cursor:help;font-weight:700;">Δ${pendente?'':'✓'}</span>`;
     }
-    h+=`<tr class="viag-row ${pend?'row-alert':''}" style="cursor:pointer" title="Clique para ver o resumo e os detalhes da viagem" onclick="openViagemDetalhe('${v.id}')">
+    h+=`<tr class="viag-row ${orfa?'row-orfa':(pend?'row-alert':'')}" style="cursor:pointer" title="Clique para ver o resumo e os detalhes da viagem" onclick="openViagemDetalhe('${v.id}')">
       <td>${alerta}${desvMark}</td>
       <td>${v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—'} ${v.horaSaida||''}</td>
       <td>${e?e.nome:'—'}</td>
@@ -3028,12 +3174,13 @@ function renderViagens(){
       <td>${v.condicao}</td>
       <td>${chegada}</td>
       <td class="num">${tempo}</td>
-      <td><span class="pill ${v.status}">${v.status}</span>${autoMark}</td>
+      <td><span class="pill ${v.status}">${v.status}</span>${autoMark}${orfa?' <span class="pill orfa" title="Não casou com nenhuma viagem do Histórico importado">sem par</span>':''}</td>
       <td onclick="event.stopPropagation()">
         <button class="btn sm" onclick="openViagemDetalhe('${v.id}')">Detalhes</button>
         <button class="btn sm secondary" onclick="openViagemModal('${v.id}')">Editar</button>
         ${v.status==='Realizada'?`<button class="btn sm" onclick="openFinalizarViagem('${v.id}')">Finalizar</button>`:''}
         ${v.status==='Finalizada'?`<button class="btn sm secondary" onclick="openFinalizarViagem('${v.id}')">Ver/Editar</button>`:''}
+        ${orfa?`<button class="btn sm secondary danger" title="Excluir esta viagem programada sem par na importação" onclick="excluirViagemOrfa('${v.id}')">Excluir</button>`:''}
       </td>
     </tr>`;
   });
@@ -4867,7 +5014,59 @@ function sincronizarViagensProgramadas(){
     }
     state.viagens.push(nova); criadas++;
   });
-  return {finalizadas, pendentes, criadas};
+  // 4) SINALIZAÇÃO DE ÓRFÃS — a base importada é a fonte principal.
+  //    Viagens PROGRAMADAS que caem dentro do período coberto pela importação e não
+  //    casaram com nenhuma viagem real são prováveis sobreposições/duplicatas (o ID da
+  //    viagem depende da data de saída; se a data mudou na base, a programação antiga
+  //    fica órfã). O app apenas SINALIZA — a exclusão é sempre manual, pelo usuário.
+  const datasReais=(state.historicoViagens||[]).map(v=>v.data).filter(Boolean).sort();
+  const impIni=datasReais[0]||null, impFim=datasReais[datasReais.length-1]||null;
+  // Janela de checagem: do início do período importado (com folga para trás, porque a data pode
+  // ter recuado na base) até a ÚLTIMA viagem executada. Nada é sinalizado depois de impFim —
+  // dali para frente a programação ainda não aconteceu e é legítima.
+  const janelaIni = impIni ? dateStr(addDays(parseDate(impIni), -TOLERANCIA_ORFA_DIAS)) : null;
+  let orfas=0;
+  state.viagens.forEach(v=>{
+    delete v.orfaImport; delete v.orfaImportPeriodo;
+    if(v.criadaDoReal || v.realImportId) return;       // casou com a base ou nasceu dela
+    if(v.status==='Finalizada') return;                // finalizada à mão pelo usuário — dado dele, não se mexe
+    if(!janelaIni || !impFim || !v.dataSaida) return;
+    if(v.dataSaida<janelaIni || v.dataSaida>impFim) return; // fora da janela: programação legítima
+    v.orfaImport=true; v.orfaImportPeriodo=janelaIni+'..'+impFim;
+    orfas++;
+  });
+  return {finalizadas, pendentes, criadas, orfas, impIni, impFim};
+}
+// Viagem programada sem par na última importação do Histórico de Viagens
+function viagemOrfaImport(v){ return !!v.orfaImport; }
+function viagensOrfas(){ return state.viagens.filter(viagemOrfaImport); }
+function excluirViagemOrfa(id){
+  const v=state.viagens.find(x=>x.id===id); if(!v) return;
+  const e=empById(v.empId), r=rotaById(v.rotaId);
+  if(!confirm('Excluir esta viagem programada?\n\n'+
+    (e?e.nome:'—')+' — '+(r?r.nome:'—')+' ('+v.condicao+')\n'+
+    'Saída: '+(v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—')+' '+(v.horaSaida||'')+'\n\n'+
+    'Ela não casou com nenhuma viagem do Histórico importado.')) return;
+  state.viagens=state.viagens.filter(x=>x.id!==id);
+  save(); renderViagens(); renderMapa();
+}
+function excluirTodasOrfas(){
+  const list=viagensOrfas();
+  if(!list.length) return;
+  const amostra=list.slice(0,12).map(v=>{
+    const e=empById(v.empId), r=rotaById(v.rotaId);
+    return '• '+(v.dataSaida?parseDate(v.dataSaida).toLocaleDateString('pt-BR'):'—')+'  '+(e?e.nome:'—')+' — '+(r?r.nome:'—');
+  }).join('\n');
+  if(!confirm('Excluir as '+list.length+' viagens programadas sem par na importação?\n\n'+amostra+
+    (list.length>12?'\n… e mais '+(list.length-12)+'.':'')+
+    '\n\nEsta ação não pode ser desfeita.')) return;
+  const ids=new Set(list.map(v=>v.id));
+  state.viagens=state.viagens.filter(v=>!ids.has(v.id));
+  save(); renderViagens(); renderMapa();
+}
+function limparSinalizacaoOrfas(){
+  state.viagens.forEach(v=>{ delete v.orfaImport; delete v.orfaImportPeriodo; });
+  save(); renderViagens();
 }
 
 /* ---- Histórico de Viagens (real) ---- */
@@ -4941,6 +5140,9 @@ function processHistViagRows(rows){
     `\n\nViagens finalizadas automaticamente: ${sync.finalizadas}`+
     (sync.criadas?`\nViagens criadas a partir da importação (sem programação equivalente, ex.: A Contrabordo): ${sync.criadas}`:'')+
     (sync.pendentes?`\nViagens atualizadas aguardando consumo (não finalizadas): ${sync.pendentes}`:'')+
+    (sync.orfas?`\n\n⚠ ${sync.orfas} viagem(ns) PROGRAMADA(S) sem par nesta importação, dentro do período importado.`+
+      `\nElas ficaram marcadas como "sem par" no módulo de Viagens (linha em âmbar). Revise e exclua manualmente as duplicatas`+
+      `\npara não sobrepor viagem programada com viagem executada no Mapa de Giros.`:'')+
     (nOver?`\n\n⚠ ${nOver} viagem(ns) com sobreposição de horário no mesmo empurrador (marcadas na tabela). No Mapa, o trecho sobreposto entra só na viagem principal — sem dupla contagem.`:'')+
     (colsNaoAchadas.length?`\n\n⚠ Colunas não encontradas no cabeçalho: ${colsNaoAchadas.join(', ')}. Verifique o nome exato dessas colunas na planilha BD_VIAGENS.`:'')+
     `\n\nO casamento com as viagens programadas usa o ID_Viagem (padrão NOME-EMPURRADOR_AAMMDD). A base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
@@ -6258,11 +6460,32 @@ function seedData(){
 
 /* =========================================================
    BASE EM PASTA (File System Access API)
-   ========================================================= */
-const BASE_FILENAME = 'mapa-abastecimento.json';
-const FS_DB = 'mapaAbastecimentoFS', FS_STORE = 'handles';
-let dirHandle = null, fileHandle = null;
 
+   Regras de ouro (evitam perda de dados):
+   1. A pasta escolhida é o destino oficial. Enquanto estiver vinculada e
+      com permissão, TODA alteração é gravada nela (autosave), não só no
+      navegador.
+   2. O app NUNCA substitui os dados da sessão pelo arquivo da pasta sem
+      confirmação explícita quando os dois lados têm conteúdo diferente.
+   3. Antes de qualquer substituição (do arquivo ou da sessão) é gravada
+      uma cópia de segurança em <pasta>/backups/.
+   4. Se a pasta estiver vinculada mas sem permissão de escrita, o app
+      avisa em faixa visível — nunca volta a salvar só no navegador em
+      silêncio.
+   ========================================================= */
+const BASE_FILENAME  = 'mapa-abastecimento.json';
+const BACKUP_DIRNAME = 'backups';
+const BACKUP_KEEP    = 30;
+const FS_DB = 'mapaAbastecimentoFS', FS_STORE = 'handles';
+const FS_SYNC_KEY = 'mapaAbastecimento_fsSync';   // registro da última gravação feita por este navegador
+
+let dirHandle = null, fileHandle = null;
+let fsMode = 'none';              // none | pending | ready | error
+let fsError = '';
+let fsDirty = false, fsSaving = false, fsTimer = null;
+let fsLastSavedAt = null, fsSuppressAutosave = false;
+
+/* ---------- IndexedDB (guarda o handle da pasta entre sessões) ---------- */
 function fsIdb(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(FS_DB,1);
@@ -6287,88 +6510,485 @@ async function fsIdbGet(k){
     rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error);
   });
 }
+
+/* ---------- registro da última sincronização ---------- */
+function fsSyncGet(){
+  try{ return JSON.parse(localStorage.getItem(FS_SYNC_KEY)||'null'); }catch(e){ return null; }
+}
+function fsSyncSet(o){
+  try{ localStorage.setItem(FS_SYNC_KEY, JSON.stringify(o)); }catch(e){}
+}
+
+/* ---------- contagem de registros (para comparar as duas versões) ---------- */
+const FS_COUNT_KEYS = [
+  ['empurradores','Embarcações'],
+  ['rotas','Rotas'],
+  ['viagens','Viagens'],
+  ['abastecimentos','Abastecimentos'],
+  ['fornecedores','Fornecedores'],
+  ['justificativas','Justificativas'],
+  ['historicoPrecos','Histórico de preços'],
+  ['estoques','Leituras de estoque'],
+  ['historicoViagens','Histórico de viagens'],
+  ['estoqueLeituras','Estoque (importado)'],
+  ['abastecimentosReais','Abastecimentos (reais)'],
+  ['apontamentos','Apontamentos']
+];
+function stateCounts(st){
+  const o={}; let total=0;
+  FS_COUNT_KEYS.forEach(([k])=>{
+    const n = Array.isArray(st&&st[k]) ? st[k].length : 0;
+    o[k]=n; total+=n;
+  });
+  o.__total=total;
+  return o;
+}
+function fsFmtWhen(iso){
+  if(!iso) return 'sem data registrada';
+  try{ return new Date(iso).toLocaleString('pt-BR'); }catch(e){ return iso; }
+}
+function fsStamp(d){
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());
+}
+
+/* ---------- serialização ---------- */
+const FS_EMPTY_STATE = {empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],
+  justificativas:[],historicoPrecos:[],budgetVolume:{},estoques:[]};
+function serializeState(){
+  const counts = stateCounts(state);
+  const payload = Object.assign({}, state, {
+    __meta:{ app:'mapa-abastecimento', schema:1, savedAt:new Date().toISOString(), counts }
+  });
+  return { txt: JSON.stringify(payload,null,2), savedAt: payload.__meta.savedAt, counts };
+}
+function parseBase(txt){
+  if(!txt || !txt.trim()) return null;
+  const data = JSON.parse(txt);
+  if(!data || typeof data!=='object') throw new Error('conteúdo não é um objeto JSON');
+  const meta = data.__meta || {};
+  return { data, meta, counts: stateCounts(data), savedAt: meta.savedAt || null };
+}
+function rerenderCurrent(){
+  const btn=document.querySelector('nav button.active');
+  renderView(btn ? btn.dataset.view : 'premissas');
+}
+
+/* ---------- permissões / estado visual ---------- */
+async function ensurePermission(handle, interactive){
+  const opts={mode:'readwrite'};
+  try{
+    if((await handle.queryPermission(opts))==='granted') return true;
+    if(!interactive) return false;
+    return (await handle.requestPermission(opts))==='granted';
+  }catch(e){ return false; }
+}
+function setFsMode(mode, err){
+  fsMode=mode; fsError=err||'';
+  updateFsStatus(); renderFsBanner();
+}
 function updateFsStatus(msg){
   const el=document.getElementById('fsStatus');
-  if(dirHandle){
-    el.classList.add('linked');
-    el.textContent = msg ? '✓ '+msg : 'Base: '+dirHandle.name+'/'+BASE_FILENAME;
-    el.title = dirHandle.name+'/'+BASE_FILENAME;
+  const tx=document.getElementById('fsStatusTxt');
+  if(!el||!tx) return;
+  el.classList.remove('linked','pending','error','saving');
+  const path = dirHandle ? dirHandle.name+'/'+BASE_FILENAME : '';
+  if(fsMode==='none'){
+    tx.textContent='Base: não vinculada';
+    el.title='Nenhuma pasta escolhida — os dados estão apenas neste navegador. Clique para escolher a pasta.';
+  }else if(fsMode==='pending'){
+    el.classList.add('pending');
+    tx.textContent='⚠ Reconectar: '+dirHandle.name;
+    el.title='A pasta está vinculada mas o navegador precisa da sua autorização para gravar. Clique para reconectar.';
+  }else if(fsMode==='error'){
+    el.classList.add('error');
+    tx.textContent='✕ Falha ao salvar na pasta';
+    el.title=fsError||'Erro ao gravar na pasta. Clique para tentar de novo.';
+  }else if(fsSaving){
+    el.classList.add('saving');
+    tx.textContent='Salvando em '+path+'…';
+    el.title=path;
+  }else if(fsDirty){
+    el.classList.add('saving');
+    tx.textContent='Alterações pendentes…';
+    el.title='Gravando em '+path;
   }else{
-    el.classList.remove('linked');
-    el.textContent='Base: não vinculada';
+    el.classList.add('linked');
+    tx.textContent = msg ? '✓ '+msg : 'Base: '+path;
+    el.title = path + (fsLastSavedAt ? '\nÚltima gravação: '+fsFmtWhen(fsLastSavedAt) : '');
   }
 }
-async function ensurePermission(handle){
-  const opts={mode:'readwrite'};
-  if((await handle.queryPermission(opts))==='granted') return true;
-  return (await handle.requestPermission(opts))==='granted';
+function renderFsBanner(){
+  const b=document.getElementById('fsBanner'), t=document.getElementById('fsBannerTxt'), btn=document.getElementById('fsBannerBtn');
+  if(!b) return;
+  b.classList.remove('show','warn','bad');
+  if(fsMode==='pending'){
+    b.classList.add('show','warn');
+    t.innerHTML='<b>A base não está sendo gravada na pasta.</b> A pasta <b>'+dirHandle.name+'</b> continua vinculada, mas o navegador exige que você autorize a gravação nesta sessão. Até lá, as alterações ficam só neste navegador.';
+    btn.textContent='Reconectar agora'; btn.onclick=()=>reconnectFolder();
+  }else if(fsMode==='error'){
+    b.classList.add('show','bad');
+    t.innerHTML='<b>Falha ao gravar na pasta:</b> '+ (fsError||'erro desconhecido') +'. As alterações estão só neste navegador — resolva antes de fechar o app.';
+    btn.textContent='Tentar salvar de novo'; btn.onclick=()=>saveBase(true);
+  }else if(fsMode==='none'){
+    b.classList.add('show','warn');
+    t.innerHTML='<b>Nenhuma pasta vinculada.</b> Os dados estão apenas neste navegador e podem ser perdidos se o cache do navegador for limpo. Escolha a pasta onde a base deve ser gravada.';
+    btn.textContent='Selecionar pasta'; btn.onclick=()=>pickFolder();
+  }
+}
+
+/* ---------- backups ---------- */
+async function backupDir(){
+  return await dirHandle.getDirectoryHandle(BACKUP_DIRNAME,{create:true});
+}
+async function writeBackup(name, txt){
+  try{
+    const bd=await backupDir();
+    const fh=await bd.getFileHandle(name,{create:true});
+    const w=await fh.createWritable(); await w.write(txt); await w.close();
+    return name;
+  }catch(e){ console.warn('backup falhou',e); return null; }
+}
+async function backupExists(name){
+  try{ const bd=await backupDir(); await bd.getFileHandle(name,{create:false}); return true; }
+  catch(e){ return false; }
+}
+async function pruneBackups(){
+  try{
+    const bd=await backupDir();
+    const diarios=[];
+    for await (const [nome,h] of bd.entries()){
+      if(h.kind==='file' && /^base_\d{4}-\d{2}-\d{2}\.json$/.test(nome)) diarios.push(nome);
+    }
+    diarios.sort();
+    while(diarios.length>BACKUP_KEEP){ const n=diarios.shift(); try{ await bd.removeEntry(n); }catch(e){} }
+  }catch(e){ /* pruning é best-effort */ }
+}
+
+/* ---------- leitura / escrita do arquivo ---------- */
+async function readBaseRaw(){
+  if(!fileHandle) fileHandle = await dirHandle.getFileHandle(BASE_FILENAME,{create:true});
+  const f=await fileHandle.getFile();
+  return await f.text();
+}
+async function atomicWrite(txt){
+  // grava em .tmp e renomeia quando o navegador suporta — evita arquivo truncado se algo falhar no meio
+  try{
+    if(typeof FileSystemFileHandle!=='undefined' && FileSystemFileHandle.prototype.move){
+      const tmp=await dirHandle.getFileHandle(BASE_FILENAME+'.tmp',{create:true});
+      const w=await tmp.createWritable(); await w.write(txt); await w.close();
+      await tmp.move(BASE_FILENAME);
+      fileHandle=await dirHandle.getFileHandle(BASE_FILENAME,{create:false});
+      return;
+    }
+  }catch(e){ /* segue para a escrita direta */ }
+  if(!fileHandle) fileHandle=await dirHandle.getFileHandle(BASE_FILENAME,{create:true});
+  const w=await fileHandle.createWritable(); await w.write(txt); await w.close();
+}
+
+/**
+ * Grava a sessão atual no arquivo da pasta.
+ * opts.interactive — pode pedir permissão / mostrar alertas
+ * opts.force       — ignora a trava anti-esvaziamento
+ */
+async function writeBaseFile(opts){
+  opts=opts||{};
+  if(!dirHandle) return false;
+  if(fsSaving){ fsDirty=true; return false; }
+  fsSaving=true; updateFsStatus();
+  try{
+    if(!(await ensurePermission(dirHandle, !!opts.interactive))){
+      setFsMode('pending');
+      fsSaving=false; updateFsStatus();
+      return false;
+    }
+    const atual = serializeState();
+
+    // ---- trava de segurança: não deixa uma sessão vazia apagar uma base cheia
+    let anterior=null;
+    try{ anterior = parseBase(await readBaseRaw()); }catch(e){ anterior=null; }
+    if(anterior && anterior.counts.__total>0 && atual.counts.__total===0 && !opts.force){
+      fsSaving=false;
+      setFsMode('error','a sessão está vazia e o arquivo tem '+anterior.counts.__total+' registros — gravação bloqueada para não apagar a base');
+      if(opts.interactive){
+        alert('Gravação bloqueada.\n\nA sessão atual está vazia e o arquivo da pasta tem '+anterior.counts.__total+
+              ' registros. Salvar agora apagaria a base.\n\nUse "Recarregar da pasta" para trazer os dados do arquivo.');
+      }
+      return false;
+    }
+
+    // ---- backup diário: preserva o conteúdo anterior uma vez por dia
+    if(anterior){
+      const hoje='base_'+new Date().toISOString().slice(0,10)+'.json';
+      if(!(await backupExists(hoje))){
+        await writeBackup(hoje, JSON.stringify(anterior.data,null,2));
+        await pruneBackups();
+      }
+    }
+
+    await atomicWrite(atual.txt);
+
+    fsLastSavedAt=atual.savedAt;
+    fsDirty=false; fsSaving=false;
+    fsSyncSet({dirName:dirHandle.name, savedAt:atual.savedAt, total:atual.counts.__total});
+    setFsMode('ready');
+    updateFsStatus('Salvo em '+dirHandle.name+' às '+new Date().toLocaleTimeString('pt-BR'));
+    setTimeout(()=>{ if(fsMode==='ready' && !fsDirty && !fsSaving) updateFsStatus(); }, 4000);
+    return true;
+  }catch(e){
+    fsSaving=false;
+    setFsMode('error', e.message||String(e));
+    if(opts.interactive) alert('Falha ao salvar base na pasta: '+(e.message||e));
+    return false;
+  }
+}
+
+/* ---------- autosave ---------- */
+function scheduleFolderSave(){
+  if(fsSuppressAutosave || !dirHandle) return;
+  fsDirty=true;
+  updateFsStatus();
+  clearTimeout(fsTimer);
+  fsTimer=setTimeout(()=>{ writeBaseFile({interactive:false}); }, 1200);
+}
+function flushFolderSave(){
+  if(!dirHandle || !fsDirty) return;
+  clearTimeout(fsTimer);
+  writeBaseFile({interactive:false});
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushFolderSave(); });
+window.addEventListener('beforeunload', e=>{
+  if(dirHandle && (fsDirty||fsSaving||fsMode==='pending'||fsMode==='error')){
+    flushFolderSave();
+    e.preventDefault(); e.returnValue='';
+    return '';
+  }
+});
+
+/* ---------- diálogo de conflito ---------- */
+function fsConflictDialog(info){
+  return new Promise(resolve=>{
+    const bg=document.getElementById('modalFsConflict');
+    const cmp=document.getElementById('fsConflictCmp');
+    const ch=document.getElementById('fsConflictChoices');
+    const lt=info.localCounts.__total, ft=info.fileCounts.__total;
+
+    const linhas = FS_COUNT_KEYS.filter(([k])=>info.localCounts[k]||info.fileCounts[k]);
+    const painel=(titulo,quando,counts,outros,rec)=>
+      `<div class="side${rec?' recommended':''}">
+         <h4>${titulo}</h4><div class="when">${quando}</div>
+         <div class="tot">${fmt(counts.__total)}<small>registros no total</small></div>
+         <ul>${linhas.map(([k,l])=>`<li><span>${l}</span><b class="${counts[k]>outros[k]?'':''}">${fmt(counts[k])}</b></li>`).join('')}</ul>
+       </div>`;
+
+    cmp.innerHTML =
+      painel('📝 Sessão atual (navegador)', 'Em uso agora'+(info.localSavedAt?' — última gravação em '+fsFmtWhen(info.localSavedAt):''),
+             info.localCounts, info.fileCounts, lt>=ft) +
+      painel('📁 Arquivo na pasta', 'Salvo em '+fsFmtWhen(info.fileSavedAt), info.fileCounts, info.localCounts, ft>lt);
+
+    const fechar=v=>{ bg.classList.remove('show'); ch.innerHTML=''; resolve(v); };
+    ch.innerHTML=
+      `<button class="primary" data-v="local"><b>Manter a sessão atual e gravar na pasta</b>
+         <span>Os ${fmt(lt)} registros abertos agora passam a ser a base oficial. O arquivo atual da pasta é copiado para <code>backups/</code> antes de ser substituído.</span></button>`+
+      `<button class="danger" data-v="file"><b>Carregar o arquivo da pasta</b>
+         <span>Substitui a sessão atual pelos ${fmt(ft)} registros do arquivo. A sessão atual é copiada para <code>backups/</code> antes, para poder ser recuperada.</span></button>`+
+      `<button data-v="cancel"><b>Cancelar</b>
+         <span>Não grava e não carrega nada. A pasta continua vinculada e nada é alterado.</span></button>`;
+    ch.querySelectorAll('button').forEach(b=>b.onclick=()=>fechar(b.dataset.v));
+    bg.classList.add('show');
+  });
+}
+
+/* ---------- adoção dos dados do arquivo ---------- */
+async function backupCurrentSession(motivo){
+  if(!dirHandle) return null;
+  try{
+    const c=stateCounts(state);
+    if(!c.__total) return null;
+    return await writeBackup('sessao_'+motivo+'_'+fsStamp(new Date())+'.json', serializeState().txt);
+  }catch(e){ return null; }
+}
+function adoptFileData(data){
+  fsSuppressAutosave=true;
+  try{
+    const limpo=Object.assign({}, data);
+    delete limpo.__meta;
+    state=Object.assign({}, FS_EMPTY_STATE, limpo);
+    ensureState();
+    save();
+    rerenderCurrent();
+  }finally{ fsSuppressAutosave=false; }
+  fsDirty=false;
+}
+
+/**
+ * Decide o que fazer quando a pasta é vinculada / reconectada.
+ * Nunca substitui a sessão em silêncio quando os dois lados têm dados.
+ */
+async function syncWithFolder(opts){
+  opts=opts||{};
+  let arquivo=null, erroLeitura=null;
+  try{ arquivo = parseBase(await readBaseRaw()); }
+  catch(e){ erroLeitura=e; }
+
+  if(erroLeitura){
+    setFsMode('error','não foi possível ler '+BASE_FILENAME+': '+erroLeitura.message);
+    if(opts.interactive) alert('Não foi possível ler a base da pasta: '+erroLeitura.message+'\n\nA sessão atual foi preservada. O arquivo não será sobrescrito automaticamente.');
+    return;
+  }
+
+  const local = stateCounts(state);
+  const fileT = arquivo ? arquivo.counts.__total : 0;
+  const sync  = fsSyncGet();
+
+  // arquivo novo/vazio → a sessão vira a base
+  if(!arquivo || fileT===0){
+    setFsMode('ready');
+    if(local.__total>0){ await writeBaseFile({interactive:!!opts.interactive}); }
+    else { updateFsStatus(); }
+    return;
+  }
+  // sessão vazia → carrega o arquivo (não há nada a perder)
+  if(local.__total===0){
+    adoptFileData(arquivo.data);
+    fsLastSavedAt=arquivo.savedAt;
+    fsSyncSet({dirName:dirHandle.name, savedAt:arquivo.savedAt, total:fileT});
+    setFsMode('ready');
+    if(opts.interactive) alert('Base carregada da pasta ('+fmt(fileT)+' registros).');
+    return;
+  }
+  // o arquivo é exatamente a nossa última gravação → a sessão é a versão corrente
+  if(sync && sync.savedAt && arquivo.savedAt && sync.savedAt===arquivo.savedAt){
+    fsLastSavedAt=arquivo.savedAt;
+    setFsMode('ready');
+    flushFolderSave();
+    return;
+  }
+  // conteúdo idêntico → nada a decidir
+  if(JSON.stringify(local)===JSON.stringify(arquivo.counts) && sync && sync.total===fileT){
+    fsLastSavedAt=arquivo.savedAt;
+    setFsMode('ready');
+    return;
+  }
+
+  // divergência real → o usuário decide
+  setFsMode('ready');
+  const escolha = await fsConflictDialog({
+    localCounts: local, fileCounts: arquivo.counts,
+    localSavedAt: (sync&&sync.savedAt)||null, fileSavedAt: arquivo.savedAt
+  });
+  if(escolha==='local'){
+    await writeBaseFile({interactive:true});
+  }else if(escolha==='file'){
+    const b=await backupCurrentSession('antes-de-carregar');
+    adoptFileData(arquivo.data);
+    fsLastSavedAt=arquivo.savedAt;
+    fsSyncSet({dirName:dirHandle.name, savedAt:arquivo.savedAt, total:fileT});
+    setFsMode('ready');
+    alert('Base carregada da pasta ('+fmt(fileT)+' registros).'+
+          (b?'\n\nA sessão anterior foi salva em backups/'+b:''));
+  }else{
+    updateFsStatus();
+  }
+}
+
+/* ---------- ações do usuário ---------- */
+function fsUnsupported(){
+  if(!window.showDirectoryPicker){
+    alert('Este navegador não permite gravar direto em uma pasta.\n\nUse o Google Chrome ou o Microsoft Edge no computador. '+
+          'Enquanto isso, use "Exportar dados" para guardar a base manualmente.');
+    return true;
+  }
+  return false;
 }
 async function pickFolder(){
-  if(!window.showDirectoryPicker){
-    alert('Seu navegador não suporta seleção de pasta (use Chrome/Edge). Você ainda pode usar Exportar/Importar dados.');
+  if(fsUnsupported()) return;
+  try{
+    const h=await window.showDirectoryPicker({mode:'readwrite', id:'mapaAbastecimentoBase', startIn:'documents'});
+    if(!(await ensurePermission(h,true))){ alert('Permissão de gravação negada para a pasta.'); return; }
+    dirHandle=h; fileHandle=null;
+    await fsIdbSet('dirHandle', h);
+    const sync=fsSyncGet();
+    if(!sync || sync.dirName!==h.name) fsSyncSet({dirName:h.name, savedAt:null, total:0});
+    setFsMode('ready');
+    await syncWithFolder({interactive:true});
+  }catch(e){
+    if(e.name!=='AbortError') alert('Falha ao selecionar pasta: '+(e.message||e));
+  }
+}
+async function reconnectFolder(){
+  if(!dirHandle){ return pickFolder(); }
+  if(!(await ensurePermission(dirHandle,true))){
+    setFsMode('pending');
+    alert('O navegador não autorizou a gravação na pasta "'+dirHandle.name+'".\n\nSe a pasta foi movida ou removida, use "Selecionar pasta" para vinculá-la de novo.');
     return;
   }
-  try{
-    dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
-    await fsIdbSet('dirHandle', dirHandle);
-    fileHandle = await dirHandle.getFileHandle(BASE_FILENAME,{create:true});
-    await loadFromFile(true);
-    updateFsStatus();
-  }catch(e){
-    if(e.name!=='AbortError') alert('Falha ao selecionar pasta: '+e.message);
+  fileHandle=null;
+  setFsMode('ready');
+  await syncWithFolder({interactive:true});
+}
+async function saveBase(interactive){
+  if(fsUnsupported()) return;
+  if(!dirHandle){
+    alert('Nenhuma pasta vinculada.\n\nEscolha a pasta onde a base deve ser gravada — a partir daí o app salva sempre nela.');
+    return pickFolder();
+  }
+  if(fsMode==='pending'){ return reconnectFolder(); }
+  clearTimeout(fsTimer);
+  const ok=await writeBaseFile({interactive:true});
+  if(ok && interactive!==false){
+    updateFsStatus('Base salva em '+dirHandle.name+'/'+BASE_FILENAME);
   }
 }
-async function loadFromFile(silent){
-  try{
-    const f=await fileHandle.getFile();
-    const txt=await f.text();
-    if(txt.trim()){
-      const data=JSON.parse(txt);
-      state=Object.assign({empurradores:[],rotas:[],medias:{},viagens:[],abastecimentos:[],fornecedores:[],justificativas:[],historicoPrecos:[],budgetVolume:{},estoques:[]}, data);
-      ensureState();
-      save();
-      renderView(document.querySelector('nav button.active').dataset.view);
-      if(!silent) alert('Base carregada da pasta.');
-    }else if(!silent){
-      alert('Arquivo de base vazio — será criado ao salvar.');
-    }
-  }catch(e){
-    if(!silent) alert('Não foi possível ler a base: '+e.message);
-  }
+async function reloadFromFolder(){
+  if(!dirHandle){ alert('Nenhuma pasta vinculada.'); return; }
+  if(!(await ensurePermission(dirHandle,true))){ setFsMode('pending'); return reconnectFolder(); }
+  let arquivo=null;
+  try{ arquivo=parseBase(await readBaseRaw()); }
+  catch(e){ alert('Não foi possível ler a base da pasta: '+(e.message||e)); return; }
+  if(!arquivo || !arquivo.counts.__total){ alert('O arquivo da pasta está vazio — não há o que carregar.'); return; }
+  const local=stateCounts(state);
+  if(local.__total>0 && !confirm(
+      'Isto substitui os '+fmt(local.__total)+' registros desta sessão pelos '+fmt(arquivo.counts.__total)+
+      ' registros do arquivo (salvo em '+fsFmtWhen(arquivo.savedAt)+').\n\n'+
+      'Uma cópia da sessão atual será gravada em backups/. Continuar?')) return;
+  const b=await backupCurrentSession('antes-de-recarregar');
+  adoptFileData(arquivo.data);
+  fsLastSavedAt=arquivo.savedAt;
+  fsSyncSet({dirName:dirHandle.name, savedAt:arquivo.savedAt, total:arquivo.counts.__total});
+  setFsMode('ready');
+  alert('Base recarregada da pasta.'+(b?'\n\nA sessão anterior foi salva em backups/'+b:''));
 }
-async function saveBase(){
-  if(!window.showDirectoryPicker){
-    alert('Seu navegador não suporta salvar em pasta. Use "Exportar dados".');
-    return;
-  }
-  if(!dirHandle){ await pickFolder(); }
-  if(!dirHandle) return;
-  try{
-    if(!(await ensurePermission(dirHandle))){ alert('Permissão de escrita negada.'); return; }
-    if(!fileHandle) fileHandle = await dirHandle.getFileHandle(BASE_FILENAME,{create:true});
-    const w=await fileHandle.createWritable();
-    await w.write(JSON.stringify(state,null,2));
-    await w.close();
-    updateFsStatus('Base salva às '+new Date().toLocaleTimeString('pt-BR'));
-    setTimeout(updateFsStatus, 4000);
-  }catch(e){
-    alert('Falha ao salvar base: '+e.message);
-  }
-}
+
+/* ---------- religa a pasta ao abrir o app ---------- */
 async function restoreFolderHandle(){
   try{
     const h=await fsIdbGet('dirHandle');
-    if(!h) return;
-    dirHandle=h;
-    updateFsStatus();
-    if((await h.queryPermission({mode:'readwrite'}))==='granted'){
-      fileHandle=await dirHandle.getFileHandle(BASE_FILENAME,{create:true});
-      await loadFromFile(true);
+    if(!h){ setFsMode('none'); return; }
+    dirHandle=h; fileHandle=null;
+    let perm='prompt';
+    try{ perm=await h.queryPermission({mode:'readwrite'}); }catch(e){ perm='prompt'; }
+    if(perm==='granted'){
+      setFsMode('ready');
+      await syncWithFolder({interactive:false});
+    }else{
+      // o navegador exige um gesto do usuário para reautorizar — avisa em vez de salvar só local
+      setFsMode('pending');
     }
-  }catch(e){ /* handle inválido */ }
+  }catch(e){
+    setFsMode('error','pasta vinculada não pôde ser aberta: '+(e.message||e));
+  }
 }
+
 document.getElementById('btnPickFolder').addEventListener('click', pickFolder);
-document.getElementById('btnSaveBase').addEventListener('click', saveBase);
+document.getElementById('btnSaveBase').addEventListener('click', ()=>saveBase(true));
+document.getElementById('btnReloadBase').addEventListener('click', reloadFromFolder);
+document.getElementById('fsStatus').addEventListener('click', ()=>{
+  if(fsMode==='none') pickFolder();
+  else if(fsMode==='pending') reconnectFolder();
+  else if(fsMode==='error') saveBase(true);
+  else saveBase(true);
+});
 
 /* =========================================================
    TEMA CLARO / ESCURO

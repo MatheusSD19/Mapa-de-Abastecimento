@@ -98,6 +98,10 @@
   th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;}
   tr:hover td{background:rgba(56,189,248,0.05);}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  /* Linha de totais no rodape das tabelas */
+  tr.total-row td{background:var(--panel2);font-weight:700;color:var(--txt);border-top:2px solid var(--accent);}
+  tr.total-row:hover td{background:var(--panel2);}
+  tr.total-row td .sub{font-weight:400;color:var(--muted);font-size:10px;}
   /* Ordenação por clique no cabeçalho */
   table.sortable th.th-sort{cursor:pointer;user-select:none;white-space:nowrap;}
   table.sortable th.th-sort:hover{background:var(--panel);color:var(--txt);}
@@ -499,6 +503,8 @@
         </div>
         <button class="btn secondary" id="btnAbastFilterReset">Mês atual</button>
         <div class="spacer"></div>
+        <button class="btn secondary" id="btnAbastExportXlsx" title="Baixa os abastecimentos do filtro atual em Excel (.xlsx), com a linha de totais e uma aba de resumo.">⬇ Exportar Excel</button>
+        <button class="btn secondary" id="btnAbastExportCsv" title="Baixa os abastecimentos do filtro atual em CSV (separador ponto-e-virgula), pronto para abrir no Excel.">⬇ CSV</button>
         <button class="btn" id="btnNovoAbast">+ Novo Abastecimento</button>
       </div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblAbast"></table></div>
@@ -509,6 +515,7 @@
         <span class="item" title="Abastecimento concluído; entra no estoque e no custo."><span class="sw st-Realizado"></span>Realizado</span>
         <span class="item" title="Não aconteceu; fica no histórico mas não soma em nada."><span class="sw st-Cancelado"></span>Cancelado</span>
       </div>
+      <div class="hint">A coluna <b>Total pago (R$)</b> é <b>litros × preço (R$/L)</b>. A linha de <b>TOTAL</b> no rodapé soma tudo o que está no filtro — abastecimentos <b>Cancelados</b> não entram em litros nem em R$ — e o preço no rodapé é a <b>média ponderada</b> pelos litros. Use <b>Exportar Excel</b> para baixar a mesma lista em .xlsx (com totais, filtro automático e uma aba de <b>Resumo</b> por combustível e por status) ou <b>CSV</b> para um arquivo leve já no padrão brasileiro.</div>
     </div>
   </section>
 
@@ -2698,6 +2705,8 @@ document.getElementById('btnNovoAbast').addEventListener('click', ()=>openAbastM
 ['abastFiltro','abastFiltroIni','abastFiltroFim','abastFiltroEmp'].forEach(id=>{
   document.getElementById(id).addEventListener('change', renderAbast);
 });
+document.getElementById('btnAbastExportXlsx').addEventListener('click', ()=>abastExportXlsx());
+document.getElementById('btnAbastExportCsv').addEventListener('click', ()=>abastExportCSV());
 document.getElementById('btnAbastFilterReset').addEventListener('click', ()=>{
   document.getElementById('abastFiltro').value='';
   document.getElementById('abastFiltroEmp').value='';
@@ -2940,8 +2949,14 @@ function initAbastFilters(){
   sel.value=cur||'';
 }
 
-function renderAbast(){
-  initAbastFilters();
+// Total pago no abastecimento = litros x preco (R$/L). Cancelado nao gera custo.
+function abastTotalPago(a){
+  if(!a || a.status==='Cancelado') return 0;
+  const q=Number(a.qtd)||0, p=Number(a.preco)||0;
+  return q*p;
+}
+// Lista do filtro atual da tela de Abastecimentos (usada na tabela e nas exportacoes)
+function abastFiltrados(){
   const filtro=document.getElementById('abastFiltro').value;
   const ini=document.getElementById('abastFiltroIni').value;
   const fim=document.getElementById('abastFiltroFim').value;
@@ -2953,26 +2968,48 @@ function renderAbast(){
   if(fim) list=list.filter(a=>!a.data || a.data<=fim);
   if(empF) list=list.filter(a=>a.empId===empF);
   list.sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  return list;
+}
+// Totais da lista filtrada — cancelados ficam de fora de litros/R$
+function abastTotais(list){
+  const validos=list.filter(a=>a.status!=='Cancelado');
+  const litros=validos.reduce((s,a)=>s+(Number(a.qtd)||0),0);
+  const pago=validos.reduce((s,a)=>s+abastTotalPago(a),0);
+  // preco medio ponderado considera so o que tem preco lancado
+  const comPreco=validos.filter(a=>Number(a.preco)>0);
+  const litrosComPreco=comPreco.reduce((s,a)=>s+(Number(a.qtd)||0),0);
+  const precoMedio=litrosComPreco?comPreco.reduce((s,a)=>s+abastTotalPago(a),0)/litrosComPreco:0;
+  return {
+    registros:list.length,
+    cancelados:list.length-validos.length,
+    litros, pago, precoMedio,
+    litrosRealizados:list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+(Number(a.qtd)||0),0),
+    pagoRealizado:list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+abastTotalPago(a),0)
+  };
+}
+
+function renderAbast(){
+  initAbastFilters();
+  const list=abastFiltrados();
 
   // KPIs (refletindo o filtro)
   const kpis=document.getElementById('abastKpis');
   const counts={};
   STATUS.forEach(s=>counts[s]=list.filter(a=>a.status===s).length);
-  const totalL=list.filter(a=>a.status!=='Cancelado').reduce((s,a)=>s+(a.qtd||0),0);
-  const totalRealL=list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+(a.qtd||0),0);
-  const totalRealValor=list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+((a.qtd||0)*(a.preco||0)),0);
+  const tot=abastTotais(list);
   const atrasados=list.filter(isAbastAtrasado).length;
   kpis.innerHTML=
     STATUS.map(s=>`<div class="kpi kpi-${s}" title="${STATUS_HINT[s]||''}"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
-    `<div class="kpi"><div class="v">${fmt(totalL)}</div><div class="l">Litros (filtro)</div></div>`+
-    `<div class="kpi"><div class="v">${fmt(totalRealL)}</div><div class="l">Litros Realizados</div></div>`+
-    `<div class="kpi"><div class="v">${fmtMoney(totalRealValor)}</div><div class="l">R$ Realizado</div></div>`+
+    `<div class="kpi" title="Soma dos litros de todos os abastecimentos do filtro, exceto os cancelados."><div class="v">${fmt(tot.litros)}</div><div class="l">Litros (filtro)</div></div>`+
+    `<div class="kpi" title="Soma de (litros × preço) de todos os abastecimentos do filtro, exceto os cancelados."><div class="v">${fmtMoney(tot.pago)}</div><div class="l">R$ total (filtro)</div></div>`+
+    `<div class="kpi"><div class="v">${fmt(tot.litrosRealizados)}</div><div class="l">Litros Realizados</div></div>`+
+    `<div class="kpi"><div class="v">${fmtMoney(tot.pagoRealizado)}</div><div class="l">R$ Realizado</div></div>`+
     (atrasados ? `<div class="kpi"><div class="v" style="color:var(--bad)">${atrasados}</div><div class="l">⚠ Atrasados</div></div>` : '');
 
   const t=document.getElementById('tblAbast');
   if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum abastecimento no filtro.</td></tr>'; return; }
   let h=`<tr><th></th><th>Data</th><th>Empurrador</th><th>Cidade</th><th>Combustível</th><th class="num">Quantidade (L)</th>
-    <th>Status</th><th class="num">Preço (R$/L)</th><th>Fornecedor</th><th>NF</th><th>Observação</th><th>Ações</th></tr>`;
+    <th>Status</th><th class="num">Preço (R$/L)</th><th class="num" title="Litros × preço (R$/L). Abastecimentos cancelados não somam.">Total pago (R$)</th><th>Fornecedor</th><th>NF</th><th>Observação</th><th>Ações</th></tr>`;
   list.forEach(a=>{
     const e=empById(a.empId);
     const d=a.data?parseDate(a.data).toLocaleDateString('pt-BR'):'—';
@@ -2991,12 +3028,23 @@ function renderAbast(){
         </select>
       </td>
       <td class="num">${a.preco?fmt2(a.preco):'—'}</td>
+      <td class="num">${(a.status!=='Cancelado' && a.qtd && a.preco)?fmtMoney(abastTotalPago(a)):'—'}</td>
       <td>${forn?forn.nome:'—'}</td>
       <td>${a.nf||'—'}${a.saving?` <span class="tag" style="background:var(--ok);color:#001018;" title="Saving registrado">Saving</span>`:''}</td>
       <td>${a.obs||''}</td>
       <td><button class="btn sm secondary" onclick="openAbastModal('${a.id}')">Editar</button></td>
     </tr>`;
   });
+  // Linha de TOTAIS (cancelados ficam de fora dos somatorios)
+  h+=`<tr class="total-row" title="Totais do filtro atual. Abastecimentos cancelados não entram em litros nem em R$.">
+    <td></td>
+    <td colspan="4">TOTAL <span class="sub">— ${fmt(tot.registros)} registro(s)${tot.cancelados?` · ${fmt(tot.cancelados)} cancelado(s) fora do total`:''}</span></td>
+    <td class="num">${fmt(tot.litros)}</td>
+    <td></td>
+    <td class="num" title="Preço médio ponderado pelos litros dos abastecimentos com preço lançado.">${tot.precoMedio?fmt2(tot.precoMedio):'—'}</td>
+    <td class="num">${fmtMoney(tot.pago)}</td>
+    <td colspan="4"></td>
+  </tr>`;
   t.innerHTML=h;
 }
 function changeAbastStatus(id,val){
@@ -3015,6 +3063,156 @@ function changeAbastStatus(id,val){
     return;
   }
   a.status=val; save(); renderAbast(); renderMapa();
+}
+
+/* ---------------------------------------------------------
+   ABASTECIMENTOS — exportacao para Excel (.xlsx) e CSV
+   Exporta exatamente a lista do filtro da tela, ja com a
+   linha de TOTAIS e uma aba de resumo por combustivel/status.
+   --------------------------------------------------------- */
+const ABAST_EXPORT_COLS = ['Data','Empurrador','Cidade','Combustível','Status','Quantidade (L)','Preço (R$/L)','Total pago (R$)','Fornecedor','NF','Observação'];
+
+function abastExportRows(list){
+  return list.map(a=>{
+    const e=empById(a.empId);
+    const forn = a.fornecedorId ? state.fornecedores.find(f=>f.id===a.fornecedorId) : null;
+    const cancel = a.status==='Cancelado';
+    return [
+      a.data?parseDate(a.data):'',
+      e?e.nome:'',
+      a.cidade||'',
+      COMB_LABEL[a.comb]||a.comb||'',
+      a.status||'',
+      Number(a.qtd)||0,
+      Number(a.preco)||'',
+      // cancelado nao gera custo; sem preco lancado, celula fica vazia (e nao R$ 0,00)
+      (cancel || !Number(a.preco) || !Number(a.qtd)) ? '' : abastTotalPago(a),
+      forn?forn.nome:'',
+      a.nf||'',
+      a.obs||''
+    ];
+  });
+}
+
+function abastExportFileName(ext){
+  const ini=document.getElementById('abastFiltroIni').value;
+  const fim=document.getElementById('abastFiltroFim').value;
+  const per=(ini||fim)?`_${ini||'inicio'}_a_${fim||'fim'}`:`_${todayStr()}`;
+  return `abastecimentos${per}.${ext}`;
+}
+
+function abastExportXlsx(){
+  const list=abastFiltrados();
+  if(!list.length){ alert('Não há abastecimentos no filtro atual para exportar.'); return; }
+  if(typeof XLSX==='undefined'){ alert('Biblioteca de Excel indisponível (sem internet?). Use o botão CSV — ele abre direto no Excel.'); return; }
+  const tot=abastTotais(list);
+  const dados=abastExportRows(list);
+
+  const aoa=[ABAST_EXPORT_COLS.slice(), ...dados];
+  aoa.push([tot.cancelados?'TOTAL (exclui cancelados)':'TOTAL','','','','',tot.litros,tot.precoMedio||'',tot.pago,'','','']);
+  const ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true});
+
+  const lastRow=aoa.length;              // 1-based, inclui a linha de totais
+  const dataLastRow=lastRow-1;           // ultima linha de dados
+  ws['!cols']=[{wch:11},{wch:20},{wch:18},{wch:14},{wch:12},{wch:14},{wch:13},{wch:16},{wch:22},{wch:14},{wch:40}];
+  // Formatos numericos por coluna (A=data, F=litros, G=preco, H=total pago)
+  const fmtCol={0:'dd/mm/yyyy', 5:'#,##0', 6:'#,##0.0000', 7:'R$ #,##0.00'};
+  for(let r=1;r<=lastRow-1;r++){
+    Object.keys(fmtCol).forEach(c=>{
+      const ref=XLSX.utils.encode_cell({r:r,c:Number(c)});
+      if(ws[ref] && ws[ref].v!=='' && ws[ref].v!=null) ws[ref].z=fmtCol[c];
+    });
+  }
+  // Filtro automatico sobre o cabecalho + dados (a linha de TOTAIS fica fora)
+  if(dataLastRow>=2) ws['!autofilter']={ref:`A1:K${dataLastRow}`};
+  // Congela o cabecalho ao rolar
+  ws['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Abastecimentos');
+  XLSX.utils.book_append_sheet(wb, abastResumoSheet(list, tot), 'Resumo');
+  XLSX.writeFile(wb, abastExportFileName('xlsx'));
+}
+
+// Aba de resumo: consolidado, por combustivel e por status
+function abastResumoSheet(list, tot){
+  const ini=document.getElementById('abastFiltroIni').value;
+  const fim=document.getElementById('abastFiltroFim').value;
+  const empF=document.getElementById('abastFiltroEmp').value;
+  const empNome=empF?(empById(empF)||{}).nome:'Todas';
+  const filtro=document.getElementById('abastFiltro').value||'Todos';
+
+  const aoa=[
+    ['Resumo de Abastecimentos'],
+    ['Período', (ini?parseDate(ini).toLocaleDateString('pt-BR'):'—')+' a '+(fim?parseDate(fim).toLocaleDateString('pt-BR'):'—')],
+    ['Embarcação', empNome||'Todas'],
+    ['Status filtrado', filtro],
+    ['Gerado em', new Date().toLocaleString('pt-BR')],
+    [],
+    ['Registros', tot.registros],
+    ['Cancelados (fora dos totais)', tot.cancelados],
+    ['Litros', tot.litros],
+    ['Total pago (R$)', tot.pago],
+    ['Preço médio ponderado (R$/L)', tot.precoMedio||''],
+    [],
+    ['Por combustível','Registros','Litros','Total pago (R$)','Preço médio (R$/L)']
+  ];
+  const iCombHead=aoa.length-1;              // linha do cabecalho "Por combustivel"
+  const validos=list.filter(a=>a.status!=='Cancelado');
+  const combs=[...new Set(validos.map(a=>a.comb).filter(Boolean))];
+  combs.forEach(c=>{
+    const g=validos.filter(a=>a.comb===c);
+    const litros=g.reduce((s,a)=>s+(Number(a.qtd)||0),0);
+    const pago=g.reduce((s,a)=>s+abastTotalPago(a),0);
+    const comPreco=g.filter(a=>Number(a.preco)>0);
+    const litrosCP=comPreco.reduce((s,a)=>s+(Number(a.qtd)||0),0);
+    aoa.push([COMB_LABEL[c]||c, g.length, litros, pago, litrosCP?comPreco.reduce((s,a)=>s+abastTotalPago(a),0)/litrosCP:'']);
+  });
+  aoa.push(['TOTAL', validos.length, tot.litros, tot.pago, tot.precoMedio||'']);
+  const iCombEnd=aoa.length-1;
+  aoa.push([]);
+  aoa.push(['Por status','Registros','Litros','Total pago (R$)']);
+  const iStatHead=aoa.length-1;
+  STATUS.forEach(st=>{
+    const g=list.filter(a=>a.status===st);
+    if(!g.length) return;
+    aoa.push([st, g.length, g.reduce((s,a)=>s+(Number(a.qtd)||0),0), g.reduce((s,a)=>s+abastTotalPago(a),0)]);
+  });
+
+  const iStatEnd=aoa.length-1;
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:32},{wch:12},{wch:14},{wch:18},{wch:20}];
+  const setZ=(r,c,z)=>{ const ref=XLSX.utils.encode_cell({r:r,c:c}); if(ws[ref] && ws[ref].t==='n') ws[ref].z=z; };
+  // Bloco consolidado (linhas 7 a 11 do aoa, indices 6..10)
+  setZ(6,1,'#,##0'); setZ(7,1,'#,##0'); setZ(8,1,'#,##0'); setZ(9,1,'R$ #,##0.00'); setZ(10,1,'#,##0.0000');
+  for(let r=iCombHead+1;r<=iCombEnd;r++){ setZ(r,1,'#,##0'); setZ(r,2,'#,##0'); setZ(r,3,'R$ #,##0.00'); setZ(r,4,'#,##0.0000'); }
+  for(let r=iStatHead+1;r<=iStatEnd;r++){ setZ(r,1,'#,##0'); setZ(r,2,'#,##0'); setZ(r,3,'R$ #,##0.00'); }
+  return ws;
+}
+
+function abastExportCSV(){
+  const list=abastFiltrados();
+  if(!list.length){ alert('Não há abastecimentos no filtro atual para exportar.'); return; }
+  const tot=abastTotais(list);
+  // pt-BR: separador ";" e decimal "," — o Excel abre sem precisar de assistente
+  const esc=v=>{ const s=String(v==null?'':v); return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const numBR=(n,dec)=>(Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec,useGrouping:false});
+  const lines=[ABAST_EXPORT_COLS.join(';')];
+  abastExportRows(list).forEach(r=>{
+    lines.push([
+      r[0]?r[0].toLocaleDateString('pt-BR'):'',
+      r[1], r[2], r[3], r[4],
+      numBR(r[5],0), r[6]?numBR(r[6],4):'', r[7]!==''?numBR(r[7],2):'',
+      r[8], r[9], r[10]
+    ].map(esc).join(';'));
+  });
+  lines.push([tot.cancelados?'TOTAL (exclui cancelados)':'TOTAL','','','','',numBR(tot.litros,0),tot.precoMedio?numBR(tot.precoMedio,4):'',numBR(tot.pago,2),'','',''].map(esc).join(';'));
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url; link.download=abastExportFileName('csv'); link.click();
+  URL.revokeObjectURL(url);
 }
 
 /* =========================================================

@@ -82,6 +82,9 @@
   .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:16px;}
   .card h2{font-size:14px;margin-bottom:10px;color:var(--accent);display:flex;align-items:center;gap:8px;}
   .card h2 .sub{font-size:11px;color:var(--muted);font-weight:400;}
+  /* Sub-titulo dentro de um card (ex.: as duas tabelas da base de viagens) */
+  .imp-sub{margin:18px 0 8px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;font-weight:600;color:var(--txt);}
+  .imp-sub span{font-weight:400;font-size:11px;color:var(--muted);}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
   .field{display:flex;flex-direction:column;gap:3px;}
   .field label{font-size:11px;color:var(--muted);}
@@ -889,15 +892,23 @@
     </div>
 
     <div class="card">
-      <h2>Histórico de Viagens <span class="sub src-tag real">dado real</span></h2>
+      <h2>Viagens <span class="sub src-tag real">dado real</span> <span class="sub">— histórico e apontamentos na mesma importação</span></h2>
       <div class="row">
-        <button class="tool-btn" id="btnImportHistViag">Importar Excel / CSV</button>
-        <input type="file" id="fileHistViag" accept=".csv,.xlsx,.xls,.xlsm" style="display:none">
+        <button class="tool-btn" id="btnImportViagensBase">Importar Excel / CSV</button>
+        <input type="file" id="fileViagensBase" accept=".csv,.xlsx,.xls,.xlsm" style="display:none">
         <div class="spacer"></div>
-        <button class="btn secondary danger" id="btnClearHistViag">Limpar base</button>
+        <button class="btn secondary danger" id="btnClearHistViag">Limpar histórico</button>
+        <button class="btn secondary danger" id="btnClearApont">Limpar apontamentos</button>
       </div>
+      <div class="hint">Um único upload carrega as <b>duas tabelas</b> da base: <b>BD_VIAGENS</b> (histórico) e <b>BD_APONT_VIAGENS</b> (apontamentos), estejam elas em abas, intervalos nomeados ou tabelas do Excel. Cada tabela é reconhecida também pelo <b>cabeçalho</b>, então funciona mesmo com a aba renomeada. Se o arquivo trouxer só uma delas — ou for um <b>CSV</b>, que comporta uma tabela só —, a que existir é importada e a outra base <b>permanece intacta</b>.</div>
+
+      <div class="imp-sub">Histórico de Viagens <span>— tabela BD_VIAGENS</span></div>
       <div class="hint">Colunas esperadas: <b>Empurrador, Comand, Condição, Produto, Volume, Barcaças, Saída</b> (DD/MM/AAAA HH:MM), <b>Chegada</b> (DD/MM/AAAA HH:MM), <b>Trecho, Tempo, Diesel, HFO</b>. Diesel e HFO são o <b>consumo real</b> (litros) da viagem — "Diesel" é tratado como MGO. Cria automaticamente trechos/empurradores inexistentes.<br><b>Consumo zerado</b> (base ainda não atualizada): o Mapa usa a <b>estimativa</b> da média por barco/trecho/condição (marcada com <span style="color:var(--warn)">~</span>); quando o consumo real for importado, ele <b>substitui</b> a estimativa (marca <span style="color:var(--ok)">●</span>). HFO não é estimado para barcos que só usam MGO.</div>
       <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblHistViag"></table></div>
+
+      <div class="imp-sub">Apontamentos de Viagens <span>— tabela BD_APONT_VIAGENS</span></div>
+      <div class="hint">Colunas esperadas: <b>ID Viagem, Empurrador, Início, Fim, Tempo, Tempo 2</b> (horas em decimal), <b>Indicador, Item, Descrição, OEE, Mês, Calcular, M, Ano, Data Ref.</b> Cada apontamento é vinculado à viagem pelo <b>ID Viagem</b> — ao abrir uma viagem finalizada, os apontamentos aparecem como justificativas (ex.: para consumo/tempo). A coluna <b>Calcular</b> (Sim/Não) indica se o tempo entra no OEE, mas todos os apontamentos são considerados na gestão geral.</div>
+      <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblApont"></table></div>
     </div>
 
     <div class="card">
@@ -924,17 +935,6 @@
       <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblAbastReal"></table></div>
     </div>
 
-    <div class="card">
-      <h2>Apontamentos de Viagens <span class="sub src-tag real">dado real</span></h2>
-      <div class="row">
-        <button class="tool-btn" id="btnImportApont">Importar Excel / CSV</button>
-        <input type="file" id="fileApont" accept=".csv,.xlsx,.xls,.xlsm" style="display:none">
-        <div class="spacer"></div>
-        <button class="btn secondary danger" id="btnClearApont">Limpar base</button>
-      </div>
-      <div class="hint">Aba <b>Apontamentos</b> / tabela <b>BD_APONT_VIAGENS</b>. Colunas esperadas: <b>ID Viagem, Empurrador, Início, Fim, Tempo, Tempo 2</b> (horas em decimal), <b>Indicador, Item, Descrição, OEE, Mês, Calcular, M, Ano, Data Ref.</b> Cada apontamento é vinculado à viagem pelo <b>ID Viagem</b> — ao abrir uma viagem finalizada, os apontamentos aparecem como justificativas (ex.: para consumo/tempo). A coluna <b>Calcular</b> (Sim/Não) indica se o tempo entra no OEE, mas todos os apontamentos são considerados na gestão geral.</div>
-      <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblApont"></table></div>
-    </div>
 
     <div class="card">
       <h2>Budget Mensal de Volume por Cidade <span class="sub">— volume previsto (t) por mês/cidade</span></h2>
@@ -5268,13 +5268,37 @@ function limparSinalizacaoOrfas(){
 }
 
 /* ---- Histórico de Viagens (real) ---- */
-function processHistViagRows(rows){
-  if(!rows.length){ alert('Arquivo vazio.'); return; }
+/* ---- Reconhecimento das duas tabelas da base de viagens ----
+   Historico (BD_VIAGENS) e Apontamentos (BD_APONT_VIAGENS) saem da MESMA base.
+   Os detectores abaixo identificam cada tabela pelo cabecalho, o que permite
+   importar as duas de uma vez (e achar a tabela mesmo com a aba renomeada). */
+function isHeaderViagensRow(r){
+  if(!Array.isArray(r)) return false; const H=r.map(na);
+  return H.some(h=>h.includes('empurrador')||h.includes('embarca')) && H.some(h=>h.includes('saida')||h.includes('partida'));
+}
+function isHeaderApontRow(r){
+  if(!Array.isArray(r)) return false; const H=r.map(na);
+  return H.some(h=>h.includes('viagem')) && H.some(h=>h.includes('indicador')||h.includes('item'));
+}
+// Que tabela ha nestas linhas? 'viagens' | 'apont' | null (procura o cabecalho nas 1as linhas)
+function detectTipoBaseViagens(rows){
+  const lim=Math.min((rows||[]).length, 40);
+  for(let i=0;i<lim;i++){ if(isHeaderViagensRow(rows[i])) return 'viagens'; }
+  for(let i=0;i<lim;i++){ if(isHeaderApontRow(rows[i])) return 'apont'; }
+  return null;
+}
+// Padroniza o retorno dos processadores: avisa na tela, a menos que o chamador
+// (import unificado) peca silencio para juntar tudo num aviso so.
+function impResult(opts, res){
+  if(!(opts&&opts.silent) && res.msg) alert(res.msg);
+  return res;
+}
+
+function processHistViagRows(rows, opts){
+  if(!rows.length) return impResult(opts,{sucesso:false, aplicados:0, ignorados:0, msg:'Arquivo vazio.'});
   // A tabela BD_VIAGENS pode não começar na 1ª linha (lemos a aba "BD" inteira, que pode
   // ter títulos/linhas antes). Localiza a linha de cabeçalho: a que tem Empurrador + Saída.
-  const isHeader=r=>{ if(!Array.isArray(r)) return false; const H=r.map(na);
-    return H.some(h=>h.includes('empurrador')||h.includes('embarca')) && H.some(h=>h.includes('saida')||h.includes('partida')); };
-  let hIdx=rows.findIndex(isHeader); if(hIdx<0) hIdx=0;
+  let hIdx=rows.findIndex(isHeaderViagensRow); if(hIdx<0) hIdx=0;
   const header=(rows[hIdx]||[]).map(na); const find=headerFinder(header);
   // "Condição" precisa ser exata: existe também "Condição Viagem" (outra informação, não usada).
   const findExact=(...keys)=>header.findIndex(h=>keys.some(k=>h===na(k)));
@@ -5285,7 +5309,7 @@ function processHistViagRows(rows){
     tempo:find('tempo'), diesel:find('diesel','mgo'), hfo:find('hfo'),
     idViag:header.findIndex(h=>h.includes('id')&&h.includes('viagem')),
   };
-  if(idx.emp<0 || idx.saida<0){ alert('Cabeçalho inválido. Esperado ao menos: Empurrador e Saída.'); return; }
+  if(idx.emp<0 || idx.saida<0) return impResult(opts,{sucesso:false, aplicados:0, ignorados:0, msg:'Cabeçalho inválido no Histórico de Viagens. Esperado ao menos: Empurrador e Saída.'});
   // Diagnóstico: colunas esperadas que NÃO foram encontradas no cabeçalho lido
   const colsEsperadas=[['Comandante',idx.comand],['Condição',idx.cond],['Trecho',idx.trecho],
     ['Volume',idx.vol],['Tempo',idx.tempo],['MGO/Diesel',idx.diesel],['HFO',idx.hfo],['ID_Viagem',idx.idViag]];
@@ -5334,7 +5358,7 @@ function processHistViagRows(rows){
   const nOver=overlappingTripIds().size;
   const sync=sincronizarViagensProgramadas();
   save(); renderHistViagTable(); renderImpStatus(); renderRot(); renderEmp(); renderViagens();
-  alert(`Histórico de Viagens importado.\nViagens aplicadas: ${ok}\nIgnoradas (sem empurrador/saída): ${skip}`+
+  const msg=`Histórico de Viagens importado.\nViagens aplicadas: ${ok}\nIgnoradas (sem empurrador/saída): ${skip}`+
     `\n\nViagens finalizadas automaticamente: ${sync.finalizadas}`+
     (sync.criadas?`\nViagens criadas a partir da importação (sem programação equivalente, ex.: A Contrabordo): ${sync.criadas}`:'')+
     (sync.pendentes?`\nViagens atualizadas aguardando consumo (não finalizadas): ${sync.pendentes}`:'')+
@@ -5343,7 +5367,8 @@ function processHistViagRows(rows){
       `\npara não sobrepor viagem programada com viagem executada no Mapa de Giros.`:'')+
     (nOver?`\n\n⚠ ${nOver} viagem(ns) com sobreposição de horário no mesmo empurrador (marcadas na tabela). No Mapa, o trecho sobreposto entra só na viagem principal — sem dupla contagem.`:'')+
     (colsNaoAchadas.length?`\n\n⚠ Colunas não encontradas no cabeçalho: ${colsNaoAchadas.join(', ')}. Verifique o nome exato dessas colunas na planilha BD_VIAGENS.`:'')+
-    `\n\nO casamento com as viagens programadas usa o ID_Viagem (padrão NOME-EMPURRADOR_AAMMDD). A base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
+    `\n\nO casamento com as viagens programadas usa o ID_Viagem (padrão NOME-EMPURRADOR_AAMMDD). A base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`;
+  return impResult(opts,{sucesso:true, aplicados:ok, ignorados:skip, msg});
 }
 function renderHistViagTable(){
   const t=document.getElementById('tblHistViag'); if(!t) return;
@@ -5499,13 +5524,11 @@ function apontHoras(t2, t1){
   const n=parseNum(t1);
   return isNaN(n)?0:n;
 }
-function processApontamentosRows(rows){
-  if(!rows.length){ alert('Arquivo vazio.'); return; }
+function processApontamentosRows(rows, opts){
+  if(!rows.length) return impResult(opts,{sucesso:false, aplicados:0, ignorados:0, msg:'Arquivo vazio.'});
   // A tabela BD_APONT_VIAGENS pode não começar na 1ª linha. Localiza o cabeçalho:
   // linha que tem "ID Viagem" (ou "ID"+"Viagem") e algum de Indicador/Item.
-  const isHeader=r=>{ if(!Array.isArray(r)) return false; const H=r.map(na);
-    return H.some(h=>h.includes('viagem')) && H.some(h=>h.includes('indicador')||h.includes('item')); };
-  let hIdx=rows.findIndex(isHeader); if(hIdx<0) hIdx=0;
+  let hIdx=rows.findIndex(isHeaderApontRow); if(hIdx<0) hIdx=0;
   const header=(rows[hIdx]||[]).map(na); const find=headerFinder(header);
   const idx={
     idViag:header.findIndex(h=>h.includes('viagem')),
@@ -5516,7 +5539,7 @@ function processApontamentosRows(rows){
     descricao:find('descricao','descrição','descr'), oee:find('oee'),
     calcula:find('calcula'), ano:header.findIndex(h=>h==='ano'), dataRef:find('data ref','dataref','data ref.'),
   };
-  if(idx.idViag<0 && idx.item<0){ alert('Cabeçalho inválido. Esperado ao menos: ID Viagem e Item/Indicador.'); return; }
+  if(idx.idViag<0 && idx.item<0) return impResult(opts,{sucesso:false, aplicados:0, ignorados:0, msg:'Cabeçalho inválido nos Apontamentos. Esperado ao menos: ID Viagem e Item/Indicador.'});
   let ok=0, skip=0; const novos=[];
   for(let i=hIdx+1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
@@ -5548,7 +5571,8 @@ function processApontamentosRows(rows){
   state.apontamentos=novos;
   save(); renderApontImpTable(); renderImpStatus(); renderEmp();
   const nViag=new Set(novos.map(a=>na(a.idViagem)).filter(Boolean)).size;
-  alert(`Apontamentos importados.\nApontamentos aplicados: ${ok}\nIgnorados (linhas vazias): ${skip}\nViagens distintas com apontamento: ${nViag}\n\nA base anterior foi substituída. Os apontamentos aparecem nas viagens finalizadas (vínculo por ID Viagem) e no módulo 📝 Apontamentos.`);
+  const msg=`Apontamentos importados.\nApontamentos aplicados: ${ok}\nIgnorados (linhas vazias): ${skip}\nViagens distintas com apontamento: ${nViag}\n\nA base anterior foi substituída. Os apontamentos aparecem nas viagens finalizadas (vínculo por ID Viagem) e no módulo 📝 Apontamentos.`;
+  return impResult(opts,{sucesso:true, aplicados:ok, ignorados:skip, viagens:nViag, msg});
 }
 function renderApontImpTable(){
   const t=document.getElementById('tblApont'); if(!t) return;
@@ -5567,10 +5591,91 @@ function renderApontImpTable(){
   t.innerHTML=h;
 }
 
-wireImport('btnImportHistViag','fileHistViag', processHistViagRows, {sheet:'BD_VIAGENS', altSheets:['BD']});
 wireImport('btnImportEstoque','fileEstoque', processEstoqueRows);
 wireImport('btnImportAbastReal','fileAbastReal', processAbastRealRows);
-wireImport('btnImportApont','fileApont', processApontamentosRows, {sheet:'BD_APONT_VIAGENS', altSheets:['Apontamentos']});
+
+/* ---------------------------------------------------------
+   IMPORTACAO UNIFICADA — Historico de Viagens + Apontamentos
+   As duas tabelas vem da MESMA base (BD_VIAGENS e BD_APONT_VIAGENS,
+   normalmente em abas diferentes do mesmo arquivo), entao um unico
+   upload carrega as duas. Se o arquivo trouxer so uma delas (ou for um
+   CSV, que so comporta uma tabela), importa a que existir e avisa —
+   a outra base fica intacta.
+   --------------------------------------------------------- */
+function sheetRowsByName(wb, preferName, altSheets){
+  const picked=pickSheet(wb, preferName, altSheets);
+  if(!picked) return null;
+  try{ return XLSX.utils.sheet_to_json(picked.ws,{header:1,range:picked.range}); }
+  catch(e){ return null; }
+}
+// Localiza, no arquivo inteiro, as linhas do Historico e dos Apontamentos.
+// 1o tenta pelos nomes conhecidos (aba, intervalo nomeado ou aba que contem a
+// tabela); o que faltar, procura varrendo as abas e identificando pelo cabecalho.
+function acharTabelasBaseViagens(wb){
+  let viagens=null, apont=null;
+  const porNome=sheetRowsByName(wb,'BD_VIAGENS',['BD']);
+  if(porNome && detectTipoBaseViagens(porNome)==='viagens') viagens=porNome;
+  const porNomeAp=sheetRowsByName(wb,'BD_APONT_VIAGENS',['Apontamentos']);
+  if(porNomeAp && detectTipoBaseViagens(porNomeAp)==='apont') apont=porNomeAp;
+  if(!viagens || !apont){
+    for(const nome of wb.SheetNames){
+      if(viagens && apont) break;
+      let rows; try{ rows=XLSX.utils.sheet_to_json(wb.Sheets[nome],{header:1}); }catch(e){ continue; }
+      const tipo=detectTipoBaseViagens(rows);
+      if(tipo==='viagens' && !viagens) viagens=rows;
+      else if(tipo==='apont' && !apont) apont=rows;
+    }
+  }
+  return {viagens, apont};
+}
+// Processa o que foi encontrado e junta tudo num aviso unico.
+function processarBaseViagens(achadas, wb){
+  const {viagens, apont}=achadas;
+  if(!viagens && !apont){
+    const abas=wb?('\n\nAbas encontradas no arquivo: '+wb.SheetNames.join(', ')):'';
+    alert('Não encontrei nenhuma das duas tabelas neste arquivo.\n\nEsperado: BD_VIAGENS (Histórico de Viagens) e/ou BD_APONT_VIAGENS (Apontamentos) — identificadas pela aba, pelo intervalo nomeado ou pelo cabeçalho.'+abas);
+    return;
+  }
+  const partes=[];
+  const rv=viagens?processHistViagRows(viagens,{silent:true}):null;
+  const ra=apont?processApontamentosRows(apont,{silent:true}):null;
+  if(rv) partes.push('━━ HISTÓRICO DE VIAGENS ━━\n'+rv.msg);
+  if(ra) partes.push('━━ APONTAMENTOS ━━\n'+ra.msg);
+  // O que nao veio no arquivo continua valendo — a base anterior nao e apagada.
+  if(!viagens) partes.push('━━ HISTÓRICO DE VIAGENS ━━\nNão encontrado neste arquivo (BD_VIAGENS). A base de viagens que já estava carregada foi mantida.');
+  if(!apont)   partes.push('━━ APONTAMENTOS ━━\nNão encontrados neste arquivo (BD_APONT_VIAGENS). A base de apontamentos que já estava carregada foi mantida.');
+  const feitos=[rv&&rv.sucesso?'viagens':null, ra&&ra.sucesso?'apontamentos':null].filter(Boolean);
+  alert('Importação da base de viagens concluída'+(feitos.length?(' — '+feitos.join(' + ')):'')+'.\n\n'+partes.join('\n\n'));
+}
+
+function wireImportBaseViagens(btnId, fileId){
+  const btn=document.getElementById(btnId), inp=document.getElementById(fileId);
+  if(!btn||!inp) return;
+  btn.addEventListener('click', ()=>inp.click());
+  inp.addEventListener('change', e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const isCsv=/\.csv$/i.test(file.name);
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        if(isCsv){
+          // CSV comporta uma tabela so: identifica pelo cabecalho qual das duas e.
+          const rows=parseCSV(ev.target.result);
+          const tipo=detectTipoBaseViagens(rows);
+          if(tipo==='viagens') processarBaseViagens({viagens:rows, apont:null}, null);
+          else if(tipo==='apont') processarBaseViagens({viagens:null, apont:rows}, null);
+          else alert('Não reconheci o conteúdo deste CSV.\n\nPara o Histórico de Viagens o cabeçalho precisa ter Empurrador e Saída; para os Apontamentos, ID Viagem e Indicador/Item.\n\nDica: exporte o arquivo em Excel (.xlsx) para importar as duas tabelas de uma vez.');
+        }else{
+          const wb=XLSX.read(ev.target.result,{type:'array'});
+          processarBaseViagens(acharTabelasBaseViagens(wb), wb);
+        }
+      }catch(err){ alert('Falha ao ler arquivo: '+err.message); }
+      e.target.value='';
+    };
+    if(isCsv) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
+  });
+}
+wireImportBaseViagens('btnImportViagensBase','fileViagensBase');
 function clearBase(arrName, label, renderFn){
   if(!confirm('Limpar toda a base de '+label+' importada?')) return;
   state[arrName]=[]; save(); renderFn(); renderImpStatus();

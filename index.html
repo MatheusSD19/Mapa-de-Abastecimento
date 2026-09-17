@@ -303,6 +303,56 @@
   .small-tbl input{width:100%;}
   .modal.wide{width:680px;}
   .modal.xwide{width:780px;}
+  /* ===== Mapa de Giros (por cidade) ===== */
+  table.giro{font-size:11px;}
+  table.giro td,table.giro th{padding:3px 5px;white-space:nowrap;}
+  table.giro tr.giro-h1 th{position:sticky;top:0;z-index:12;}
+  table.giro tr.giro-h2 th{position:sticky;top:24px;z-index:11;}
+  table.giro td.col-data,table.giro td.col-calado{position:sticky;background:var(--panel);font-weight:600;z-index:5;}
+  table.giro th.col-data,table.giro td.col-data{left:0;min-width:86px;width:86px;}
+  table.giro th.col-calado,table.giro td.col-calado{min-width:52px;width:52px;}
+  table.giro td.col-calado{left:86px;font-weight:500;text-align:center;}
+  table.giro tr.weekend td.col-data,table.giro tr.weekend td.col-calado{background:var(--panel2);}
+  table.giro tr.giro-h1 th.col-data,table.giro tr.giro-h2 th.col-data{position:sticky;left:0;z-index:22;background:var(--panel2);}
+  table.giro tr.giro-h1 th.col-calado,table.giro tr.giro-h2 th.col-calado{position:sticky;left:86px;z-index:22;background:var(--panel2);}
+  table.giro .cid-head{text-align:center;font-size:12px;font-weight:700;}
+  table.giro .cid-sep{border-right:3px solid var(--line);}
+  table.giro .sub-sep{border-right:1px dashed var(--line);}
+  table.giro tr.today td{background:rgba(56,189,248,0.13);}
+  table.giro tr.today td.col-data{background:rgba(56,189,248,0.22);}
+  table.giro td.giro-click{cursor:pointer;}
+  table.giro td.giro-click:hover{background:rgba(56,189,248,0.12);}
+  table.giro .calado-chip{font-weight:700;}
+  table.giro .calado-chip.sim{color:var(--accent);}
+  .navio-chip{border-radius:4px;padding:1px 6px;font-weight:700;display:inline-block;cursor:grab;}
+  .navio-chip:active{cursor:grabbing;}
+  .navio-chip.nav-grao{background:var(--ok);color:#04210f;}
+  .navio-chip.nav-fertz{background:var(--warn);color:#2b1a00;}
+  .navio-cont{opacity:.85;font-weight:600;}
+  .barc-badge{display:inline-block;font-weight:700;letter-spacing:.02em;}
+  .barc-V{color:var(--muted);} .barc-C{color:var(--ok);} .barc-F{color:var(--warn);}
+  .est-cell{cursor:pointer;line-height:1.35;}
+  .est-cell:hover{outline:1px dashed var(--accent);outline-offset:-2px;}
+  .est-cell .qtd{font-weight:700;}
+  .est-cell .vol{font-size:9.5px;color:var(--muted);display:block;}
+  .est-cell.est-manual{background:rgba(167,139,250,.10);}
+  .est-cell.est-neg .qtd{color:var(--bad);}
+  .est-cell .mark{font-size:9px;color:var(--info);margin-right:2px;}
+  .term-status{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;cursor:pointer;user-select:none;border:1px solid transparent;}
+  .term-status.ts-Disponivel{background:rgba(148,163,184,.20);color:var(--muted);border-color:rgba(148,163,184,.45);}
+  .term-status.ts-Operando{background:rgba(34,197,94,.20);color:var(--ok);border-color:rgba(34,197,94,.55);}
+  .term-status.ts-Indisponivel{background:rgba(239,68,68,.20);color:var(--bad);border-color:rgba(239,68,68,.55);}
+  .term-status:hover{filter:brightness(1.25);}
+  .giro-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px;}
+  .giro-legend .item{display:inline-flex;align-items:center;gap:5px;}
+  .giro-legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block;}
+  .cid-card{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--panel2);margin-bottom:8px;}
+  .cid-card h4{font-size:12px;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .tag{display:inline-block;padding:1px 6px;border-radius:10px;font-size:9.5px;font-weight:700;}
+  .tag.origem{background:rgba(56,189,248,.20);color:var(--accent);}
+  .tag.navio{background:rgba(34,197,94,.20);color:var(--ok);}
+  .tag.principal{background:rgba(167,139,250,.20);color:var(--info);}
+  .tag.secund{background:rgba(148,163,184,.20);color:var(--muted);}
   /* ===== Dashboard ===== */
   .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
   .dash-grid .full{grid-column:1 / -1;}
@@ -390,7 +440,8 @@
     <button data-view="dashboard">📊 Dashboard</button>
     <button data-view="premissas" class="active">Premissas</button>
     <button data-view="medias">Médias de Consumo</button>
-    <button data-view="mapa">Mapa de Giros</button>
+    <button data-view="mapa">Mapa de Abastecimentos</button>
+    <button data-view="giros">🔄 Mapa de Giros</button>
     <button data-view="abastecimentos">Abastecimentos</button>
     <button data-view="viagens">Viagens</button>
     <button data-view="apontamentos">📝 Apontamentos</button>
@@ -441,6 +492,70 @@
       </div>
       <div style="margin-top:12px;overflow:auto;"><table id="tblRot"></table></div>
     </div>
+
+    <div class="card">
+      <h2>Cidades <span class="sub">— blocos do Mapa de Giros</span></h2>
+      <div class="row">
+        <div class="field"><label>Nome da cidade</label><input id="cidNome" placeholder="Ex.: Miritituba"></div>
+        <div class="field"><label>Cor no Mapa</label><input type="color" id="cidCor" value="#0ea5e9" style="width:54px;height:32px;padding:2px;"></div>
+        <div class="field" style="flex:1 1 220px;"><label>Apelidos / siglas nas rotas</label><input id="cidApelidos" placeholder="Ex.: MIR, Itaituba, ITB" style="width:100%"></div>
+        <div class="field">
+          <label>Perfil</label>
+          <div class="chk-group">
+            <label><input type="checkbox" id="cidOrigem"> Origem (ETC — carrega/descarrega em terminal)</label>
+            <label><input type="checkbox" id="cidNavio" checked> Opera navio</label>
+          </div>
+        </div>
+        <button class="btn" id="btnAddCid">Adicionar Cidade</button>
+        <button class="btn secondary" id="btnCancelCid" style="display:none;">Cancelar edição</button>
+      </div>
+      <div class="hint">Os <b>apelidos</b> ligam a cidade aos trechos já cadastrados: se as rotas usam siglas (ex.: <code>MIR x STM</code>), informe <code>MIR</code> em Miritituba e <code>STM</code> em Santarém para que as viagens apareçam no bloco certo. A ordem das cidades define a ordem dos blocos no Mapa de Giros (use ▲▼). <b>Origem</b> não opera navio: lá ficam os terminais que carregam grão nas barcaças vazias e descarregam as barcaças de fertilizante. <b>Opera navio</b> libera as colunas Navio, Barcaças (acumuladas) e Estoque 3º.</div>
+      <div style="margin-top:12px;overflow:auto;"><table id="tblCid"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Terminais <span class="sub">— pranchas de carregamento e descarga nas cidades de origem</span></h2>
+      <div class="row">
+        <div class="field"><label>Cidade</label><select id="termCidade" style="min-width:150px"></select></div>
+        <div class="field"><label>Nome do terminal</label><input id="termNome" placeholder="Ex.: Terminal 1"></div>
+        <div class="field"><label>Tipo</label>
+          <select id="termTipo"><option value="principal">Principal</option><option value="secundario">Secundário</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Prancha carregamento (t/h)</label><input type="number" step="any" id="termPranchaCar" placeholder="0"></div>
+        <div class="field"><label>Horas/dia carregamento</label><input type="number" step="any" id="termHorasCar" value="24" placeholder="24"></div>
+        <div class="field"><label>Prancha descarga Fertz (t/h)</label><input type="number" step="any" id="termPranchaDes" placeholder="0"></div>
+        <div class="field"><label>Horas/dia descarga</label><input type="number" step="any" id="termHorasDes" value="24" placeholder="24"></div>
+        <button class="btn" id="btnAddTerm">Adicionar Terminal</button>
+        <button class="btn secondary" id="btnCancelTerm" style="display:none;">Cancelar edição</button>
+      </div>
+      <div class="hint">O terminal <b>principal</b> recebe automaticamente as barcaças que chegam à cidade. O <b>secundário</b> só opera quando barcaças são direcionadas manualmente para ele (clique na célula de Estoque do terminal no Mapa de Giros). Alguns terminais não rodam 24 h — informe as horas efetivas por dia.</div>
+      <div style="margin-top:12px;overflow:auto;"><table id="tblTerm"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Calado Médio <span class="sub">— volume médio por barcaça e calado previsto do rio</span></h2>
+      <div class="row">
+        <button class="tool-btn" id="btnImportCalado">Importar Excel / CSV</button>
+        <input type="file" id="fileCalado" accept=".csv,.xlsx,.xls,.xlsm" style="display:none">
+        <div class="field"><label>Calado padrão da viagem (m)</label><input type="number" step="0.1" id="giroCaladoPadrao" style="width:90px"></div>
+        <div class="field"><label>Cenário de calado usado nas sugestões</label>
+          <select id="giroCaladoCenario" style="min-width:150px">
+            <option value="medio">Médio</option>
+            <option value="pessimista">Pessimista</option>
+            <option value="otimista">Otimista</option>
+          </select>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn secondary danger" id="btnClearCalado">Limpar base</button>
+      </div>
+      <div class="hint">O mesmo arquivo traz as duas tabelas: <b>CONF_CALADO_VOLUME</b> (colunas <b>Calado (m)</b>, <b>Box</b>, <b>Rake</b>, <b>Média</b>) — volume médio de uma barcaça para cada calado — e <b>CALC_SIMULACAO</b> (colunas <b>Data, Calado Pessimista, Calado Médio, Calado Otimista</b>) — calado previsto do rio por dia, que aparece na coluna <b>Calado</b> do Mapa de Giros. Valores entre dois calados da tabela são interpolados. O calado previsto em <b>D+1</b> é usado para sugerir o calado das barcaças (fim da operação do navio de fertilizante e saída do próximo comboio na origem).</div>
+      <div class="row" style="margin-top:10px;gap:14px;align-items:flex-start;">
+        <div style="flex:1 1 280px;max-height:320px;overflow:auto;"><table id="tblCaladoVol"></table></div>
+        <div style="flex:1 1 320px;max-height:320px;overflow:auto;"><table id="tblCaladoSim"></table></div>
+      </div>
+    </div>
   </section>
 
   <!-- ================= MEDIAS ================= -->
@@ -461,7 +576,7 @@
   <!-- ================= MAPA ================= -->
   <section class="view" id="view-mapa">
     <div class="card">
-      <h2>Mapa de Giros e Abastecimento</h2>
+      <h2>Mapa de Abastecimentos <span class="sub">— consumo, estoque e abastecimento por empurrador</span></h2>
       <div class="row">
         <div class="field"><label>Data inicial</label><input type="date" id="mapaIni"></div>
         <div class="field"><label>Data final</label><input type="date" id="mapaFim"></div>
@@ -477,6 +592,44 @@
       </div>
       <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia, ou na coluna <b>Abast.</b> para programar um abastecimento. Arraste o chip de uma viagem ou de um abastecimento para mover a data — segurando <b>Ctrl</b> ao soltar, o item é <b>copiado</b> sem alterar o original.</div>
       <div class="mapa-wrap" id="mapaWrap" style="margin-top:12px;"></div>
+    </div>
+  </section>
+
+  <!-- ================= MAPA DE GIROS ================= -->
+  <section class="view" id="view-giros">
+    <div class="card">
+      <h2>Mapa de Giros <span class="sub">— giro das barcaças por cidade, terminais e navios</span></h2>
+      <div class="row">
+        <div class="field"><label>Data inicial</label><input type="date" id="giroIni"></div>
+        <div class="field"><label>Data final</label><input type="date" id="giroFim"></div>
+        <div class="field"><label>Cidades exibidas</label>
+          <div class="dropdown" id="cidFilterDrop">
+            <button type="button" class="dropdown-btn" id="cidFilterBtn">Todas as cidades ▾</button>
+            <div class="dropdown-panel" id="cidFilterPanel"></div>
+          </div>
+        </div>
+        <button class="btn secondary" id="btnGiroRefresh">Atualizar</button>
+        <div class="spacer"></div>
+        <button class="btn secondary" id="btnGiroIndisp">🛠 Indisponibilidade</button>
+        <button class="btn" id="btnNovoNavio">+ Novo Navio</button>
+        <button class="btn" id="btnNovaViagemGiro">+ Nova Viagem</button>
+      </div>
+      <div class="hint">As <b>viagens são as mesmas</b> do Mapa de Abastecimentos — o que muda aqui muda lá, e vice-versa. Clique numa célula vazia de <b>Viagem</b> para programar uma saída daquela cidade, de <b>Navio</b> para lançar um navio começando naquele dia, ou de <b>Estoque</b> para informar barcaças/volume manualmente. Arraste o chip da viagem ou do navio para mudar a data (com <b>Ctrl</b> ao soltar, copia). Na coluna <b>Status</b> do terminal, um clique alterna Indisponível; <b>Ctrl+clique</b> abre o período de indisponibilidade.</div>
+      <div class="mapa-wrap" id="giroWrap" style="margin-top:12px;"></div>
+      <div class="giro-legend">
+        <span>Legenda:</span>
+        <span class="item"><span class="barc-badge barc-V">V</span> vazias</span>
+        <span class="item"><span class="barc-badge barc-C">C</span> carregadas (grão p/ navio)</span>
+        <span class="item"><span class="barc-badge barc-F">F</span> com fertilizante</span>
+        <span class="item"><span class="sw" style="background:var(--ok)"></span> navio de grão (produz vazias)</span>
+        <span class="item"><span class="sw" style="background:var(--warn)"></span> navio de fertilizante (consome vazias)</span>
+        <span class="item">📍 estoque informado manualmente</span>
+        <span class="item"><span style="color:var(--bad);font-weight:700">negativo</span> = falta de barcaça no dia</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Navios <span class="sub">— programação de atendimento</span></h2>
+      <div id="giroNaviosTbl" style="overflow:auto;"></div>
     </div>
   </section>
 
@@ -867,7 +1020,7 @@
   <section class="view" id="view-importacoes">
     <div class="card">
       <h2>Importações <span class="sub">— centralize aqui todas as cargas de dados (Excel / CSV)</span></h2>
-      <div class="hint">Os dados reais importados (Histórico de Viagens, Estoque/Horas Máquina e Abastecimentos) são <b>soberanos</b>: substituem as estimativas no Mapa de Giros nos dias em que há informação real. Onde não houver dado importado para o dia, seguem valendo as estimativas já existentes no mapa.</div>
+      <div class="hint">Os dados reais importados (Histórico de Viagens, Estoque/Horas Máquina e Abastecimentos) são <b>soberanos</b>: substituem as estimativas no Mapa de Abastecimentos nos dias em que há informação real. Onde não houver dado importado para o dia, seguem valendo as estimativas já existentes no mapa.</div>
       <div class="imp-status" id="impStatus" style="margin-top:12px;"></div>
     </div>
 
@@ -901,7 +1054,7 @@
         <div class="spacer"></div>
         <button class="btn secondary danger" id="btnClearEstoque">Limpar base</button>
       </div>
-      <div class="hint">Colunas esperadas: <b>ADM_Data</b> (DD/MM/AAAA HH:MM), <b>ADM_Empurrador, Estoque Diesel, Estoque HFO, Horas MCP, Horas MCA</b>. <b>Estoque</b>: quando há mais de uma leitura no mesmo dia, considera-se apenas a <b>primeira (~06:00)</b> — Estoque Diesel é tratado como MGO e vira <b>âncora soberana</b> do Mapa de Giros. <b>Horas MCP/MCA</b>: cada valor já é o total de horas trabalhadas desde a última aferição, portanto são <b>somadas</b> no período.</div>
+      <div class="hint">Colunas esperadas: <b>ADM_Data</b> (DD/MM/AAAA HH:MM), <b>ADM_Empurrador, Estoque Diesel, Estoque HFO, Horas MCP, Horas MCA</b>. <b>Estoque</b>: quando há mais de uma leitura no mesmo dia, considera-se apenas a <b>primeira (~06:00)</b> — Estoque Diesel é tratado como MGO e vira <b>âncora soberana</b> do Mapa de Abastecimentos. <b>Horas MCP/MCA</b>: cada valor já é o total de horas trabalhadas desde a última aferição, portanto são <b>somadas</b> no período.</div>
       <div style="margin-top:12px;overflow:auto;max-height:340px;"><table id="tblEstoque"></table></div>
     </div>
 
@@ -985,6 +1138,13 @@
       <div class="field"><label>Horário de saída (24h)</label><input type="text" id="mvHora" value="08:00" placeholder="HH:MM" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" style="width:90px;"></div>
       <div class="field" id="mvVolField"><label>Volume previsto (Ton) <span class="muted">[Carregada]</span></label><input type="number" id="mvVol" placeholder="0"></div>
     </div>
+    <div class="row" id="mvBarcRow" style="gap:8px;align-items:flex-end;">
+      <div class="field"><label>Barcaças vazias <span class="muted">(V)</span></label><input type="number" min="0" step="1" id="mvBarcV" placeholder="0" style="width:92px"></div>
+      <div class="field"><label>Carregadas <span class="muted">(C — grão p/ navio)</span></label><input type="number" min="0" step="1" id="mvBarcC" placeholder="0" style="width:92px"></div>
+      <div class="field"><label>Com Fertz <span class="muted">(F)</span></label><input type="number" min="0" step="1" id="mvBarcF" placeholder="0" style="width:92px"></div>
+      <div class="field"><label>Calado das barcaças (m)</label><input type="number" step="0.1" min="0" id="mvCalado" placeholder="4,5" style="width:92px"></div>
+    </div>
+    <div id="mvBarcCalc" class="hint"></div>
     <div id="mvCalc" class="hint"></div>
     <div id="mvMediaBox" style="display:none;margin-top:8px;padding:10px 12px;border:1px solid var(--warn);border-radius:8px;background:rgba(245,158,11,.08)"></div>
     <div class="modal-actions">
@@ -992,6 +1152,91 @@
       <button class="btn sm" id="mvFinalizar" style="display:none;background:var(--info);color:#1a103d;">Finalizar Viagem</button>
       <button class="btn secondary" data-close>Cancelar</button>
       <button class="btn" id="mvSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL NAVIO ===== -->
+<div class="modal-bg" id="modalNavio">
+  <div class="modal wide">
+    <h3 id="mnTitle">Novo Navio</h3>
+    <div class="row">
+      <div class="field" style="flex:1;"><label>Nome do navio</label><input id="mnNome" style="width:100%" placeholder="Ex.: MV Santos"></div>
+      <div class="field" style="flex:1;"><label>Cidade</label><select id="mnCidade" style="width:100%"></select></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1;"><label>Produto</label>
+        <select id="mnProduto" style="width:100%">
+          <option value="Soja">Soja (Grão)</option>
+          <option value="Milho">Milho (Grão)</option>
+          <option value="Fertilizante">Fertilizante</option>
+        </select>
+      </div>
+      <div class="field"><label>Volume (t)</label><input type="number" step="any" id="mnVolume" placeholder="0" style="width:120px"></div>
+      <div class="field"><label>Início da operação</label><input type="date" id="mnData"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Modo de duração</label>
+        <select id="mnModo" style="min-width:170px">
+          <option value="dias">Tempo de operação (dias)</option>
+          <option value="prancha">Prancha média (t/h)</option>
+        </select>
+      </div>
+      <div class="field" id="mnDiasField"><label>Dias de operação</label><input type="number" step="any" id="mnDias" placeholder="0" style="width:110px"></div>
+      <div class="field" id="mnPranchaField" style="display:none;"><label>Prancha média (t/h)</label><input type="number" step="any" id="mnPrancha" placeholder="0" style="width:120px"></div>
+      <div class="field"><label>Horas de operação por dia</label><input type="number" step="any" id="mnHorasDia" value="24" style="width:110px"></div>
+    </div>
+    <div class="row" id="mnCaladoRow" style="display:none;">
+      <div class="field"><label>Calado previsto das barcaças (m)</label><input type="number" step="0.1" id="mnCalado" placeholder="4,5" style="width:130px"></div>
+      <div class="field" style="flex:1;"><div id="mnCaladoHint" class="hint" style="margin-top:0"></div></div>
+    </div>
+    <div id="mnCalc" class="hint"></div>
+    <div class="modal-actions">
+      <button class="btn danger sm" id="mnDelete" style="display:none;">Excluir</button>
+      <button class="btn secondary" data-close>Cancelar</button>
+      <button class="btn" id="mnSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ESTOQUE DE BARCAÇAS (cidade / terminal / terceiro) ===== -->
+<div class="modal-bg" id="modalGiroEst">
+  <div class="modal wide">
+    <h3 id="mgeTitle">Estoque de barcaças</h3>
+    <div id="mgeCtx" class="hint" style="margin-bottom:10px;"></div>
+    <div class="row" style="gap:8px;align-items:flex-end;">
+      <div class="field"><label>Vazias (V)</label><input type="number" min="0" step="1" id="mgeV" placeholder="0" style="width:90px"></div>
+      <div class="field"><label>Carregadas (C)</label><input type="number" min="0" step="1" id="mgeC" placeholder="0" style="width:90px"></div>
+      <div class="field"><label>Com Fertz (F)</label><input type="number" min="0" step="1" id="mgeF" placeholder="0" style="width:90px"></div>
+    </div>
+    <div class="row" style="gap:8px;align-items:flex-end;">
+      <div class="field"><label>Volume de grão (t)</label><input type="number" step="any" id="mgeVolG" placeholder="0" style="width:130px"></div>
+      <div class="field"><label>Volume de fertilizante (t)</label><input type="number" step="any" id="mgeVolF" placeholder="0" style="width:150px"></div>
+      <div class="field"><label>Calado das barcaças (m)</label><input type="number" step="0.1" id="mgeCalado" placeholder="4,5" style="width:130px"></div>
+      <button class="btn secondary sm" id="mgeCalcVol" title="Calcula o volume pelo calado informado">Calcular volume pelo calado</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger sm" id="mgeDelete" style="display:none;">Remover lançamento</button>
+      <button class="btn secondary" data-close>Cancelar</button>
+      <button class="btn" id="mgeSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL INDISPONIBILIDADE DE TERMINAL ===== -->
+<div class="modal-bg" id="modalTermInd">
+  <div class="modal">
+    <h3>Indisponibilidade de Terminal</h3>
+    <div class="row"><div class="field" style="flex:1;"><label>Terminal</label><select id="mtiTerm" style="width:100%"></select></div></div>
+    <div class="row">
+      <div class="field"><label>De</label><input type="date" id="mtiIni"></div>
+      <div class="field"><label>Até</label><input type="date" id="mtiFim"></div>
+    </div>
+    <div class="row"><div class="field" style="flex:1;"><label>Motivo</label><input id="mtiMotivo" style="width:100%" placeholder="Ex.: manutenção / outra empresa"></div></div>
+    <div style="margin-top:10px;max-height:220px;overflow:auto;"><table id="mtiTbl"></table></div>
+    <div class="modal-actions">
+      <button class="btn secondary" data-close>Fechar</button>
+      <button class="btn" id="mtiSave">Adicionar período</button>
     </div>
   </div>
 </div>
@@ -1152,7 +1397,17 @@ let state = {
   estoqueLeituras: [],     // leituras REAIS de estoque+horas: {id,empId,empNome,data,datetime,estoqueMGO,estoqueHFO,horasMCP,horasMCA}
   abastecimentosReais: [], // abastecimentos REAIS: {id,empId,empNome,inicio,fim,produto,data}
   apontamentos: [],  // apontamentos REAIS das viagens: {id,idViagem,empId,empNome,inicio,fim,tempo(h),indicador,item,descricao,oee,calcula(bool),data,mesRef('YYYY-MM'),ano}
-  mapaEmpFilter: null // array de ids exibidos no Mapa de Giros; null = todos
+  mapaEmpFilter: null, // array de ids exibidos no Mapa de Abastecimentos; null = todos
+  /* ---- Mapa de Giros (por cidade) ---- */
+  cidades: [],       // {id,nome,cor,origem(bool),operaNavio(bool),ordem,ativo}
+  terminais: [],     // {id,cidadeId,nome,principal(bool),pranchaCar(t/h),horasCar,pranchaDes(t/h),horasDes,ativo}
+  termIndisp: [],    // indisponibilidade: {id,terminalId,ini,fim,motivo}
+  navios: [],        // {id,cidadeId,nome,produto('Soja'|'Milho'|'Fertilizante'),volume,modo('dias'|'prancha'),dias,prancha,horasDia,dataInicio,calado}
+  giroEstoques: [],  // âncoras manuais: {id,escopo('cidade'|'terminal'|'terceiro'),cidadeId,terminalId,data,V,C,F,volG,volF}
+  caladoVolume: [],  // CONF_CALADO_VOLUME: [{calado,box,rake,media}]
+  caladoSim: [],     // CALC_SIMULACAO: [{data:'YYYY-MM-DD',pess,medio,otim}]
+  giroCfg: {caladoPadrao:4.5, cenario:'medio'},
+  giroCidFilter: null // array de ids de cidades exibidas; null = todas
 };
 
 function ensureState(){
@@ -1166,6 +1421,23 @@ function ensureState(){
   if(!state.estoqueLeituras) state.estoqueLeituras=[];
   if(!state.abastecimentosReais) state.abastecimentosReais=[];
   if(!state.apontamentos) state.apontamentos=[];
+  if(!state.cidades) state.cidades=[];
+  if(!state.terminais) state.terminais=[];
+  if(!state.termIndisp) state.termIndisp=[];
+  if(!state.navios) state.navios=[];
+  if(!state.giroEstoques) state.giroEstoques=[];
+  if(!state.caladoVolume) state.caladoVolume=[];
+  if(!state.caladoSim) state.caladoSim=[];
+  if(!state.giroCfg) state.giroCfg={caladoPadrao:4.5, cenario:'medio'};
+  if(!(state.giroCfg.caladoPadrao>0)) state.giroCfg.caladoPadrao=4.5;
+  if(!state.giroCfg.cenario) state.giroCfg.cenario='medio';
+  // Migração: viagens antigas não tinham barcaças/calado — assume o padrão e nenhuma barcaça informada
+  state.viagens.forEach(v=>{
+    if(!v.barcacas) v.barcacas={V:0,C:0,F:0};
+    ['V','C','F'].forEach(k=>{ v.barcacas[k]=Math.max(0, Math.round(v.barcacas[k]||0)); });
+    if(!(v.calado>0)) v.calado=state.giroCfg.caladoPadrao;
+  });
+  state.cidades.forEach((c,i)=>{ if(!(c.ordem>=0)) c.ordem=i; });
   state.viagens.forEach(v=>{ if(!v.status) v.status='Previsto'; });
   state.abastecimentos.forEach(a=>{
     if(!('cidade' in a)) a.cidade='';
@@ -1500,9 +1772,10 @@ document.querySelectorAll('[data-goto-view]').forEach(b=>{
 });
 function renderView(v){
   refreshViagemStatuses();
-  if(v==='premissas'){ renderEmp(); renderRot(); }
+  if(v==='premissas'){ renderEmp(); renderRot(); renderCid(); renderTerm(); renderCaladoTables(); }
   if(v==='medias'){ renderMedias(); }
   if(v==='mapa'){ renderMapa(); }
+  if(v==='giros'){ renderGiros(); }
   if(v==='abastecimentos'){ renderAbast(); }
   if(v==='viagens'){ renderViagens(); }
   if(v==='apontamentos'){ renderApontamentos(); }
@@ -2077,7 +2350,7 @@ function consumoDiaViagem(v, dayStart){
 }
 
 /* =========================================================
-   MAPA DE GIROS
+   MAPA DE ABASTECIMENTOS
    ========================================================= */
 function dateStr(d){ return d.toISOString().slice(0,10); }
 function parseDate(s){ return new Date(s+'T00:00:00'); }
@@ -2406,7 +2679,8 @@ function renderMapa(){
         // CTRL pressionado: copia a viagem, sem alterar a original
         state.viagens.push({
           id:uid(), empId:v.empId, rotaId:v.rotaId, condicao:v.condicao,
-          dataSaida:td.dataset.date, horaSaida:v.horaSaida
+          dataSaida:td.dataset.date, horaSaida:v.horaSaida,
+          barcacas:Object.assign({V:0,C:0,F:0}, v.barcacas), calado:v.calado||caladoPadrao()
         });
       }else{
         // arrasto normal: move a viagem
@@ -2508,7 +2782,7 @@ function normHora(s){
   if(m){ let h=+m[1]; if(h<=23) return String(h).padStart(2,'0')+':00'; }
   return null;
 }
-function openViagemModal(vid, empId, dateStr_){
+function openViagemModal(vid, empId, dateStr_, cidId){
   editViagemId = vid;
   const mEmp=document.getElementById('mvEmp'), mRota=document.getElementById('mvRota');
   const vEdit = vid ? state.viagens.find(x=>x.id===vid) : null;
@@ -2535,6 +2809,7 @@ function openViagemModal(vid, empId, dateStr_){
     document.getElementById('mvData').value=v.dataSaida;
     document.getElementById('mvHora').value=v.horaSaida||'08:00';
     document.getElementById('mvVol').value=v.volumeCarregada||'';
+    setMvBarcacas(v.barcacas, v.calado);
     document.getElementById('mvDelete').style.display='';
     const btnFin=document.getElementById('mvFinalizar');
     btnFin.style.display='';
@@ -2543,19 +2818,76 @@ function openViagemModal(vid, empId, dateStr_){
     document.getElementById('mvTitle').textContent='Nova Viagem';
     if(empId) mEmp.value=empId;
     mRota.value='';
+    // Vindo do Mapa de Giros: já sugere um trecho que sai da cidade clicada
+    if(cidId){
+      const cOri=cidById(cidId);
+      const rOri=cOri && rotList.find(r=>{ const c2=cidByNome(r.origem); return c2 && c2.id===cOri.id; });
+      if(rOri) mRota.value=rOri.nome;
+    }
     document.getElementById('mvCond').value='Carregada';
     document.getElementById('mvComandante').value='';
     document.getElementById('mvData').value=dateStr_||dateStr(new Date());
     document.getElementById('mvHora').value='08:00';
     document.getElementById('mvVol').value='';
+    // O calado das barcaças segue o previsto em D+1 da saída (padrão das Premissas quando não houver)
+    setMvBarcacas(null, caladoD1(dateStr_||dateStr(new Date())) || caladoPadrao());
     document.getElementById('mvDelete').style.display='none';
     document.getElementById('mvFinalizar').style.display='none';
   }
   updateMvVolVisibility();
   updateMvCalc();
   updateMvMediaBox();
+  updateMvBarcCalc();
   document.getElementById('modalViagem').classList.add('show');
 }
+/* ---- Barcaças e calado da viagem (compartilhados com o Mapa de Giros) ---- */
+function setMvBarcacas(b, calado){
+  b=b||{};
+  document.getElementById('mvBarcV').value=b.V||'';
+  document.getElementById('mvBarcC').value=b.C||'';
+  document.getElementById('mvBarcF').value=b.F||'';
+  const c=(calado>0)?calado:caladoPadrao();
+  document.getElementById('mvCalado').value=Math.round(c*100)/100;
+}
+function getMvBarcacas(){
+  return {
+    V:Math.max(0, parseInt(document.getElementById('mvBarcV').value,10)||0),
+    C:Math.max(0, parseInt(document.getElementById('mvBarcC').value,10)||0),
+    F:Math.max(0, parseInt(document.getElementById('mvBarcF').value,10)||0)
+  };
+}
+function getMvCalado(){
+  const v=parseFloat(String(document.getElementById('mvCalado').value).replace(',','.'))||0;
+  return v>0?v:caladoPadrao();
+}
+// Mostra o volume calculado pelo calado e alimenta o "Volume previsto" quando ele está vazio.
+function updateMvBarcCalc(){
+  const el=document.getElementById('mvBarcCalc'); if(!el) return;
+  const b=getMvBarcacas(), cal=getMvCalado();
+  const tot=(b.V||0)+(b.C||0)+(b.F||0);
+  if(!tot){ el.innerHTML='<span class="muted">Informe as barcaças do comboio para o giro por cidade (o Mapa de Giros usa esta quebra).</span>'; return; }
+  const vpb=volumePorBarcaca(cal);
+  if(!(vpb>0)){
+    el.innerHTML=`<b>Comboio:</b> ${barcStr(b,true)} · <span style="color:var(--warn)">importe CONF_CALADO_VOLUME (Premissas → Calado Médio) para calcular o volume.</span>`;
+    return;
+  }
+  const volG=(b.C||0)*vpb, volF=(b.F||0)*vpb;
+  const partes=[];
+  if(volG>0) partes.push(`Grão: ${fmt(volG)} t`);
+  if(volF>0) partes.push(`Fertilizante: ${fmt(volF)} t`);
+  el.innerHTML=`<b>Comboio:</b> ${barcStr(b,true)} · ${fmt(vpb)} t por barcaça a ${fmt2(cal)} m`+
+    (partes.length?` · <b>${partes.join(' · ')}</b>`:'');
+  const volEl=document.getElementById('mvVol');
+  if(volG>0 && (!volEl.value || volEl.dataset.autoVol==='1')){
+    volEl.value=Math.round(volG);
+    volEl.dataset.autoVol='1';
+  }
+}
+['mvBarcV','mvBarcC','mvBarcF','mvCalado'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateMvBarcCalc);
+  document.getElementById(id).addEventListener('change', updateMvBarcCalc);
+});
+document.getElementById('mvVol').addEventListener('input', function(){ this.dataset.autoVol=''; });
 function condCarregada(){ return (document.getElementById('mvCond').value||'').trim().toLowerCase()==='carregada'; }
 function updateMvVolVisibility(){
   document.getElementById('mvVolField').style.display = condCarregada() ? '' : 'none';
@@ -2665,7 +2997,9 @@ document.getElementById('mvSave').addEventListener('click', ()=>{
     dataSaida:document.getElementById('mvData').value,
     horaSaida:hora,
     volumeCarregada: (condicao==='Carregada')
-      ? (parseFloat(document.getElementById('mvVol').value)||0) : 0
+      ? (parseFloat(document.getElementById('mvVol').value)||0) : 0,
+    barcacas: getMvBarcacas(),
+    calado: getMvCalado()
   };
   if(!data.empId||!data.dataSaida){ alert('Preencha todos os campos.'); return; }
   if(editViagemId){
@@ -2676,12 +3010,14 @@ document.getElementById('mvSave').addEventListener('click', ()=>{
   }
   refreshViagemStatuses();
   save(); closeModals(); renderMapa();
+  if(document.getElementById('view-giros').classList.contains('active')) renderGiros();
   if(document.getElementById('view-viagens').classList.contains('active')) renderViagens();
 });
 document.getElementById('mvDelete').addEventListener('click', ()=>{
   if(!confirm('Excluir esta viagem?')) return;
   state.viagens=state.viagens.filter(v=>v.id!==editViagemId);
   save(); closeModals(); renderMapa();
+  if(document.getElementById('view-giros').classList.contains('active')) renderGiros();
   if(document.getElementById('view-viagens').classList.contains('active')) renderViagens();
 });
 document.getElementById('mvFinalizar').addEventListener('click', ()=>{
@@ -2690,6 +3026,1366 @@ document.getElementById('mvFinalizar').addEventListener('click', ()=>{
   closeModals();
   openFinalizarViagem(vid);
 });
+
+/* =========================================================
+   MAPA DE GIROS — cidades, terminais, navios e giro de barcaças
+   ---------------------------------------------------------
+   As VIAGENS são as mesmas do Mapa de Abastecimentos (state.viagens):
+   o que muda num módulo muda no outro. Aqui elas ganham a quebra de
+   barcaças (Vazias / Carregadas com grão / com Fertilizante) e o calado,
+   que definem o volume transportado e movimentam o estoque das cidades.
+   ========================================================= */
+
+/* ---- Cidades ---- */
+const CID_PALETTE=['#0ea5e9','#22c55e','#a78bfa','#f59e0b','#ec4899','#14b8a6','#ef4444','#84cc16'];
+function cidById(id){ return (state.cidades||[]).find(c=>c.id===id); }
+function cidadesOrdenadas(){ return (state.cidades||[]).filter(ativo).slice().sort((a,b)=>(a.ordem||0)-(b.ordem||0)); }
+// As rotas costumam usar siglas ("MIR x STM"). Além do nome, a cidade casa por apelido.
+function cidApelidos(c){
+  return String((c&&c.apelidos)||'').split(/[,;/]/).map(x=>na(x)).filter(Boolean);
+}
+function cidByNome(nome){
+  const n=na(nome); if(!n) return null;
+  const lista=state.cidades||[];
+  return lista.find(c=>na(c.nome)===n) || lista.find(c=>cidApelidos(c).includes(n)) || null;
+}
+// Origens/destinos das rotas que ainda não apontam para nenhuma cidade cadastrada.
+function cidadesNaoResolvidas(){
+  const faltando=new Set();
+  (state.rotas||[]).filter(ativo).forEach(r=>{
+    [r.origem, r.destino].forEach(x=>{ if(x && !cidByNome(x)) faltando.add(String(x).trim()); });
+  });
+  return [...faltando].sort();
+}
+function getCidCor(c){
+  if(c && c.cor) return c.cor;
+  const i=(state.cidades||[]).indexOf(c);
+  return CID_PALETTE[(i<0?0:i)%CID_PALETTE.length];
+}
+function terminaisDaCidade(cidId){
+  return (state.terminais||[]).filter(t=>t.cidadeId===cidId && ativo(t))
+    .slice().sort((a,b)=> (b.principal?1:0)-(a.principal?1:0) || String(a.nome||'').localeCompare(String(b.nome||'')));
+}
+function terminalPrincipal(cidId){ const l=terminaisDaCidade(cidId); return l.find(t=>t.principal)||l[0]||null; }
+function termById(id){ return (state.terminais||[]).find(t=>t.id===id); }
+function cidadeOrigemDaViagem(v){ const r=rotaById(v.rotaId); return r?cidByNome(r.origem):null; }
+function cidadeDestinoDaViagem(v){ const r=rotaById(v.rotaId); return r?cidByNome(r.destino):null; }
+
+/* ---- Calado: volume por barcaça (CONF_CALADO_VOLUME) e calado previsto (CALC_SIMULACAO) ---- */
+let _cvCache={ref:null,arr:[]};
+function caladoVolTable(){
+  if(_cvCache.ref!==state.caladoVolume){
+    _cvCache={ref:state.caladoVolume,
+      arr:(state.caladoVolume||[]).filter(r=>r.calado>0 && r.media>0).slice().sort((a,b)=>a.calado-b.calado)};
+  }
+  return _cvCache.arr;
+}
+// Volume médio (t) de UMA barcaça para o calado informado. Interpola entre as linhas da tabela.
+function volumePorBarcaca(calado){
+  const tb=caladoVolTable(); if(!tb.length) return 0;
+  const c=parseFloat(calado)||0; if(c<=0) return 0;
+  if(c<=tb[0].calado) return tb[0].media;
+  if(c>=tb[tb.length-1].calado) return tb[tb.length-1].media;
+  for(let i=1;i<tb.length;i++){
+    if(c<=tb[i].calado){
+      const a=tb[i-1], b=tb[i], den=(b.calado-a.calado)||1;
+      return a.media + (c-a.calado)/den*(b.media-a.media);
+    }
+  }
+  return tb[tb.length-1].media;
+}
+function temTabelaCalado(){ return caladoVolTable().length>0; }
+let _csCache={ref:null,map:null};
+function caladoSimMap(){
+  if(_csCache.ref!==state.caladoSim){
+    const m={};
+    (state.caladoSim||[]).forEach(r=>{ if(r.data) m[r.data]={pess:r.pess||0, medio:r.medio||0, otim:r.otim||0}; });
+    _csCache={ref:state.caladoSim, map:m};
+  }
+  return _csCache.map;
+}
+function caladoPrevisto(dStr, cenario){
+  const r=caladoSimMap()[dStr]; if(!r) return null;
+  const k=cenario||(state.giroCfg&&state.giroCfg.cenario)||'medio';
+  const v = k==='pessimista'?r.pess : k==='otimista'?r.otim : r.medio;
+  return v>0?v:null;
+}
+// Calado previsto em D+1 de uma data — base das sugestões de calado das barcaças.
+function caladoD1(dStr){
+  if(!dStr) return null;
+  return caladoPrevisto(dateStr(addDays(parseDate(dStr),1)));
+}
+function caladoPadrao(){ return (state.giroCfg&&state.giroCfg.caladoPadrao)>0 ? state.giroCfg.caladoPadrao : 4.5; }
+// Origem: o calado de carregamento das barcaças segue a saída do PRÓXIMO comboio, em D+1.
+function caladoCarregamentoSugerido(cidId, dStr, saidasOrdenadas){
+  const lista = saidasOrdenadas || (state.viagens||[])
+    .filter(v=>{ const co=cidadeOrigemDaViagem(v); return co&&co.id===cidId; })
+    .map(v=>v.dataSaida).filter(Boolean).sort();
+  const prox = lista.find(d=>d>=dStr);
+  const c = caladoD1(prox||dStr);
+  return c>0 ? c : caladoPadrao();
+}
+
+/* ---- Formatação de barcaças e estoque ---- */
+// Conta barcaças aceitando fração (operação parcial no dia): 4 → "4", 4.3 → "4,3"
+function nb(n){
+  n=Number(n)||0;
+  const r=Math.round(n);
+  return Math.abs(n-r)<0.05 ? String(r) : n.toFixed(1).replace('.',',');
+}
+function fmtK(t){
+  t=Number(t)||0;
+  if(Math.abs(t)<50) return '0';
+  const k=t/1000;
+  const s=(Math.abs(k)>=10 ? k.toFixed(0) : k.toFixed(1).replace(/\.0$/,''));
+  return s.replace('.',',')+'k';
+}
+// "20C", "20V", "15F" ou, na viagem mista, "10V + 15F"
+function barcStr(b, plain){
+  b=b||{};
+  const parts=[];
+  const push=(k,cls)=>{ if(Math.abs(b[k]||0)>0.049) parts.push(plain?`${nb(b[k])}${k}`:`<span class="barc-badge barc-${k}">${nb(b[k])}${k}</span>`); };
+  push('V'); push('C'); push('F');
+  return parts.join(plain?' + ':' + ');
+}
+function barcTotal(b){ b=b||{}; return (b.V||0)+(b.C||0)+(b.F||0); }
+// "0V-4C-15F" + "12,5k(G)+30k(F)" — em falta de barcaça o valor fica negativo e o
+// separador vira espaço, para não sair "0C--15F".
+function estStr(e, plain){
+  e=e||{};
+  let q='';
+  [['V',e.V||0],['C',e.C||0],['F',e.F||0]].forEach(([k,v],i)=>{
+    const txt=nb(v)+k;
+    q += (i===0 ? '' : (txt.charAt(0)==='-' ? ' ' : '-'))
+       + (plain ? txt : `<span class="barc-${k}">${txt}</span>`);
+  });
+  const vols=[];
+  if(Math.abs(e.volG||0)>=50) vols.push(fmtK(e.volG)+'(G)');
+  if(Math.abs(e.volF||0)>=50) vols.push(fmtK(e.volF)+'(F)');
+  return {q, vol:vols.join('+')};
+}
+function estCellHtml(e){
+  const s=estStr(e);
+  return `<span class="qtd">${s.q}</span><span class="vol">${s.vol||'—'}</span>`;
+}
+function estTip(e){
+  const s=estStr(e,true);
+  return `${s.q}${s.vol?' — '+s.vol:''}`;
+}
+function estVazio(e){ return !e || (Math.abs(e.V||0)<0.05 && Math.abs(e.C||0)<0.05 && Math.abs(e.F||0)<0.05 && Math.abs(e.volG||0)<50 && Math.abs(e.volF||0)<50); }
+function estNegativo(e){ return !!e && ((e.V||0)<-0.05 || (e.C||0)<-0.05 || (e.F||0)<-0.05); }
+
+/* ---- Navios ---- */
+function navById(id){ return (state.navios||[]).find(n=>n.id===id); }
+function navioEhGrao(n){ return na(n&&n.produto)!=='fertilizante'; }
+function navioHorasDia(n){ return (n&&n.horasDia>0)?n.horasDia:24; }
+// Toneladas movimentadas por dia — pela prancha média ou pelo tempo de operação informado.
+function navioTonsDia(n){
+  if(!n) return 0;
+  if(n.modo==='prancha' && n.prancha>0) return n.prancha*navioHorasDia(n);
+  return (n.dias>0) ? (n.volume||0)/n.dias : 0;
+}
+// Duração prevista em dias — quando o usuário informa a prancha, o app calcula.
+function navioDias(n){
+  if(!n) return 0;
+  if(n.modo==='prancha'){ const td=navioTonsDia(n); return td>0 ? (n.volume||0)/td : 0; }
+  return n.dias||0;
+}
+function navioFimPrevisto(n){
+  const d=navioDias(n);
+  if(!n||!n.dataInicio||!(d>0)) return n&&n.dataInicio||'';
+  return dateStr(addDays(parseDate(n.dataInicio), Math.max(0, Math.ceil(d)-1)));
+}
+// Fertilizante: quantas barcaças VAZIAS o navio vai consumir para ser descarregado.
+function navioBarcacasNecessarias(n){
+  const vpb=volumePorBarcaca((n&&n.calado)||caladoPadrao());
+  return vpb>0 ? Math.ceil((n.volume||0)/vpb) : 0;
+}
+// Fertilizante: o calado das barcaças é sugerido pelo previsto em D+1 do término da operação.
+function caladoSugeridoNavio(n){
+  const fim=navioFimPrevisto(n);
+  const c=caladoD1(fim);
+  return c>0?c:null;
+}
+
+/* ---- Indisponibilidade de terminal ---- */
+function termIndispNoDia(termId, dStr){
+  return (state.termIndisp||[]).find(p=>p.terminalId===termId && p.ini<=dStr && dStr<=(p.fim||p.ini)) || null;
+}
+function toggleTermIndisp(termId, dStr){
+  const p=termIndispNoDia(termId,dStr);
+  if(p){
+    if(p.ini===dStr && (p.fim||p.ini)===dStr){
+      state.termIndisp=state.termIndisp.filter(x=>x.id!==p.id);      // some o período de 1 dia
+    }else if(p.ini===dStr){
+      p.ini=dateStr(addDays(parseDate(dStr),1));                     // encurta pela frente
+    }else if((p.fim||p.ini)===dStr){
+      p.fim=dateStr(addDays(parseDate(dStr),-1));                    // encurta por trás
+    }else{
+      const fimOrig=p.fim||p.ini;                                    // parte o período ao meio
+      p.fim=dateStr(addDays(parseDate(dStr),-1));
+      state.termIndisp.push({id:uid(), terminalId:termId, ini:dateStr(addDays(parseDate(dStr),1)), fim:fimOrig, motivo:p.motivo||''});
+    }
+  }else{
+    state.termIndisp.push({id:uid(), terminalId:termId, ini:dStr, fim:dStr, motivo:''});
+  }
+  save();
+}
+
+/* =========================================================
+   GIRO DE BARCAÇAS — motor de simulação diária
+   ---------------------------------------------------------
+   Ordem dos eventos do dia:
+     1) chegada dos comboios (entra no estoque da cidade de destino)
+     2) terminais da origem: descarrega Fertz (vira vazia) e carrega grão
+     3) navios: grão consome carregadas e devolve vazias;
+        fertilizante consome vazias e devolve carregadas com Fertz
+     4) saída dos comboios (sai do estoque da cidade de origem)
+     5) âncoras manuais sobrescrevem o estoque do dia (valor do FIM do dia)
+   ========================================================= */
+function novoEst(){ return {V:0,C:0,F:0,volG:0,volF:0}; }
+function cloneEst(e){ return {V:e.V||0,C:e.C||0,F:e.F||0,volG:e.volG||0,volF:e.volF||0}; }
+function somaEst(a,b){ a.V+=b.V||0; a.C+=b.C||0; a.F+=b.F||0; a.volG+=b.volG||0; a.volF+=b.volF||0; return a; }
+// Sem barcaça não há carga: limpa o resíduo de volume que sobra quando o calado do
+// carregamento e o da viagem divergem. A falta de barcaça (valor negativo) é preservada,
+// porque é justamente o alerta do dia.
+function normalizarEst(e){
+  ['V','C','F'].forEach(k=>{ if(Math.abs(e[k])<1e-6) e[k]=0; });
+  if(Math.abs(e.C)<0.05){ e.C=0; e.volG=0; } else if(e.C>0 && e.volG<0) e.volG=0;
+  if(Math.abs(e.F)<0.05){ e.F=0; e.volF=0; } else if(e.F>0 && e.volF<0) e.volF=0;
+  if(Math.abs(e.volG)<1) e.volG=0;
+  if(Math.abs(e.volF)<1) e.volF=0;
+  return e;
+}
+// Data prevista de chegada do comboio (média do trecho; sem média, assume 1 dia de trânsito).
+function viagemChegadaStr(v){
+  const c=calcViagem(v);
+  if(!c.incompleto) return dateStr(c.chegada);
+  return v.dataSaida ? dateStr(addDays(parseDate(v.dataSaida),1)) : '';
+}
+// O que a viagem carrega: barcaças por tipo + volume calculado pelo calado.
+function movimentoDaViagem(v){
+  const b=v.barcacas||{};
+  const V=Math.max(0,b.V||0), C=Math.max(0,b.C||0), F=Math.max(0,b.F||0);
+  const vpb=volumePorBarcaca(v.calado||caladoPadrao());
+  return {V,C,F, volG:C*vpb, volF:F*vpb};
+}
+function volumeDaViagem(v){ const m=movimentoDaViagem(v); return m.volG+m.volF; }
+
+// Retira barcaças de uma lista de "bolsões" (terminais da origem, ou o pátio único da cidade).
+// O que faltar sai negativo no primeiro bolsão — é a falta de barcaça do dia, sinalizada em vermelho.
+function retirarDePools(pools, mov){
+  ['V','C','F'].forEach(k=>{
+    let rest=mov[k]||0;
+    if(rest<=0) return;
+    for(const p of pools){
+      if(rest<=0.0001) break;
+      const disp=p[k]||0;
+      if(disp<=0) continue;
+      const vpb = k==='C' ? (p.volG||0)/disp : k==='F' ? (p.volF||0)/disp : 0;
+      const take=Math.min(disp, rest);
+      p[k]-=take;
+      if(k==='C') p.volG-=vpb*take; else if(k==='F') p.volF-=vpb*take;
+      rest-=take;
+    }
+    if(rest>0.0001){
+      const p=pools[0];
+      p[k]-=rest;
+      const vpbMov = (mov[k]||0)>0 ? (k==='C'?(mov.volG||0):k==='F'?(mov.volF||0):0)/mov[k] : 0;
+      if(k==='C') p.volG-=vpbMov*rest; else if(k==='F') p.volF-=vpbMov*rest;
+    }
+  });
+}
+// Operação de um terminal no dia: descarrega Fertz (vira vazia) e depois carrega grão nas vazias.
+function operarTerminal(t, est, dStr, caladoCarreg){
+  const res={descF:0, carreg:0, status:'Disponível', motivo:''};
+  const ind=termIndispNoDia(t.id,dStr);
+  if(ind){ res.status='Indisponível'; res.motivo=ind.motivo||''; return res; }
+  let horasUsadas=0;
+  // 1) descarga de fertilizante — a barcaça vira VAZIA e fica pronta para carregar grão
+  const capDes=(t.pranchaDes||0)*(t.horasDes||0);
+  if(capDes>0 && (est.F||0)>0.001){
+    const vpbF=(est.volF||0)/est.F;
+    if(vpbF>0){
+      const n=Math.min(est.F, capDes/vpbF);
+      if(n>0.0001){
+        est.F-=n; est.volF-=n*vpbF; est.V+=n;
+        res.descF=n;
+        horasUsadas=(t.pranchaDes>0) ? (n*vpbF)/t.pranchaDes : 0;
+      }
+    }
+  }
+  // 2) carregamento de grão nas barcaças vazias, com as horas que sobraram do dia no berço
+  const capCar=(t.pranchaCar||0)*Math.max(0,(t.horasCar||0)-horasUsadas);
+  const vpb=volumePorBarcaca(caladoCarreg);
+  if(capCar>0 && vpb>0 && (est.V||0)>0.001){
+    const n=Math.min(est.V, capCar/vpb);
+    if(n>0.0001){ est.V-=n; est.C+=n; est.volG+=n*vpb; res.carreg=n; }
+  }
+  if(res.descF>0.0001||res.carreg>0.0001) res.status='Operando';
+  return res;
+}
+
+function simularGiros(iniStr, fimStr){
+  const cidades=cidadesOrdenadas();
+  if(!cidades.length) return {dias:{}, avisos:[]};
+  // Recua o início da simulação até a 1ª âncora manual, para o saldo chegar coerente ao período exibido.
+  const datasAnc=(state.giroEstoques||[]).map(a=>a.data).filter(Boolean).sort();
+  const start=(datasAnc.length && datasAnc[0]<iniStr) ? datasAnc[0] : iniStr;
+
+  // --- movimentos das viagens (mesmas do Mapa de Abastecimentos) ---
+  const saidas={}, chegadas={}, saidasPorCidade={};
+  (state.viagens||[]).forEach(v=>{
+    if(!v.dataSaida) return;
+    const co=cidadeOrigemDaViagem(v);
+    if(co){ (saidasPorCidade[co.id]=saidasPorCidade[co.id]||[]).push(v.dataSaida); }
+    const mov=movimentoDaViagem(v);
+    if(!barcTotal(mov)) return;
+    if(co) (saidas[v.dataSaida]=saidas[v.dataSaida]||[]).push({cid:co.id, mov});
+    const cd=cidadeDestinoDaViagem(v);
+    const ch=viagemChegadaStr(v);
+    if(cd && ch) (chegadas[ch]=chegadas[ch]||[]).push({cid:cd.id, mov});
+  });
+  Object.values(saidasPorCidade).forEach(l=>l.sort());
+
+  // --- âncoras manuais por data ---
+  const ancByDate={};
+  (state.giroEstoques||[]).forEach(a=>{ if(a.data) (ancByDate[a.data]=ancByDate[a.data]||[]).push(a); });
+
+  // --- estado corrente por cidade ---
+  const cur={};
+  cidades.forEach(c=>{
+    cur[c.id]={cidade:novoEst(), terminais:{}, terceiro:novoEst()};
+    terminaisDaCidade(c.id).forEach(t=>{ cur[c.id].terminais[t.id]=novoEst(); });
+  });
+  const acum={};
+  (state.navios||[]).forEach(n=>{ acum[n.id]={V:0,F:0,tons:0, ini:'', fim:''}; });
+
+  const poolsDe=(c)=>{
+    const terms=terminaisDaCidade(c.id);
+    if(c.origem && terms.length) return terms.map(t=>cur[c.id].terminais[t.id]);
+    return [cur[c.id].cidade];
+  };
+
+  const dias={};
+  for(let d=parseDate(start); dateStr(d)<=fimStr; d=addDays(d,1)){
+    const dStr=dateStr(d);
+    const infoTerm={}, infoNavPorCidade={};
+
+    // 1) chegadas → entram no bolsão principal da cidade de destino
+    (chegadas[dStr]||[]).forEach(ch=>{
+      const c=cidById(ch.cid); if(!c||!cur[ch.cid]) return;
+      somaEst(poolsDe(c)[0], ch.mov);
+    });
+
+    // 2) terminais (cidades de origem)
+    cidades.forEach(c=>{
+      if(!c.origem) return;
+      const cal=caladoCarregamentoSugerido(c.id, dStr, saidasPorCidade[c.id]);
+      terminaisDaCidade(c.id).forEach(t=>{
+        const r=operarTerminal(t, cur[c.id].terminais[t.id], dStr, cal);
+        infoTerm[t.id]=Object.assign(r,{calado:cal});
+      });
+    });
+
+    // 3) navios (cidades que operam navio)
+    cidades.forEach(c=>{
+      if(!c.operaNavio) return;
+      const infoNav=infoNavPorCidade[c.id]=infoNavPorCidade[c.id]||{};
+      (state.navios||[]).filter(n=>n.cidadeId===c.id && n.dataInicio && n.dataInicio<=dStr).forEach(n=>{
+        const ac=acum[n.id]||(acum[n.id]={V:0,F:0,tons:0});
+        const restante=(n.volume||0)-ac.tons;
+        if(restante<=0.5){
+          infoNav[n.id]={ativo:false, concluido:true, acumV:ac.V, acumF:ac.F, nV:0, nF:0, tons:0, fimReal:ac.fim};
+          return;
+        }
+        const pool=cur[c.id].cidade, ter=cur[c.id].terceiro;
+        const alvo=Math.min(navioTonsDia(n), restante);
+        let rest=alvo, nV=0, nF=0;
+        if(navioEhGrao(n)){
+          // grão: consome barcaça carregada e DEVOLVE barcaça vazia para o giro
+          if(pool.C>0.001){
+            const vpb=(pool.volG||0)/pool.C;
+            if(vpb>0){
+              const n1=Math.min(pool.C, rest/vpb);
+              if(n1>0.0001){ pool.C-=n1; pool.volG-=n1*vpb; pool.V+=n1; rest-=n1*vpb; nV+=n1; }
+            }
+          }
+          // carga de terceiro conta para o navio, mas não entra no nosso giro de barcaças
+          if(rest>0.5 && ter.C>0.001){
+            const vpb3=(ter.volG||0)/ter.C;
+            if(vpb3>0){
+              const n3=Math.min(ter.C, rest/vpb3);
+              if(n3>0.0001){ ter.C-=n3; ter.volG-=n3*vpb3; rest-=n3*vpb3; }
+            }
+          }
+        }else{
+          // fertilizante: PRECISA de barcaça vazia para descarregar e produz barcaça com Fertz
+          const vpb=volumePorBarcaca(n.calado||caladoPadrao());
+          if(vpb>0 && pool.V>0.001){
+            const n1=Math.min(pool.V, rest/vpb);
+            if(n1>0.0001){ pool.V-=n1; pool.F+=n1; pool.volF+=n1*vpb; rest-=n1*vpb; nF+=n1; }
+          }
+          if(vpb>0 && rest>0.5 && ter.V>0.001){
+            const n3=Math.min(ter.V, rest/vpb);
+            if(n3>0.0001){ ter.V-=n3; ter.F+=n3; ter.volF+=n3*vpb; rest-=n3*vpb; }
+          }
+        }
+        const feito=alvo-rest;
+        ac.tons+=feito; ac.V+=nV; ac.F+=nF;
+        if(!ac.ini && feito>0.5) ac.ini=dStr;
+        if(feito>0.5) ac.fim=dStr;
+        infoNav[n.id]={ativo:true, concluido:((n.volume||0)-ac.tons)<=0.5, acumV:ac.V, acumF:ac.F,
+                       nV, nF, tons:feito, parado:feito<=0.5, fimReal:ac.fim};
+      });
+    });
+
+    // 4) saídas → saem do estoque da cidade de origem
+    (saidas[dStr]||[]).forEach(sa=>{
+      const c=cidById(sa.cid); if(!c||!cur[sa.cid]) return;
+      retirarDePools(poolsDe(c), sa.mov);
+    });
+
+    cidades.forEach(c=>{
+      normalizarEst(cur[c.id].cidade);
+      normalizarEst(cur[c.id].terceiro);
+      Object.values(cur[c.id].terminais).forEach(normalizarEst);
+    });
+
+    // 5) âncoras manuais sobrescrevem o valor do fim do dia
+    (ancByDate[dStr]||[]).forEach(a=>{
+      const c=cur[a.cidadeId]; if(!c) return;
+      const val={V:+a.V||0, C:+a.C||0, F:+a.F||0, volG:+a.volG||0, volF:+a.volF||0};
+      if(a.escopo==='terceiro') c.terceiro=val;
+      else if(a.escopo==='terminal' && c.terminais[a.terminalId]) c.terminais[a.terminalId]=val;
+      else c.cidade=val;
+    });
+
+    if(dStr>=iniStr){
+      const snap={};
+      cidades.forEach(c=>{
+        const terms=terminaisDaCidade(c.id);
+        const usaTerm=c.origem && terms.length;
+        const cidEst = usaTerm
+          ? terms.reduce((acc,t)=>somaEst(acc, cur[c.id].terminais[t.id]), novoEst())
+          : cloneEst(cur[c.id].cidade);
+        const tSnap={};
+        terms.forEach(t=>{ tSnap[t.id]={est:cloneEst(cur[c.id].terminais[t.id]), info:infoTerm[t.id]||{status:'Disponível'}}; });
+        snap[c.id]={estoque:cidEst, terminais:tSnap, terceiro:cloneEst(cur[c.id].terceiro),
+                    navios:infoNavPorCidade[c.id]||{}};
+      });
+      dias[dStr]=snap;
+    }
+  }
+  const avisos=[];
+  const semCidade=cidadesNaoResolvidas();
+  if(semCidade.length) avisos.push('Estes pontos das rotas não estão ligados a nenhuma cidade, então as viagens deles não entram no giro: <b>'+
+    semCidade.join('</b>, <b>')+'</b>. Cadastre-os como cidade ou informe a sigla no campo <b>Apelidos</b> da cidade (Premissas → Cidades).');
+  if(!temTabelaCalado()) avisos.push('Importe a tabela <b>CONF_CALADO_VOLUME</b> nas Premissas → Calado Médio: sem ela o app não consegue converter calado em volume por barcaça.');
+  if(!Object.keys(caladoSimMap()).length) avisos.push('Sem a tabela <b>CALC_SIMULACAO</b> a coluna Calado fica vazia e as sugestões de calado (D+1) usam o calado padrão.');
+  return {dias, avisos};
+}
+
+/* =========================================================
+   MAPA DE GIROS — renderização
+   ========================================================= */
+function initGiroDates(){
+  const ini=document.getElementById('giroIni'), fim=document.getElementById('giroFim');
+  if(!ini.value){
+    const today=new Date();
+    ini.value=dateStr(addDays(today,-2));
+    fim.value=dateStr(addDays(today,35));
+  }
+}
+function getGiroFilterSet(){
+  const ids=cidadesOrdenadas().map(c=>c.id);
+  if(!Array.isArray(state.giroCidFilter)) return new Set(ids);
+  return new Set(state.giroCidFilter.filter(id=>ids.includes(id)));
+}
+function setGiroFilter(set){ state.giroCidFilter=[...set]; save(); }
+function renderCidFilter(){
+  const lista=cidadesOrdenadas();
+  const sel=getGiroFilterSet();
+  const panel=document.getElementById('cidFilterPanel');
+  panel.innerHTML=
+    `<div class="dd-actions"><button type="button" id="cddAll">Todas</button><button type="button" id="cddNone">Nenhuma</button></div>`+
+    (lista.map(c=>`<label><input type="checkbox" value="${c.id}" ${sel.has(c.id)?'checked':''}> ${c.nome}</label>`).join('')
+      || '<div class="empty">Nenhuma cidade cadastrada.</div>');
+  const n=lista.filter(c=>sel.has(c.id)).length;
+  document.getElementById('cidFilterBtn').textContent=
+    (n===lista.length?'Todas as cidades':n+' de '+lista.length+' cidades')+' ▾';
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const s=getGiroFilterSet();
+      if(cb.checked) s.add(cb.value); else s.delete(cb.value);
+      setGiroFilter(s); renderGiros();
+    });
+  });
+  const all=panel.querySelector('#cddAll'), none=panel.querySelector('#cddNone');
+  if(all) all.addEventListener('click', ()=>{ setGiroFilter(new Set(lista.map(c=>c.id))); renderGiros(); });
+  if(none) none.addEventListener('click', ()=>{ setGiroFilter(new Set()); renderGiros(); });
+}
+document.getElementById('cidFilterBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  document.getElementById('cidFilterDrop').classList.toggle('open');
+});
+document.addEventListener('click', e=>{
+  const d=document.getElementById('cidFilterDrop');
+  if(d && !d.contains(e.target)) d.classList.remove('open');
+});
+document.getElementById('btnGiroRefresh').addEventListener('click', renderGiros);
+document.getElementById('btnNovaViagemGiro').addEventListener('click', ()=>openViagemModal(null,null,null));
+document.getElementById('btnNovoNavio').addEventListener('click', ()=>openNavioModal(null,null,null));
+document.getElementById('btnGiroIndisp').addEventListener('click', ()=>openTermIndispModal());
+
+function viagensDaCidadeNoDia(cidId, dStr){
+  return (state.viagens||[]).filter(v=>{
+    if(v.dataSaida!==dStr) return false;
+    const co=cidadeOrigemDaViagem(v);
+    return !!co && co.id===cidId;
+  });
+}
+function naviosDaCidade(cidId){ return (state.navios||[]).filter(n=>n.cidadeId===cidId); }
+
+function renderGiros(){
+  initGiroDates();
+  const wrap=document.getElementById('giroWrap');
+  renderCidFilter();
+  renderGiroNavios();
+  const todas=cidadesOrdenadas();
+  if(!todas.length){
+    wrap.innerHTML='<div class="empty" style="padding:18px;text-align:center;">Nenhuma cidade cadastrada.<br><br>'+
+      '<button class="btn" onclick="criarCidadesPadrao()">Criar Miritituba, Santarém e Vila do Conde</button>'+
+      '<div class="hint" style="margin-top:8px;">Você pode cadastrar outras cidades em <b>Premissas → Cidades</b>.</div></div>';
+    return;
+  }
+  const cidades=todas.filter(c=>getGiroFilterSet().has(c.id));
+  if(!cidades.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Nenhuma cidade selecionada no filtro acima.</div>'; return; }
+  const iniStr=document.getElementById('giroIni').value, fimStr=document.getElementById('giroFim').value;
+  if(!iniStr||!fimStr){ wrap.innerHTML='<div class="empty" style="padding:14px;">Informe o período.</div>'; return; }
+  if(fimStr<iniStr){ wrap.innerHTML='<div class="empty" style="padding:14px;">Data final anterior à inicial.</div>'; return; }
+
+  const sim=simularGiros(iniStr, fimStr);
+  let avisoHtml='';
+  if(sim.avisos.length){
+    avisoHtml='<div class="orfa-banner" style="margin:0 0 10px 0;"><div class="txt">'+
+      sim.avisos.map(a=>'⚠ '+a).join('<br>')+'</div></div>';
+  }
+
+  // ---- cabeçalho ----
+  let h='<table class="giro"><tr class="giro-h1">'+
+    '<th class="col-data" rowspan="2">Data</th>'+
+    '<th class="col-calado cid-sep" rowspan="2" title="Calado previsto do rio (CALC_SIMULACAO)">Calado</th>';
+  cidades.forEach(c=>{
+    const terms=terminaisDaCidade(c.id);
+    const usaTerm=c.origem && terms.length;
+    const span = 4 + (c.operaNavio?3:0) + (usaTerm?terms.length*2:0);
+    const cor=getCidCor(c);
+    const tags=(c.origem?' <span class="tag origem" style="background:rgba(255,255,255,.25);color:inherit">ORIGEM</span>':'')+
+               (c.operaNavio?' <span class="tag navio" style="background:rgba(255,255,255,.25);color:inherit">NAVIO</span>':'');
+    h+=`<th class="cid-head cid-sep" colspan="${span}" style="background:${cor};color:${corContraste(cor)}">${c.nome}${tags}</th>`;
+  });
+  h+='</tr><tr class="giro-h2">';
+  cidades.forEach(c=>{
+    const terms=terminaisDaCidade(c.id);
+    const usaTerm=c.origem && terms.length;
+    h+='<th>Viagem</th><th>Barcaças</th><th class="num">Volume</th>';
+    if(c.operaNavio) h+='<th>Navio</th><th title="Barcaças acumuladas produzidas pelo navio">Barcaças</th>';
+    const fimEst = !c.operaNavio && !usaTerm;
+    h+=`<th class="${fimEst?'cid-sep':(c.operaNavio?'':'sub-sep')}" title="Estoque próprio de barcaças e volume na cidade">Estoque</th>`;
+    if(c.operaNavio) h+='<th class="cid-sep" title="Barcaças e carga de terceiros: contam para o navio, não entram no nosso giro">Estoque 3º</th>';
+    if(usaTerm) terms.forEach((t,i)=>{
+      const last=i===terms.length-1;
+      h+=`<th class="sub-sep" title="${t.nome} — ${t.principal?'principal':'secundário'}">${t.nome}: Estoque</th>`+
+         `<th class="${last?'cid-sep':'sub-sep'}">${t.nome}: Status</th>`;
+    });
+  });
+  h+='</tr>';
+
+  // ---- linhas ----
+  const hojeStr=dateStr(new Date());
+  for(let d=parseDate(iniStr); dateStr(d)<=fimStr; d=addDays(d,1)){
+    const dStr=dateStr(d);
+    const snap=sim.dias[dStr]||{};
+    const wknd=(d.getDay()===0||d.getDay()===6)?' weekend':'';
+    const hoje=dStr===hojeStr?' today':'';
+    const simRow=caladoSimMap()[dStr];
+    const calVal=caladoPrevisto(dStr);
+    const calTip=simRow?`Pessimista: ${fmt2(simRow.pess)} m&#10;Médio: ${fmt2(simRow.medio)} m&#10;Otimista: ${fmt2(simRow.otim)} m`:'Sem calado previsto para esta data (importe CALC_SIMULACAO)';
+    h+=`<tr class="${wknd}${hoje}">`+
+       `<td class="col-data">${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`+
+       `<td class="col-calado cid-sep" title="${calTip}">${calVal?`<span class="calado-chip sim">${fmt2(calVal)}</span>`:'<span class="muted">—</span>'}</td>`;
+    cidades.forEach(c=>{
+      const st=snap[c.id]||{estoque:novoEst(), terminais:{}, terceiro:novoEst(), navios:{}};
+      const terms=terminaisDaCidade(c.id);
+      const usaTerm=c.origem && terms.length;
+      const cor=getCidCor(c);
+
+      // ---- Viagem / Barcaças / Volume ----
+      const vgs=viagensDaCidadeNoDia(c.id, dStr);
+      let vCell='', bCell='', volCell='';
+      if(vgs.length){
+        vCell=vgs.map(v=>{
+          const r=rotaById(v.rotaId);
+          const mov=movimentoDaViagem(v);
+          const cd=cidadeDestinoDaViagem(v);
+          const tip=`${r?r.nome:'?'} — ${v.condicao||''}&#10;Saída: ${parseDate(v.dataSaida).toLocaleDateString('pt-BR')} ${v.horaSaida||''}&#10;`+
+            `Chegada prevista: ${viagemChegadaStr(v)?parseDate(viagemChegadaStr(v)).toLocaleDateString('pt-BR'):'—'}${cd?' em '+cd.nome:''}&#10;`+
+            `Barcaças: ${barcStr(mov,true)||'—'}&#10;Calado: ${fmt2(v.calado||caladoPadrao())} m&#10;Volume: ${fmt(mov.volG+mov.volF)} t&#10;&#10;Clique para editar (a viagem é a mesma do Mapa de Abastecimentos)`;
+          return `<span class="trip-chip vstat-${v.status||'Previsto'}" draggable="true" data-gvid="${v.id}" title="${tip}"
+            style="background:${cor};color:${corContraste(cor)}" onclick="openViagemModal('${v.id}')">${r?r.nome:'?'}</span>`;
+        }).join(' ');
+        const tot=vgs.reduce((a,v)=>{const m=movimentoDaViagem(v);return {V:a.V+m.V,C:a.C+m.C,F:a.F+m.F,volG:a.volG+m.volG,volF:a.volF+m.volF};}, novoEst());
+        bCell=barcStr(tot)||'<span class="muted">—</span>';
+        const volT=tot.volG+tot.volF;
+        // comboio só de barcaças vazias não tem volume; volume zerado com carga = falta a tabela de calado
+        volCell = volT>0
+          ? `<span title="Grão: ${fmt(tot.volG)} t · Fertz: ${fmt(tot.volF)} t">${fmt(volT)}</span>`
+          : (tot.C+tot.F>0
+              ? '<span class="muted" title="Sem volume: informe o calado da viagem e importe CONF_CALADO_VOLUME (Premissas → Calado Médio)">—</span>'
+              : (barcTotal(tot)>0 ? '<span class="muted" title="Comboio de barcaças vazias — sem carga">—</span>' : ''));
+      }
+      h+=`<td class="giro-click giro-viagem-cell" data-cid="${c.id}" data-date="${dStr}">${vCell}</td>`+
+         `<td>${bCell}</td><td class="num">${volCell}</td>`;
+
+      // ---- Navio / Barcaças acumuladas ----
+      if(c.operaNavio){
+        const navs=naviosDaCidade(c.id).filter(n=>n.dataInicio&&n.dataInicio<=dStr&&(st.navios[n.id]||n.dataInicio===dStr));
+        let nCell='', naCell='';
+        const partes=[], acums=[];
+        naviosDaCidade(c.id).forEach(n=>{
+          const info=st.navios[n.id];
+          const inicia=n.dataInicio===dStr;
+          if(!inicia && (!info || (!info.ativo && !info.concluido))) return;
+          if(!inicia && info && info.concluido && !(info.tons>0.5)) return;
+          const grao=navioEhGrao(n);
+          const cls=grao?'nav-grao':'nav-fertz';
+          const nec=grao?'':`&#10;Barcaças vazias necessárias: ${navioBarcacasNecessarias(n)}`;
+          const tip=`${n.nome} — ${n.produto}&#10;Volume: ${fmt(n.volume||0)} t&#10;`+
+            `Início: ${n.dataInicio?parseDate(n.dataInicio).toLocaleDateString('pt-BR'):'—'}&#10;`+
+            `Término previsto: ${navioFimPrevisto(n)?parseDate(navioFimPrevisto(n)).toLocaleDateString('pt-BR'):'—'} (${fmt1(navioDias(n))} dias)&#10;`+
+            `Prancha: ${n.modo==='prancha'?fmt1(n.prancha)+' t/h':'—'} · ${fmt(navioTonsDia(n))} t/dia${nec}&#10;&#10;Clique para editar`;
+          if(inicia){
+            partes.push(`<span class="navio-chip ${cls}" draggable="true" data-gnid="${n.id}" title="${tip}" onclick="openNavioModal('${n.id}')">${n.nome}</span>`);
+          }else{
+            const marca=info&&info.parado?' ⏸':'';
+            partes.push(`<span class="muted navio-cont" style="cursor:pointer" title="${tip}${info&&info.parado?'&#10;&#10;⏸ Sem barcaça disponível neste dia':''}" onclick="openNavioModal('${n.id}')">↳ ${n.nome}${marca}</span>`);
+          }
+          if(info){
+            const ac = grao ? {V:info.acumV,C:0,F:0} : {V:0,C:0,F:info.acumF};
+            const s=barcStr(ac);
+            if(s) acums.push(`<span title="${n.nome}: acumulado desde o início da operação">${s}</span>`);
+          }
+        });
+        nCell=partes.join('<br>');
+        naCell=acums.join('<br>');
+        h+=`<td class="giro-click giro-navio-cell" data-cid="${c.id}" data-date="${dStr}">${nCell}</td><td>${naCell}</td>`;
+      }
+
+      // ---- Estoque da cidade ----
+      const alvoTerm = usaTerm ? (terminalPrincipal(c.id)||{}).id : '';
+      const ancCid = (state.giroEstoques||[]).find(a=>a.data===dStr && a.cidadeId===c.id &&
+        (usaTerm ? (a.escopo==='terminal'&&a.terminalId===alvoTerm) : a.escopo==='cidade'));
+      const clsCid=['est-cell'].concat(ancCid?['est-manual']:[], estNegativo(st.estoque)?['est-neg']:[],
+        (!c.operaNavio&&!usaTerm)?['cid-sep']:[]).join(' ');
+      h+=`<td class="${clsCid}" data-esc="${usaTerm?'terminal':'cidade'}" data-cid="${c.id}" data-term="${usaTerm?alvoTerm:''}" data-date="${dStr}"
+            title="Estoque da cidade — ${estTip(st.estoque)}${usaTerm?'&#10;(soma dos terminais; o clique edita o terminal principal)':''}&#10;Clique para informar manualmente">
+            ${ancCid?'<span class="mark" title="Informado manualmente">📍</span>':''}${estCellHtml(st.estoque)}</td>`;
+
+      // ---- Estoque de terceiro ----
+      if(c.operaNavio){
+        const anc3=(state.giroEstoques||[]).find(a=>a.data===dStr && a.cidadeId===c.id && a.escopo==='terceiro');
+        h+=`<td class="est-cell cid-sep ${anc3?'est-manual':''}" data-esc="terceiro" data-cid="${c.id}" data-term="" data-date="${dStr}"
+              title="Estoque de terceiro — ${estTip(st.terceiro)}&#10;Conta para o navio, mas não entra no nosso giro de barcaças.&#10;Clique para lançar">
+              ${anc3?'<span class="mark">📍</span>':''}${estoqueTerceiroHtml(st.terceiro)}</td>`;
+      }
+
+      // ---- Terminais (cidade de origem) ----
+      if(usaTerm) terms.forEach((t,i)=>{
+        const last=i===terms.length-1;
+        const ts=st.terminais[t.id]||{est:novoEst(), info:{status:'Disponível'}};
+        const ancT=(state.giroEstoques||[]).find(a=>a.data===dStr && a.escopo==='terminal' && a.terminalId===t.id);
+        const clsT=['est-cell','sub-sep'].concat(ancT?['est-manual']:[], estNegativo(ts.est)?['est-neg']:[]).join(' ');
+        h+=`<td class="${clsT}" data-esc="terminal" data-cid="${c.id}" data-term="${t.id}" data-date="${dStr}"
+              title="${t.nome} — ${estTip(ts.est)}&#10;Clique para informar/direcionar barcaças">
+              ${ancT?'<span class="mark">📍</span>':''}${estCellHtml(ts.est)}</td>`;
+        const inf=ts.info||{status:'Disponível'};
+        const stKey=na(inf.status).replace('í','i');
+        const cls = inf.status==='Operando'?'ts-Operando' : inf.status==='Indisponível'?'ts-Indisponivel' : 'ts-Disponivel';
+        const detalhe = inf.status==='Operando'
+          ? `Carregando: ${nb(inf.carreg||0)} barcaça(s)&#10;Descarregando Fertz: ${nb(inf.descF||0)}&#10;Calado de carregamento: ${fmt2(inf.calado||0)} m`
+          : inf.status==='Indisponível' ? (inf.motivo?('Motivo: '+inf.motivo):'Terminal indisponível neste dia')
+          : 'Sem barcaça para operar ou terminal livre';
+        h+=`<td class="${last?'cid-sep':'sub-sep'}"><span class="term-status ${cls}" data-term="${t.id}" data-date="${dStr}"
+              title="${detalhe}&#10;&#10;Clique: alterna Indisponível · Ctrl+clique: período">${inf.status}</span></td>`;
+      });
+    });
+    h+='</tr>';
+  }
+  h+='</table>';
+  wrap.innerHTML=avisoHtml+h;
+  wireGiroInteracoes(wrap);
+}
+// Estoque de terceiro: pode estar zerado (nada lançado) — mostra convite ao lançamento.
+function estoqueTerceiroHtml(e){
+  if(estVazio(e)) return '<span class="muted">—</span>';
+  return estCellHtml(e);
+}
+
+/* ---- Interações do Mapa de Giros: clique, arrasta e solta ---- */
+function wireGiroInteracoes(wrap){
+  // célula de Viagem: vazia abre nova viagem já naquela cidade/dia
+  wrap.querySelectorAll('.giro-viagem-cell').forEach(td=>{
+    td.addEventListener('click', ev=>{
+      if(ev.target.closest('.trip-chip')) return;
+      openViagemModal(null, null, td.dataset.date, td.dataset.cid);
+    });
+    td.addEventListener('dragover', ev=>{ ev.preventDefault(); td.classList.add('drop-target'); });
+    td.addEventListener('dragleave', ()=>td.classList.remove('drop-target'));
+    td.addEventListener('drop', ev=>{
+      ev.preventDefault(); td.classList.remove('drop-target');
+      const vid=ev.dataTransfer.getData('text/gvid'); if(!vid) return;
+      const v=state.viagens.find(x=>x.id===vid); if(!v) return;
+      const co=cidadeOrigemDaViagem(v);
+      if(!co || co.id!==td.dataset.cid){ alert('Mova a viagem dentro da mesma cidade de origem.\nPara trocar de cidade, edite o trecho da viagem.'); return; }
+      if(ev.ctrlKey||ev.metaKey){
+        state.viagens.push({id:uid(), status:'Previsto', empId:v.empId, rotaId:v.rotaId, condicao:v.condicao,
+          dataSaida:td.dataset.date, horaSaida:v.horaSaida, volumeCarregada:v.volumeCarregada||0,
+          barcacas:Object.assign({V:0,C:0,F:0}, v.barcacas), calado:v.calado||caladoPadrao()});
+      }else{
+        v.dataSaida=td.dataset.date;
+      }
+      refreshViagemStatuses(); save(); renderGiros();
+    });
+  });
+  wrap.querySelectorAll('.trip-chip[data-gvid]').forEach(chip=>{
+    chip.addEventListener('dragstart', ev=>{ ev.dataTransfer.setData('text/gvid', chip.dataset.gvid); });
+  });
+  // célula de Navio
+  wrap.querySelectorAll('.giro-navio-cell').forEach(td=>{
+    td.addEventListener('click', ev=>{
+      if(ev.target.closest('.navio-chip')||ev.target.closest('.navio-cont')) return;
+      openNavioModal(null, td.dataset.cid, td.dataset.date);
+    });
+    td.addEventListener('dragover', ev=>{ ev.preventDefault(); td.classList.add('drop-target'); });
+    td.addEventListener('dragleave', ()=>td.classList.remove('drop-target'));
+    td.addEventListener('drop', ev=>{
+      ev.preventDefault(); td.classList.remove('drop-target');
+      const nid=ev.dataTransfer.getData('text/gnid'); if(!nid) return;
+      const n=navById(nid); if(!n) return;
+      if(ev.ctrlKey||ev.metaKey){
+        const c=Object.assign({}, n, {id:uid(), cidadeId:td.dataset.cid, dataInicio:td.dataset.date});
+        state.navios.push(c);
+      }else{
+        n.cidadeId=td.dataset.cid; n.dataInicio=td.dataset.date;
+      }
+      save(); renderGiros();
+    });
+  });
+  wrap.querySelectorAll('.navio-chip[data-gnid]').forEach(chip=>{
+    chip.addEventListener('dragstart', ev=>{ ev.dataTransfer.setData('text/gnid', chip.dataset.gnid); });
+  });
+  // células de estoque (cidade / terminal / terceiro)
+  wrap.querySelectorAll('.est-cell').forEach(td=>{
+    td.addEventListener('click', ()=>openGiroEstModal(td.dataset.esc, td.dataset.cid, td.dataset.term, td.dataset.date));
+  });
+  // status do terminal: 1 clique alterna Indisponível; Ctrl+clique abre o período
+  wrap.querySelectorAll('.term-status').forEach(sp=>{
+    sp.addEventListener('click', ev=>{
+      ev.stopPropagation();
+      if(ev.ctrlKey||ev.metaKey){ openTermIndispModal(sp.dataset.term, sp.dataset.date); return; }
+      toggleTermIndisp(sp.dataset.term, sp.dataset.date);
+      renderGiros();
+    });
+  });
+}
+
+/* ---- Tabela de navios (abaixo do mapa) ---- */
+function renderGiroNavios(){
+  const el=document.getElementById('giroNaviosTbl'); if(!el) return;
+  const navs=(state.navios||[]).slice().sort((a,b)=>String(a.dataInicio||'').localeCompare(String(b.dataInicio||'')));
+  if(!navs.length){ el.innerHTML='<div class="empty">Nenhum navio programado. Clique na coluna <b>Navio</b> do mapa (ou em "+ Novo Navio") para lançar.</div>'; return; }
+  let h='<table><tr><th>Navio</th><th>Cidade</th><th>Produto</th><th class="num">Volume (t)</th><th class="num">t/dia</th>'+
+        '<th>Início</th><th>Término previsto</th><th class="num">Dias</th><th class="num">Calado (m)</th><th class="num">Barcaças</th><th></th></tr>';
+  navs.forEach(n=>{
+    const c=cidById(n.cidadeId);
+    const grao=navioEhGrao(n);
+    const vpbRef = volumePorBarcaca(grao ? (caladoD1(n.dataInicio)||caladoPadrao()) : (n.calado||caladoPadrao()));
+    const barc = grao
+      ? `<span class="barc-V" title="Barcaças vazias que o navio devolve ao giro (estimativa pelo calado previsto)">${vpbRef>0?Math.ceil((n.volume||0)/vpbRef):0}V</span>`
+      : `<span class="barc-V" title="Barcaças vazias necessárias para descarregar o navio">${navioBarcacasNecessarias(n)}V</span>`;
+    h+=`<tr><td><span class="navio-chip ${grao?'nav-grao':'nav-fertz'}" style="cursor:pointer" onclick="openNavioModal('${n.id}')">${n.nome}</span></td>`+
+       `<td>${c?c.nome:'<span class="muted">—</span>'}</td><td>${n.produto}</td>`+
+       `<td class="num">${fmt(n.volume||0)}</td><td class="num">${fmt(navioTonsDia(n))}</td>`+
+       `<td>${n.dataInicio?parseDate(n.dataInicio).toLocaleDateString('pt-BR'):'—'}</td>`+
+       `<td>${navioFimPrevisto(n)?parseDate(navioFimPrevisto(n)).toLocaleDateString('pt-BR'):'—'}</td>`+
+       `<td class="num">${fmt1(navioDias(n))}</td>`+
+       `<td class="num">${grao?'<span class="muted">—</span>':fmt2(n.calado||caladoPadrao())}</td>`+
+       `<td class="num">${barc}</td>`+
+       `<td><button class="btn sm secondary" onclick="openNavioModal('${n.id}')">Editar</button></td></tr>`;
+  });
+  el.innerHTML=h+'</table>';
+}
+
+/* ---- Modal Navio ---- */
+let editNavioId=null;
+function openNavioModal(nid, cidId, dStr){
+  const cidsNavio=cidadesOrdenadas().filter(c=>c.operaNavio);
+  if(!cidsNavio.length){ alert('Cadastre pelo menos uma cidade que opera navio em Premissas → Cidades.'); return; }
+  editNavioId=nid||null;
+  const sel=document.getElementById('mnCidade');
+  sel.innerHTML=cidsNavio.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  const n=nid?navById(nid):null;
+  document.getElementById('mnTitle').textContent=n?'Editar Navio':'Novo Navio';
+  document.getElementById('mnNome').value=n?n.nome:'';
+  sel.value = n?n.cidadeId : (cidId||cidsNavio[0].id);
+  document.getElementById('mnProduto').value=n?n.produto:'Soja';
+  document.getElementById('mnVolume').value=n?(n.volume||''):'';
+  document.getElementById('mnData').value=n?(n.dataInicio||''):(dStr||todayStr());
+  document.getElementById('mnModo').value=n?(n.modo||'dias'):'dias';
+  document.getElementById('mnDias').value=n?(n.dias||''):'';
+  document.getElementById('mnPrancha').value=n?(n.prancha||''):'';
+  document.getElementById('mnHorasDia').value=n?(n.horasDia||24):24;
+  document.getElementById('mnCalado').value=n?(n.calado||''):'';
+  document.getElementById('mnDelete').style.display=n?'':'none';
+  updateMnVisibility(); updateMnCalc();
+  document.getElementById('modalNavio').classList.add('show');
+}
+function updateMnVisibility(){
+  const modo=document.getElementById('mnModo').value;
+  document.getElementById('mnDiasField').style.display = modo==='dias'?'':'none';
+  document.getElementById('mnPranchaField').style.display = modo==='prancha'?'':'none';
+  const fertz = na(document.getElementById('mnProduto').value)==='fertilizante';
+  document.getElementById('mnCaladoRow').style.display = fertz?'':'none';
+}
+function navioDoModal(){
+  return {
+    nome:document.getElementById('mnNome').value.trim(),
+    cidadeId:document.getElementById('mnCidade').value,
+    produto:document.getElementById('mnProduto').value,
+    volume:parseFloat(document.getElementById('mnVolume').value)||0,
+    dataInicio:document.getElementById('mnData').value,
+    modo:document.getElementById('mnModo').value,
+    dias:parseFloat(document.getElementById('mnDias').value)||0,
+    prancha:parseFloat(document.getElementById('mnPrancha').value)||0,
+    horasDia:parseFloat(document.getElementById('mnHorasDia').value)||24,
+    calado:parseFloat(String(document.getElementById('mnCalado').value).replace(',','.'))||0
+  };
+}
+function updateMnCalc(){
+  const n=navioDoModal();
+  const el=document.getElementById('mnCalc');
+  const fertz=!navioEhGrao(n);
+  // Fertilizante: sugere o calado das barcaças pelo previsto em D+1 do término da operação.
+  const hintEl=document.getElementById('mnCaladoHint');
+  if(fertz){
+    const fim=navioFimPrevisto(n);
+    const sug=caladoSugeridoNavio(n);
+    const inp=document.getElementById('mnCalado');
+    if(sug && !inp.dataset.touched){ inp.value=Math.round(sug*100)/100; n.calado=sug; }
+    hintEl.innerHTML = sug
+      ? `Sugerido pelo calado previsto em <b>D+1</b> do término (${fim?parseDate(fim).toLocaleDateString('pt-BR'):'—'}): <b>${fmt2(sug)} m</b>.`
+      : 'Sem calado previsto para D+1 do término — informe manualmente (ou importe CALC_SIMULACAO).';
+  }
+  if(!n.volume||!n.dataInicio){ el.innerHTML=''; return; }
+  const dias=navioDias(n), fim=navioFimPrevisto(n), tDia=navioTonsDia(n);
+  let txt=`<b>Operação prevista:</b> ${fmt(tDia)} t/dia · ${fmt1(dias)} dias · término em <b>${fim?parseDate(fim).toLocaleDateString('pt-BR'):'—'}</b>`;
+  const calRef = fertz ? (n.calado||caladoPadrao()) : (caladoD1(n.dataInicio)||caladoPadrao());
+  const vpb=volumePorBarcaca(calRef);
+  if(vpb>0){
+    const nb1=Math.ceil(n.volume/vpb);
+    txt += fertz
+      ? `<br><b>Barcaças vazias necessárias:</b> ${nb1} (${fmt(vpb)} t por barcaça a ${fmt2(calRef)} m) — elas voltam carregadas com Fertz.`
+      : `<br><b>Barcaças vazias devolvidas ao giro:</b> ~${nb1} ao longo da operação (${fmt(vpb)} t por barcaça a ${fmt2(calRef)} m).`;
+  }else{
+    txt += '<br><span style="color:var(--warn)">Importe CONF_CALADO_VOLUME nas Premissas para calcular as barcaças.</span>';
+  }
+  el.innerHTML=txt;
+}
+['mnProduto','mnModo'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>{ updateMnVisibility(); updateMnCalc(); }));
+['mnVolume','mnData','mnDias','mnPrancha','mnHorasDia','mnCidade'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateMnCalc);
+  document.getElementById(id).addEventListener('change', updateMnCalc);
+});
+document.getElementById('mnCalado').addEventListener('input', function(){ this.dataset.touched='1'; updateMnCalc(); });
+document.getElementById('mnSave').addEventListener('click', ()=>{
+  const n=navioDoModal();
+  if(!n.nome){ alert('Informe o nome do navio.'); return; }
+  if(!n.volume){ alert('Informe o volume do navio (t).'); return; }
+  if(!n.dataInicio){ alert('Informe a data de início da operação.'); return; }
+  if(n.modo==='dias' && !(n.dias>0)){ alert('Informe o tempo de operação em dias — ou troque para prancha média.'); return; }
+  if(n.modo==='prancha' && !(n.prancha>0)){ alert('Informe a prancha média (t/h) — ou troque para tempo de operação.'); return; }
+  if(!navioEhGrao(n) && !(n.calado>0)){ alert('Informe o calado previsto das barcaças do navio de fertilizante.'); return; }
+  if(editNavioId){ Object.assign(navById(editNavioId), n); }
+  else{ state.navios.push(Object.assign({id:uid()}, n)); }
+  document.getElementById('mnCalado').dataset.touched='';
+  save(); closeModals(); renderGiros();
+});
+document.getElementById('mnDelete').addEventListener('click', ()=>{
+  if(!editNavioId) return;
+  if(!confirm('Excluir este navio?')) return;
+  state.navios=state.navios.filter(n=>n.id!==editNavioId);
+  save(); closeModals(); renderGiros();
+});
+
+/* ---- Modal Estoque de barcaças (cidade / terminal / terceiro) ---- */
+let editGiroEstCtx=null;
+function openGiroEstModal(escopo, cidId, termId, dStr){
+  const c=cidById(cidId); if(!c) return;
+  const t=termId?termById(termId):null;
+  editGiroEstCtx={escopo, cidadeId:cidId, terminalId:termId||'', data:dStr};
+  const alvo = escopo==='terceiro' ? 'Estoque de terceiro'
+             : (t ? (na(t.nome).includes('terminal') ? t.nome : 'Terminal '+t.nome) : 'Pátio da cidade');
+  document.getElementById('mgeTitle').textContent='Estoque de barcaças — '+c.nome;
+  document.getElementById('mgeCtx').innerHTML=
+    `<b>${alvo}</b> · ${parseDate(dStr).toLocaleDateString('pt-BR')}<br>`+
+    (escopo==='terceiro'
+      ? 'Barcaças e carga de outros players: <b>contam para o navio</b>, mas não entram no nosso giro nem se movem entre cidades. O valor vale deste dia em diante, até um novo lançamento.'
+      : 'O valor informado é o estoque <b>no fim do dia</b> e passa a ser a âncora da projeção a partir daí. Deixe tudo em branco/zero e clique em <b>Remover lançamento</b> para voltar ao projetado.')+
+    (t&&!t.principal?'<br><b>Terminal secundário:</b> lance aqui as barcaças que você quer direcionar manualmente para ele.':'');
+  const cur=(state.giroEstoques||[]).find(a=>a.data===dStr && a.cidadeId===cidId && a.escopo===escopo &&
+    (escopo==='terminal' ? a.terminalId===termId : true));
+  document.getElementById('mgeV').value=cur?(cur.V||''):'';
+  document.getElementById('mgeC').value=cur?(cur.C||''):'';
+  document.getElementById('mgeF').value=cur?(cur.F||''):'';
+  document.getElementById('mgeVolG').value=cur?(cur.volG||''):'';
+  document.getElementById('mgeVolF').value=cur?(cur.volF||''):'';
+  const calSug=caladoD1(dStr)||caladoPadrao();
+  document.getElementById('mgeCalado').value=Math.round(calSug*100)/100;
+  document.getElementById('mgeDelete').style.display=cur?'':'none';
+  editGiroEstCtx.id=cur?cur.id:null;
+  document.getElementById('modalGiroEst').classList.add('show');
+}
+document.getElementById('mgeCalcVol').addEventListener('click', ()=>{
+  const cal=parseFloat(String(document.getElementById('mgeCalado').value).replace(',','.'))||0;
+  const vpb=volumePorBarcaca(cal);
+  if(!(vpb>0)){ alert('Sem tabela de calado × volume (CONF_CALADO_VOLUME) ou calado inválido.'); return; }
+  const C=parseFloat(document.getElementById('mgeC').value)||0;
+  const F=parseFloat(document.getElementById('mgeF').value)||0;
+  document.getElementById('mgeVolG').value=Math.round(C*vpb)||'';
+  document.getElementById('mgeVolF').value=Math.round(F*vpb)||'';
+});
+document.getElementById('mgeSave').addEventListener('click', ()=>{
+  if(!editGiroEstCtx) return;
+  const val={
+    V:parseFloat(document.getElementById('mgeV').value)||0,
+    C:parseFloat(document.getElementById('mgeC').value)||0,
+    F:parseFloat(document.getElementById('mgeF').value)||0,
+    volG:parseFloat(document.getElementById('mgeVolG').value)||0,
+    volF:parseFloat(document.getElementById('mgeVolF').value)||0
+  };
+  if(editGiroEstCtx.id){
+    Object.assign((state.giroEstoques||[]).find(a=>a.id===editGiroEstCtx.id), val);
+  }else{
+    state.giroEstoques.push(Object.assign({id:uid(), escopo:editGiroEstCtx.escopo, cidadeId:editGiroEstCtx.cidadeId,
+      terminalId:editGiroEstCtx.terminalId, data:editGiroEstCtx.data}, val));
+  }
+  save(); closeModals(); renderGiros();
+});
+document.getElementById('mgeDelete').addEventListener('click', ()=>{
+  if(!editGiroEstCtx||!editGiroEstCtx.id) return;
+  state.giroEstoques=state.giroEstoques.filter(a=>a.id!==editGiroEstCtx.id);
+  save(); closeModals(); renderGiros();
+});
+
+/* ---- Modal Indisponibilidade de terminal ---- */
+function openTermIndispModal(termId, dStr){
+  const terms=(state.terminais||[]).filter(ativo);
+  if(!terms.length){ alert('Cadastre terminais em Premissas → Terminais.'); return; }
+  const sel=document.getElementById('mtiTerm');
+  sel.innerHTML=terms.map(t=>{ const c=cidById(t.cidadeId); return `<option value="${t.id}">${c?c.nome+' — ':''}${t.nome}</option>`; }).join('');
+  if(termId) sel.value=termId;
+  document.getElementById('mtiIni').value=dStr||todayStr();
+  document.getElementById('mtiFim').value=dStr||todayStr();
+  document.getElementById('mtiMotivo').value='';
+  renderTermIndispTbl();
+  document.getElementById('modalTermInd').classList.add('show');
+}
+function renderTermIndispTbl(){
+  const t=document.getElementById('mtiTbl');
+  const lista=(state.termIndisp||[]).slice().sort((a,b)=>String(a.ini).localeCompare(String(b.ini)));
+  if(!lista.length){ t.innerHTML='<tr><td class="empty">Nenhum período cadastrado.</td></tr>'; return; }
+  let h='<tr><th>Terminal</th><th>De</th><th>Até</th><th>Motivo</th><th></th></tr>';
+  lista.forEach(p=>{
+    const term=termById(p.terminalId), c=term?cidById(term.cidadeId):null;
+    h+=`<tr><td>${c?c.nome+' — ':''}${term?term.nome:'<span class="muted">(removido)</span>'}</td>`+
+       `<td>${parseDate(p.ini).toLocaleDateString('pt-BR')}</td><td>${parseDate(p.fim||p.ini).toLocaleDateString('pt-BR')}</td>`+
+       `<td>${p.motivo||'<span class="muted">—</span>'}</td>`+
+       `<td><button class="btn sm danger" onclick="delTermIndisp('${p.id}')">Excluir</button></td></tr>`;
+  });
+  t.innerHTML=h;
+}
+window.delTermIndisp=function(id){
+  state.termIndisp=state.termIndisp.filter(p=>p.id!==id);
+  save(); renderTermIndispTbl(); renderGiros();
+};
+document.getElementById('mtiSave').addEventListener('click', ()=>{
+  const terminalId=document.getElementById('mtiTerm').value;
+  const ini=document.getElementById('mtiIni').value, fim=document.getElementById('mtiFim').value||ini;
+  if(!terminalId||!ini){ alert('Informe o terminal e a data inicial.'); return; }
+  if(fim<ini){ alert('Data final anterior à inicial.'); return; }
+  state.termIndisp.push({id:uid(), terminalId, ini, fim, motivo:document.getElementById('mtiMotivo').value.trim()});
+  save(); renderTermIndispTbl(); renderGiros();
+});
+
+/* =========================================================
+   PREMISSAS — CIDADES
+   ========================================================= */
+let editCidId=null;
+function criarCidadesPadrao(){
+  const base=[
+    {nome:'Miritituba', origem:true,  operaNavio:false, apelidos:'MIR, Itaituba, ITB'},
+    {nome:'Santarém',   origem:false, operaNavio:true,  apelidos:'STM, Santarem'},
+    {nome:'Vila do Conde', origem:false, operaNavio:true, apelidos:'VDC, Barcarena, Conde'}
+  ];
+  let criadas=0;
+  base.forEach((b,i)=>{
+    if(cidByNome(b.nome)) return;
+    state.cidades.push({id:uid(), nome:b.nome, cor:CID_PALETTE[i%CID_PALETTE.length], apelidos:b.apelidos,
+      origem:b.origem, operaNavio:b.operaNavio, ordem:(state.cidades.length)});
+    criadas++;
+  });
+  // Miritituba nasce com dois terminais, como na operação real (um principal e um secundário)
+  const mir=cidByNome('Miritituba');
+  if(mir && !terminaisDaCidade(mir.id).length){
+    state.terminais.push({id:uid(), cidadeId:mir.id, nome:'Terminal 1', principal:true,
+      pranchaCar:1000, horasCar:24, pranchaDes:600, horasDes:24});
+    state.terminais.push({id:uid(), cidadeId:mir.id, nome:'Terminal 2', principal:false,
+      pranchaCar:800, horasCar:12, pranchaDes:500, horasDes:12});
+  }
+  save();
+  renderCid(); renderTerm(); renderGiros();
+  if(criadas) alert('Cidades criadas. Ajuste as pranchas dos terminais em Premissas → Terminais.');
+}
+window.criarCidadesPadrao=criarCidadesPadrao;
+document.getElementById('btnAddCid').addEventListener('click', ()=>{
+  const nome=document.getElementById('cidNome').value.trim();
+  if(!nome){ alert('Informe o nome da cidade.'); return; }
+  const dup=cidByNome(nome);
+  if(dup && dup.id!==editCidId){ alert('Já existe uma cidade com esse nome.'); return; }
+  const data={
+    nome,
+    cor:document.getElementById('cidCor').value,
+    apelidos:document.getElementById('cidApelidos').value.trim(),
+    origem:document.getElementById('cidOrigem').checked,
+    operaNavio:document.getElementById('cidNavio').checked
+  };
+  if(editCidId){ Object.assign(cidById(editCidId), data); editCidId=null; }
+  else{ state.cidades.push(Object.assign({id:uid(), ordem:state.cidades.length}, data)); }
+  document.getElementById('cidNome').value='';
+  document.getElementById('cidApelidos').value='';
+  document.getElementById('btnAddCid').textContent='Adicionar Cidade';
+  document.getElementById('btnCancelCid').style.display='none';
+  save(); renderCid(); renderTerm();
+});
+document.getElementById('btnCancelCid').addEventListener('click', ()=>{
+  editCidId=null;
+  document.getElementById('cidNome').value='';
+  document.getElementById('cidApelidos').value='';
+  document.getElementById('btnAddCid').textContent='Adicionar Cidade';
+  document.getElementById('btnCancelCid').style.display='none';
+});
+window.editCidade=function(id){
+  const c=cidById(id); if(!c) return;
+  editCidId=id;
+  document.getElementById('cidNome').value=c.nome;
+  document.getElementById('cidCor').value=c.cor||getCidCor(c);
+  document.getElementById('cidApelidos').value=c.apelidos||'';
+  document.getElementById('cidOrigem').checked=!!c.origem;
+  document.getElementById('cidNavio').checked=!!c.operaNavio;
+  document.getElementById('btnAddCid').textContent='Salvar Cidade';
+  document.getElementById('btnCancelCid').style.display='';
+};
+window.delCidade=function(id){
+  const c=cidById(id); if(!c) return;
+  const nT=(state.terminais||[]).filter(t=>t.cidadeId===id).length;
+  const nN=(state.navios||[]).filter(n=>n.cidadeId===id).length;
+  if(!confirm(`Excluir a cidade "${c.nome}"?`+(nT||nN?`\n\nSerão excluídos também ${nT} terminal(is) e ${nN} navio(s) vinculados.`:''))) return;
+  const terms=(state.terminais||[]).filter(t=>t.cidadeId===id).map(t=>t.id);
+  state.terminais=state.terminais.filter(t=>t.cidadeId!==id);
+  state.termIndisp=(state.termIndisp||[]).filter(p=>!terms.includes(p.terminalId));
+  state.navios=(state.navios||[]).filter(n=>n.cidadeId!==id);
+  state.giroEstoques=(state.giroEstoques||[]).filter(a=>a.cidadeId!==id);
+  state.cidades=state.cidades.filter(x=>x.id!==id);
+  save(); renderCid(); renderTerm(); renderGiros();
+};
+window.moveCidade=function(id,dir){
+  const lista=(state.cidades||[]).slice().sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+  const i=lista.findIndex(c=>c.id===id);
+  const j=i+dir;
+  if(i<0||j<0||j>=lista.length) return;
+  const tmp=lista[i].ordem; lista[i].ordem=lista[j].ordem; lista[j].ordem=tmp;
+  if(lista[i].ordem===lista[j].ordem) lista.forEach((c,k)=>c.ordem=k);
+  save(); renderCid();
+};
+window.toggleCidAtivo=function(id){
+  const c=cidById(id); if(!c) return;
+  c.ativo = (c.ativo===false);
+  save(); renderCid();
+};
+function renderCid(){
+  const t=document.getElementById('tblCid'); if(!t) return;
+  const lista=(state.cidades||[]).slice().sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+  if(!lista.length){
+    t.innerHTML='<tr><td class="empty">Nenhuma cidade cadastrada. '+
+      '<button class="btn sm" onclick="criarCidadesPadrao()">Criar Miritituba, Santarém e Vila do Conde</button></td></tr>';
+    return;
+  }
+  let h='<tr><th>Ordem</th><th>Cidade</th><th>Apelidos nas rotas</th><th>Perfil</th><th>Terminais</th><th>Navios</th><th>Ativa</th><th></th></tr>';
+  lista.forEach((c,i)=>{
+    const cor=getCidCor(c);
+    const terms=(state.terminais||[]).filter(x=>x.cidadeId===c.id);
+    const navs=(state.navios||[]).filter(x=>x.cidadeId===c.id);
+    const perfil=[c.origem?'<span class="tag origem">ORIGEM</span>':'', c.operaNavio?'<span class="tag navio">NAVIO</span>':'']
+      .filter(Boolean).join(' ')||'<span class="muted">—</span>';
+    h+=`<tr${ativo(c)?'':' style="opacity:.55"'}>`+
+       `<td><button class="btn sm secondary" onclick="moveCidade('${c.id}',-1)" ${i===0?'disabled':''}>▲</button> `+
+       `<button class="btn sm secondary" onclick="moveCidade('${c.id}',1)" ${i===lista.length-1?'disabled':''}>▼</button></td>`+
+       `<td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${cor};margin-right:6px"></span>${c.nome}</td>`+
+       `<td>${c.apelidos?`<span class="muted">${c.apelidos}</span>`:'<span class="muted">—</span>'}</td>`+
+       `<td>${perfil}</td><td>${terms.length||'<span class="muted">—</span>'}</td><td>${navs.length||'<span class="muted">—</span>'}</td>`+
+       `<td><button class="btn sm secondary" onclick="toggleCidAtivo('${c.id}')">${ativo(c)?'Sim':'Não'}</button></td>`+
+       `<td><button class="btn sm secondary" onclick="editCidade('${c.id}')">Editar</button> `+
+       `<button class="btn sm danger" onclick="delCidade('${c.id}')">Excluir</button></td></tr>`;
+  });
+  t.innerHTML=h;
+}
+
+/* =========================================================
+   PREMISSAS — TERMINAIS
+   ========================================================= */
+let editTermId=null;
+function fillTermCidades(){
+  const sel=document.getElementById('termCidade');
+  const lista=cidadesOrdenadas();
+  const cur=sel.value;
+  sel.innerHTML=lista.map(c=>`<option value="${c.id}">${c.nome}${c.origem?' (origem)':''}</option>`).join('')
+    || '<option value="">— cadastre uma cidade —</option>';
+  if(cur && lista.some(c=>c.id===cur)) sel.value=cur;
+}
+document.getElementById('btnAddTerm').addEventListener('click', ()=>{
+  const cidadeId=document.getElementById('termCidade').value;
+  const nome=document.getElementById('termNome').value.trim();
+  if(!cidadeId){ alert('Cadastre e selecione uma cidade.'); return; }
+  if(!nome){ alert('Informe o nome do terminal.'); return; }
+  const data={
+    cidadeId, nome,
+    principal:document.getElementById('termTipo').value==='principal',
+    pranchaCar:parseFloat(document.getElementById('termPranchaCar').value)||0,
+    horasCar:parseFloat(document.getElementById('termHorasCar').value)||0,
+    pranchaDes:parseFloat(document.getElementById('termPranchaDes').value)||0,
+    horasDes:parseFloat(document.getElementById('termHorasDes').value)||0
+  };
+  // só um terminal principal por cidade — o novo principal rebaixa os demais
+  if(data.principal) (state.terminais||[]).forEach(t=>{ if(t.cidadeId===cidadeId && t.id!==editTermId) t.principal=false; });
+  if(editTermId){ Object.assign(termById(editTermId), data); editTermId=null; }
+  else{ state.terminais.push(Object.assign({id:uid()}, data)); }
+  document.getElementById('termNome').value='';
+  document.getElementById('btnAddTerm').textContent='Adicionar Terminal';
+  document.getElementById('btnCancelTerm').style.display='none';
+  save(); renderTerm(); renderCid();
+});
+document.getElementById('btnCancelTerm').addEventListener('click', ()=>{
+  editTermId=null;
+  document.getElementById('termNome').value='';
+  document.getElementById('btnAddTerm').textContent='Adicionar Terminal';
+  document.getElementById('btnCancelTerm').style.display='none';
+});
+window.editTerminal=function(id){
+  const t=termById(id); if(!t) return;
+  editTermId=id;
+  fillTermCidades();
+  document.getElementById('termCidade').value=t.cidadeId;
+  document.getElementById('termNome').value=t.nome;
+  document.getElementById('termTipo').value=t.principal?'principal':'secundario';
+  document.getElementById('termPranchaCar').value=t.pranchaCar||'';
+  document.getElementById('termHorasCar').value=t.horasCar||'';
+  document.getElementById('termPranchaDes').value=t.pranchaDes||'';
+  document.getElementById('termHorasDes').value=t.horasDes||'';
+  document.getElementById('btnAddTerm').textContent='Salvar Terminal';
+  document.getElementById('btnCancelTerm').style.display='';
+};
+window.delTerminal=function(id){
+  const t=termById(id); if(!t) return;
+  if(!confirm(`Excluir o terminal "${t.nome}"?`)) return;
+  state.terminais=state.terminais.filter(x=>x.id!==id);
+  state.termIndisp=(state.termIndisp||[]).filter(p=>p.terminalId!==id);
+  state.giroEstoques=(state.giroEstoques||[]).filter(a=>a.terminalId!==id);
+  save(); renderTerm(); renderCid(); renderGiros();
+};
+function renderTerm(){
+  const t=document.getElementById('tblTerm'); if(!t) return;
+  fillTermCidades();
+  const lista=(state.terminais||[]).slice().sort((a,b)=>{
+    const ca=cidById(a.cidadeId), cb=cidById(b.cidadeId);
+    return ((ca&&ca.ordem)||0)-((cb&&cb.ordem)||0) || (b.principal?1:0)-(a.principal?1:0);
+  });
+  if(!lista.length){ t.innerHTML='<tr><td class="empty">Nenhum terminal cadastrado.</td></tr>'; return; }
+  let h='<tr><th>Cidade</th><th>Terminal</th><th>Tipo</th><th class="num">Carreg. (t/h)</th><th class="num">h/dia</th>'+
+        '<th class="num">Carreg. (t/dia)</th><th class="num">Descarga Fertz (t/h)</th><th class="num">h/dia</th>'+
+        '<th class="num">Descarga (t/dia)</th><th></th></tr>';
+  lista.forEach(t2=>{
+    const c=cidById(t2.cidadeId);
+    h+=`<tr><td>${c?c.nome:'<span class="muted">—</span>'}</td><td>${t2.nome}</td>`+
+       `<td><span class="tag ${t2.principal?'principal':'secund'}">${t2.principal?'Principal':'Secundário'}</span></td>`+
+       `<td class="num">${fmt1(t2.pranchaCar||0)}</td><td class="num">${fmt1(t2.horasCar||0)}</td>`+
+       `<td class="num">${fmt((t2.pranchaCar||0)*(t2.horasCar||0))}</td>`+
+       `<td class="num">${fmt1(t2.pranchaDes||0)}</td><td class="num">${fmt1(t2.horasDes||0)}</td>`+
+       `<td class="num">${fmt((t2.pranchaDes||0)*(t2.horasDes||0))}</td>`+
+       `<td><button class="btn sm secondary" onclick="editTerminal('${t2.id}')">Editar</button> `+
+       `<button class="btn sm danger" onclick="delTerminal('${t2.id}')">Excluir</button></td></tr>`;
+  });
+  t.innerHTML=h;
+}
+
+/* =========================================================
+   PREMISSAS — CALADO MÉDIO (CONF_CALADO_VOLUME + CALC_SIMULACAO)
+   ========================================================= */
+document.getElementById('giroCaladoPadrao').addEventListener('change', function(){
+  const v=parseFloat(String(this.value).replace(',','.'))||0;
+  state.giroCfg.caladoPadrao = v>0?v:4.5;
+  this.value=state.giroCfg.caladoPadrao;
+  save(); renderGiros();
+});
+document.getElementById('giroCaladoCenario').addEventListener('change', function(){
+  state.giroCfg.cenario=this.value; save(); renderGiros();
+});
+document.getElementById('btnClearCalado').addEventListener('click', ()=>{
+  if(!confirm('Limpar as tabelas de calado (volume por barcaça e calado previsto)?')) return;
+  state.caladoVolume=[]; state.caladoSim=[];
+  save(); renderCaladoTables(); renderGiros();
+});
+function renderCaladoTables(){
+  const cfgP=document.getElementById('giroCaladoPadrao');
+  if(cfgP) cfgP.value=caladoPadrao();
+  const cfgC=document.getElementById('giroCaladoCenario');
+  if(cfgC) cfgC.value=(state.giroCfg&&state.giroCfg.cenario)||'medio';
+  const tv=document.getElementById('tblCaladoVol');
+  if(tv){
+    const arr=caladoVolTable();
+    if(!arr.length){ tv.innerHTML='<tr><td class="empty">CONF_CALADO_VOLUME não importada.</td></tr>'; }
+    else{
+      let h='<tr><th class="num">Calado (m)</th><th class="num">Box</th><th class="num">Rake</th><th class="num">Média (t)</th></tr>';
+      arr.forEach(r=>{ h+=`<tr><td class="num">${fmt2(r.calado)}</td><td class="num">${fmt2(r.box||0)}</td><td class="num">${fmt2(r.rake||0)}</td><td class="num"><b>${fmt2(r.media)}</b></td></tr>`; });
+      tv.innerHTML=h;
+    }
+  }
+  const ts=document.getElementById('tblCaladoSim');
+  if(ts){
+    const arr=(state.caladoSim||[]).slice().sort((a,b)=>String(a.data).localeCompare(String(b.data)));
+    if(!arr.length){ ts.innerHTML='<tr><td class="empty">CALC_SIMULACAO não importada.</td></tr>'; }
+    else{
+      const hojeStr=todayStr();
+      const idx=Math.max(0, arr.findIndex(r=>r.data>=hojeStr));
+      const vis=arr.slice(idx, idx+120);
+      let h='<tr><th>Data</th><th class="num">Pessimista</th><th class="num">Médio</th><th class="num">Otimista</th></tr>';
+      vis.forEach(r=>{ h+=`<tr><td>${parseDate(r.data).toLocaleDateString('pt-BR')}</td><td class="num">${fmt2(r.pess)}</td><td class="num"><b>${fmt2(r.medio)}</b></td><td class="num">${fmt2(r.otim)}</td></tr>`; });
+      ts.innerHTML=h+`<tr><td colspan="4" class="muted">${arr.length} data(s) importada(s) — exibindo ${vis.length} a partir de hoje.</td></tr>`;
+    }
+  }
+}
+
+// Procura uma tabela no arquivo: por aba, por intervalo nomeado ou varrendo as abas
+// até achar uma linha de cabeçalho compatível. Retorna {rows, hIdx} ou null.
+function acharTabela(wb, nome, isHeader){
+  const tryRows=(ws,range)=>{
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,range:range});
+    const i=rows.findIndex(isHeader);
+    return i>=0 ? {rows, hIdx:i} : null;
+  };
+  const picked=pickSheet(wb, nome);
+  if(picked){ const r=tryRows(picked.ws, picked.range); if(r) return r; }
+  for(const sn of wb.SheetNames){
+    const r=tryRows(wb.Sheets[sn]);
+    if(r) return r;
+  }
+  return null;
+}
+function numBR(v){
+  if(v===null||v===undefined||v==='') return 0;
+  if(typeof v==='number') return v;
+  let s=String(v).trim().replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+  const n=parseFloat(s);
+  return isNaN(n)?0:n;
+}
+// Cabeçalhos das duas tabelas do mesmo arquivo
+const isHdrCaladoVol = r=>{ if(!Array.isArray(r)) return false; const H=r.map(na);
+  return H.some(h=>h.includes('calado')) && H.some(h=>h.includes('media')||h==='média'); };
+const isHdrCaladoSim = r=>{ if(!Array.isArray(r)) return false; const H=r.map(na);
+  return H.some(h=>h==='data'||h.startsWith('data')) && H.some(h=>h.includes('calado medio')||h.includes('calado pessimista')||h.includes('calado otimista')); };
+
+function processCaladoVolume(rows, hIdx){
+  const header=(rows[hIdx]||[]).map(na); const find=headerFinder(header);
+  const iCal=find('calado'), iBox=find('box'), iRake=find('rake'), iMed=find('media','médi');
+  if(iCal<0||iMed<0) return 0;
+  const out=[];
+  for(let i=hIdx+1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const cal=numBR(r[iCal]);
+    if(!(cal>0)) continue;
+    const media=numBR(r[iMed]);
+    out.push({calado:cal, box:iBox>=0?numBR(r[iBox]):0, rake:iRake>=0?numBR(r[iRake]):0, media});
+  }
+  if(out.length){ state.caladoVolume=out; _cvCache={ref:null,arr:[]}; }
+  return out.length;
+}
+function processCaladoSim(rows, hIdx){
+  const header=(rows[hIdx]||[]).map(na); const find=headerFinder(header);
+  const iData=find('data'), iP=find('pessimista'), iM=find('calado medio','medio'), iO=find('otimista');
+  if(iData<0) return 0;
+  const map={};
+  for(let i=hIdx+1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r.length) continue;
+    const iso=parseDateTimeBR(r[iData]);
+    if(!iso) continue;
+    const d=iso.slice(0,10);
+    map[d]={data:d, pess:iP>=0?numBR(r[iP]):0, medio:iM>=0?numBR(r[iM]):0, otim:iO>=0?numBR(r[iO]):0};
+  }
+  const out=Object.values(map).sort((a,b)=>a.data.localeCompare(b.data));
+  if(out.length){ state.caladoSim=out; _csCache={ref:null,map:null}; }
+  return out.length;
+}
+// O mesmo arquivo traz as duas tabelas — a importação carrega as duas de uma vez.
+(function wireImportCalado(){
+  const btn=document.getElementById('btnImportCalado'), inp=document.getElementById('fileCalado');
+  if(!btn||!inp) return;
+  btn.addEventListener('click', ()=>inp.click());
+  inp.addEventListener('change', e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const isCsv=/\.csv$/i.test(file.name);
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        let nVol=0, nSim=0;
+        if(isCsv){
+          const rows=parseCSV(ev.target.result);
+          let i=rows.findIndex(isHdrCaladoVol);
+          if(i>=0) nVol=processCaladoVolume(rows,i);
+          i=rows.findIndex(isHdrCaladoSim);
+          if(i>=0) nSim=processCaladoSim(rows,i);
+        }else{
+          const wb=XLSX.read(ev.target.result,{type:'array'});
+          const tv=acharTabela(wb,'CONF_CALADO_VOLUME',isHdrCaladoVol);
+          if(tv) nVol=processCaladoVolume(tv.rows, tv.hIdx);
+          const ts=acharTabela(wb,'CALC_SIMULACAO',isHdrCaladoSim);
+          if(ts) nSim=processCaladoSim(ts.rows, ts.hIdx);
+        }
+        if(!nVol && !nSim){
+          alert('Nenhuma das tabelas foi encontrada no arquivo.\n\n'+
+            'Esperado: CONF_CALADO_VOLUME (Calado (m), Box, Rake, Média) e/ou '+
+            'CALC_SIMULACAO (Data, Calado Pessimista, Calado Médio, Calado Otimista).');
+        }else{
+          save(); renderCaladoTables(); renderGiros();
+          alert('Importação concluída.\n\n'+
+            `CONF_CALADO_VOLUME: ${nVol?nVol+' linha(s) de calado × volume':'não encontrada (base anterior mantida)'}\n`+
+            `CALC_SIMULACAO: ${nSim?nSim+' data(s) de calado previsto':'não encontrada (base anterior mantida)'}`);
+        }
+      }catch(err){ alert('Falha ao ler arquivo: '+err.message); }
+      e.target.value='';
+    };
+    if(isCsv) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
+  });
+})();
 
 /* =========================================================
    ABASTECIMENTOS
@@ -2709,6 +4405,7 @@ document.getElementById('btnAbastFilterReset').addEventListener('click', ()=>{
 let editAbastId=null;
 function getCidades(){
   const set=new Set();
+  (state.cidades||[]).forEach(c=>{ if(c.nome) set.add(c.nome); });
   state.fornecedores.forEach(f=>{ if(f.cidade) set.add(f.cidade); });
   state.abastecimentos.forEach(a=>{ if(a.cidade) set.add(a.cidade); });
   state.rotas.forEach(r=>{ if(r.origem) set.add(r.origem); if(r.destino) set.add(r.destino); });
@@ -3089,7 +4786,7 @@ function renderViagOrfaBanner(soOrfas){
        <div class="txt"><b>⚠ ${list.length} viagem(ns) programada(s) sem par na última importação${periodo}.</b>
          O Histórico de Viagens importado é a fonte principal — estas viagens ficaram para trás (normalmente porque a
          data de saída mudou na base e o ID da viagem mudou junto). Confira e <b>exclua manualmente</b> as que forem
-         duplicatas, para não sobrepor viagem programada com viagem executada no Mapa de Giros.</div>
+         duplicatas, para não sobrepor viagem programada com viagem executada no Mapa de Abastecimentos.</div>
        <div class="acts">
          ${soOrfas?'<button class="btn sm secondary" onclick="document.getElementById(\'viagFiltro\').value=\'\';renderViagens();">Ver todas</button>'
                   :'<button class="btn sm" onclick="filtrarOrfas()">Revisar só estas</button>'}
@@ -3526,7 +5223,7 @@ document.getElementById('fvSave').addEventListener('click', ()=>{
   // finalização manual: desvincula da importação para não ser revertida em futuras importações
   v.autoFinalizada=false; v.consumoPendente=false; delete v.realImportId;
   save(); closeModals();
-  // Atualiza tanto a grade do Mapa de Giros (onde a viagem pode ter sido aberta)
+  // Atualiza tanto a grade do Mapa de Abastecimentos (onde a viagem pode ter sido aberta)
   // quanto a lista de Viagens — assim a finalização aparece imediatamente em
   // qualquer das views, sem dar a impressão de que "não salvou".
   renderMapa();
@@ -4936,6 +6633,21 @@ function sincronizarViagensProgramadas(){
   }));
   const progPorId=new Map();
   [...progIds.keys()].forEach(it=>{ const id=progIds.get(it); if(id) progPorId.set(id, it.v); });
+  // Quebra de barcaças a partir do real: a base traz a quantidade e a condição do comboio.
+  // Só preenche quando a viagem ainda não tem barcaças informadas — a quebra V/C/F digitada
+  // pelo usuário no Mapa de Giros é mais detalhada que a base e não é sobrescrita.
+  const aplicarBarcacasDoReal=(viagem, real)=>{
+    const n=Math.max(0, Math.round(real.barcacas||0));
+    if(!n) return;
+    const atual=viagem.barcacas||{};
+    if(((atual.V||0)+(atual.C||0)+(atual.F||0))>0) return;
+    const carregada=isCarregada(real.condicao);
+    const fertz=na(real.produto).includes('fert');
+    viagem.barcacas = carregada
+      ? (fertz ? {V:0,C:0,F:n} : {V:0,C:n,F:0})
+      : {V:n,C:0,F:0};
+    if(!(viagem.calado>0)) viagem.calado=caladoPadrao();
+  };
   // helper: converte consumo do real ({MGO,HFO}) para os combustíveis do barco e monta os realizados
   const realizadosDoReal=(real,emp)=>{
     const combPorto=emp.combustiveis.find(c=>c==='MGO'||c==='Diesel')||'MGO';
@@ -4955,6 +6667,7 @@ function sincronizarViagensProgramadas(){
     best.consumoRealizado=cons;
     if(isCarregada(best.condicao) && real.volume>0) best.volumeRealizado=real.volume;
     best.saidaReal=real.saida; best.chegadaReal=real.chegada; best.realImportId=real.id;
+    aplicarBarcacasDoReal(best, real);
     if(real.comandante && !best.comandante) best.comandante=real.comandante;
     if(consumoCompleto){ best.status='Finalizada'; best.autoFinalizada=true; best.finalizadaEm=todayStr(); finalizadas++; }
     else{ best.status='Realizada'; best.consumoPendente=true; pendentes++; }
@@ -5001,6 +6714,7 @@ function sincronizarViagensProgramadas(){
       volumeCarregada: carregada ? (real.volume||0) : 0,
       saidaReal:real.saida, chegadaReal:real.chegada, realImportId:real.id, criadaDoReal:true,
     };
+    aplicarBarcacasDoReal(nova, real);
     if(justCriadas[novaId]) nova.justificativas=justCriadas[novaId]; // preserva justificativas de desvio
     if(tempo>0) nova.tempoRealizado=tempo;
     nova.consumoRealizado=cons;
@@ -5142,10 +6856,10 @@ function processHistViagRows(rows){
     (sync.pendentes?`\nViagens atualizadas aguardando consumo (não finalizadas): ${sync.pendentes}`:'')+
     (sync.orfas?`\n\n⚠ ${sync.orfas} viagem(ns) PROGRAMADA(S) sem par nesta importação, dentro do período importado.`+
       `\nElas ficaram marcadas como "sem par" no módulo de Viagens (linha em âmbar). Revise e exclua manualmente as duplicatas`+
-      `\npara não sobrepor viagem programada com viagem executada no Mapa de Giros.`:'')+
+      `\npara não sobrepor viagem programada com viagem executada no Mapa de Abastecimentos.`:'')+
     (nOver?`\n\n⚠ ${nOver} viagem(ns) com sobreposição de horário no mesmo empurrador (marcadas na tabela). No Mapa, o trecho sobreposto entra só na viagem principal — sem dupla contagem.`:'')+
     (colsNaoAchadas.length?`\n\n⚠ Colunas não encontradas no cabeçalho: ${colsNaoAchadas.join(', ')}. Verifique o nome exato dessas colunas na planilha BD_VIAGENS.`:'')+
-    `\n\nO casamento com as viagens programadas usa o ID_Viagem (padrão NOME-EMPURRADOR_AAMMDD). A base anterior foi substituída. Estas viagens são soberanas no Mapa de Giros nos dias correspondentes.`);
+    `\n\nO casamento com as viagens programadas usa o ID_Viagem (padrão NOME-EMPURRADOR_AAMMDD). A base anterior foi substituída. Estas viagens são soberanas no Mapa de Abastecimentos nos dias correspondentes.`);
 }
 function renderHistViagTable(){
   const t=document.getElementById('tblHistViag'); if(!t) return;
@@ -5225,7 +6939,7 @@ function processEstoqueRows(rows){
   const dups=raw.length-afericoes;
   state.estoqueLeituras=novos;
   save(); renderEstoqueTable(); renderImpStatus(); renderEmp();
-  alert(`Estoque e Horas de Máquina importados.\nDias aplicados (estoque da 1ª leitura ~06:00): ${novos.length}\nAferições somadas (horas MCP/MCA): ${afericoes}\nLinhas duplicadas (mesmo horário) descartadas: ${dups}\n\nA base anterior foi substituída. Os estoques viram âncoras soberanas do Mapa de Giros.`);
+  alert(`Estoque e Horas de Máquina importados.\nDias aplicados (estoque da 1ª leitura ~06:00): ${novos.length}\nAferições somadas (horas MCP/MCA): ${afericoes}\nLinhas duplicadas (mesmo horário) descartadas: ${dups}\n\nA base anterior foi substituída. Os estoques viram âncoras soberanas do Mapa de Abastecimentos.`);
 }
 function renderEstoqueTable(){
   const t=document.getElementById('tblEstoque'); if(!t) return;
@@ -5521,7 +7235,8 @@ function renderImpStatus(){
     <div class="box"><div class="v">${ar.length}</div><div class="l">Abastec. reais</div><div class="s">último: ${lastDateOf(ar,'inicio')}</div></div>
     <div class="box"><div class="v">${ap.length}</div><div class="l">Apontamentos</div><div class="s">${nViagApont} viagem(ns) · última: ${lastDateOf(ap,'data')}</div></div>
     <div class="box"><div class="v">${nBudget}</div><div class="l">Budget (mês×cidade)</div><div class="s">${Object.keys(state.budgetVolume||{}).length} cidade(s)</div></div>
-    <div class="box"><div class="v">${nMed}</div><div class="l">Trechos com médias</div><div class="s">base de estimativas</div></div>`;
+    <div class="box"><div class="v">${nMed}</div><div class="l">Trechos com médias</div><div class="s">base de estimativas</div></div>
+    <div class="box"><div class="v">${(state.caladoVolume||[]).length}</div><div class="l">Calado × volume</div><div class="s">${(state.caladoSim||[]).length} data(s) de calado previsto</div></div>`;
 }
 function renderImportacoes(){
   renderImpStatus();

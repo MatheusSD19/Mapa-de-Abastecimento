@@ -260,6 +260,12 @@
   .orfa-banner .txt{flex:1 1 340px;font-size:11.5px;line-height:1.55;color:var(--warn);}
   .orfa-banner .txt b{color:var(--warn);}
   .orfa-banner .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  /* símbolo discreto no canto: pontos de rota sem cidade cadastrada */
+  .warn-dot{display:none;align-items:center;justify-content:center;width:22px;height:22px;flex:0 0 auto;
+    border-radius:50%;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.5);
+    color:var(--warn);font-size:12px;line-height:1;cursor:help;user-select:none;}
+  .warn-dot.on{display:inline-flex;}
+  .warn-dot:hover{background:rgba(245,158,11,.3);}
   .kpi.kpi-orfa{border-left:3px solid var(--warn);}
   .diff-pos{color:var(--ok);font-weight:600;}
   .diff-neg{color:var(--bad);font-weight:600;}
@@ -550,7 +556,7 @@
         <div class="spacer"></div>
         <button class="btn secondary danger" id="btnClearCalado">Limpar base</button>
       </div>
-      <div class="hint">O mesmo arquivo traz as duas tabelas: <b>CONF_CALADO_VOLUME</b> (colunas <b>Calado (m)</b>, <b>Box</b>, <b>Rake</b>, <b>Média</b>) — volume médio de uma barcaça para cada calado — e <b>CALC_SIMULACAO</b> (colunas <b>Data, Calado Pessimista, Calado Médio, Calado Otimista</b>) — calado previsto do rio por dia, que aparece na coluna <b>Calado</b> do Mapa de Giros. Valores entre dois calados da tabela são interpolados. O calado previsto em <b>D+1</b> é usado para sugerir o calado das barcaças (fim da operação do navio de fertilizante e saída do próximo comboio na origem).</div>
+      <div class="hint">O mesmo arquivo traz as duas tabelas: <b>CONF_CALADO_VOLUME</b> (colunas <b>Calado (m)</b>, <b>Box</b>, <b>Rake</b>, <b>Média</b>) — volume médio de uma barcaça para cada calado — e <b>CALC_SIMULACAO</b> (colunas <b>Data, Calado Pessimista, Calado Médio, Calado Otimista</b> — o nome precisa vir completo: só <i>Médio</i>, <i>Pessimista</i> ou <i>Otimista</i> é ignorado, para não puxar outra coluna da planilha) — calado previsto do rio por dia, que aparece na coluna <b>Calado</b> do Mapa de Giros. Valores entre dois calados da tabela são interpolados. O calado previsto em <b>D+1</b> é usado para sugerir o calado das barcaças (fim da operação do navio de fertilizante e saída do próximo comboio na origem).</div>
       <div class="row" style="margin-top:10px;gap:14px;align-items:flex-start;">
         <div style="flex:1 1 280px;max-height:320px;overflow:auto;"><table id="tblCaladoVol"></table></div>
         <div style="flex:1 1 320px;max-height:320px;overflow:auto;"><table id="tblCaladoSim"></table></div>
@@ -613,6 +619,7 @@
         <button class="btn secondary" id="btnGiroIndisp">🛠 Indisponibilidade</button>
         <button class="btn" id="btnNovoNavio">+ Novo Navio</button>
         <button class="btn" id="btnNovaViagemGiro">+ Nova Viagem</button>
+        <span class="warn-dot" id="giroOrfaDot" title="">⚠</span>
       </div>
       <div class="hint">As <b>viagens são as mesmas</b> do Mapa de Abastecimentos — o que muda aqui muda lá, e vice-versa. Clique numa célula vazia de <b>Viagem</b> para programar uma saída daquela cidade, de <b>Navio</b> para lançar um navio começando naquele dia, ou de <b>Estoque</b> para informar barcaças/volume manualmente. Arraste o chip da viagem ou do navio para mudar a data (com <b>Ctrl</b> ao soltar, copia). Na coluna <b>Status</b> do terminal, um clique alterna Indisponível; <b>Ctrl+clique</b> abre o período de indisponibilidade.</div>
       <div class="mapa-wrap" id="giroWrap" style="margin-top:12px;"></div>
@@ -3274,27 +3281,40 @@ function volumeDaViagem(v){ const m=movimentoDaViagem(v); return m.volG+m.volF; 
 
 // Retira barcaças de uma lista de "bolsões" (terminais da origem, ou o pátio único da cidade).
 // O que faltar sai negativo no primeiro bolsão — é a falta de barcaça do dia, sinalizada em vermelho.
+// Devolve o EMBARQUE real (barcaças e volume que de fato saíram): cada barcaça leva o menor
+// entre o que ela já tem no pátio e o que o calado da viagem permite, e o excedente fica na
+// origem. É isso que segue para o destino — assim a carga não some nem aparece no meio do
+// caminho quando a cidade é um pulmão (chega numa viagem, sai em outra).
 function retirarDePools(pools, mov){
+  const saiu=novoEst();
   ['V','C','F'].forEach(k=>{
     let rest=mov[k]||0;
     if(rest<=0) return;
+    saiu[k]=rest;
+    const vk = k==='C' ? 'volG' : k==='F' ? 'volF' : '';
+    const vpbMov = vk && (mov[k]||0)>0 ? (mov[vk]||0)/mov[k] : 0;  // volume por barcaça pelo calado da viagem
     for(const p of pools){
       if(rest<=0.0001) break;
       const disp=p[k]||0;
       if(disp<=0) continue;
-      const vpb = k==='C' ? (p.volG||0)/disp : k==='F' ? (p.volF||0)/disp : 0;
       const take=Math.min(disp, rest);
       p[k]-=take;
-      if(k==='C') p.volG-=vpb*take; else if(k==='F') p.volF-=vpb*take;
+      if(vk){
+        const vpbPool=Math.max(0,(p[vk]||0))/disp;
+        // pátio sem volume informado (âncora só com barcaças) → assume o calado da viagem
+        const vpb = vpbPool>0 ? Math.min(vpbPool, vpbMov) : vpbMov;
+        p[vk]-=vpb*take;
+        saiu[vk]+=vpb*take;
+      }
       rest-=take;
     }
-    if(rest>0.0001){
+    if(rest>0.0001){   // faltou barcaça: sai negativo (o alerta do dia)
       const p=pools[0];
       p[k]-=rest;
-      const vpbMov = (mov[k]||0)>0 ? (k==='C'?(mov.volG||0):k==='F'?(mov.volF||0):0)/mov[k] : 0;
-      if(k==='C') p.volG-=vpbMov*rest; else if(k==='F') p.volF-=vpbMov*rest;
+      if(vk){ p[vk]-=vpbMov*rest; saiu[vk]+=vpbMov*rest; }
     }
   });
+  return saiu;
 }
 // Operação de um terminal no dia: descarrega Fertz (vira vazia) e depois carrega grão nas vazias.
 function operarTerminal(t, est, dStr, caladoCarreg){
@@ -3334,18 +3354,28 @@ function simularGiros(iniStr, fimStr){
   const start=(datasAnc.length && datasAnc[0]<iniStr) ? datasAnc[0] : iniStr;
 
   // --- movimentos das viagens (mesmas do Mapa de Abastecimentos) ---
-  const saidas={}, chegadas={}, saidasPorCidade={};
+  // Quando a saída é simulada, a chegada é lançada no dia da saída com o que EMBARCOU de fato
+  // (cidade pulmão: o comboio que parte dela só leva a carga que chegou ali). Viagens que saíram
+  // antes do início da simulação, ou cuja origem não é uma cidade cadastrada, seguem pelo volume
+  // declarado na viagem.
+  const idsSim=new Set(cidades.map(c=>c.id));   // só cidades ativas entram na simulação
+  const saidas={}, chegadas={}, saidasPorCidade={}, embarque={};
   (state.viagens||[]).forEach(v=>{
     if(!v.dataSaida) return;
     const co=cidadeOrigemDaViagem(v);
     if(co){ (saidasPorCidade[co.id]=saidasPorCidade[co.id]||[]).push(v.dataSaida); }
     const mov=movimentoDaViagem(v);
     if(!barcTotal(mov)) return;
-    if(co) (saidas[v.dataSaida]=saidas[v.dataSaida]||[]).push({cid:co.id, mov});
     const cd=cidadeDestinoDaViagem(v);
     const ch=viagemChegadaStr(v);
-    if(cd && ch) (chegadas[ch]=chegadas[ch]||[]).push({cid:cd.id, mov});
+    const saidaSimulada = !!co && idsSim.has(co.id) && v.dataSaida>=start;
+    if(co) (saidas[v.dataSaida]=saidas[v.dataSaida]||[]).push(
+      {vid:v.id, cid:co.id, mov, destino:(cd?cd.id:''), chegada:ch, hora:v.horaSaida||'08:00'});
+    if(cd && ch && !saidaSimulada) (chegadas[ch]=chegadas[ch]||[]).push({cid:cd.id, mov});
   });
+  // No dia, as saídas seguem a hora: o comboio que sai cedo e chega no mesmo dia já entrega
+  // a carga para o comboio que sai mais tarde da cidade pulmão.
+  Object.values(saidas).forEach(l=>l.sort((a,b)=>String(a.hora).localeCompare(String(b.hora))));
   Object.values(saidasPorCidade).forEach(l=>l.sort());
 
   // --- âncoras manuais por data ---
@@ -3440,10 +3470,18 @@ function simularGiros(iniStr, fimStr){
       });
     });
 
-    // 4) saídas → saem do estoque da cidade de origem
+    // 4) saídas → saem do estoque da cidade de origem e viram a chegada do destino
     (saidas[dStr]||[]).forEach(sa=>{
       const c=cidById(sa.cid); if(!c||!cur[sa.cid]) return;
-      retirarDePools(poolsDe(c), sa.mov);
+      const saiu=retirarDePools(poolsDe(c), sa.mov);
+      embarque[sa.vid]=saiu;
+      if(!sa.destino || !sa.chegada || !cur[sa.destino]) return;
+      if(sa.chegada>dStr){
+        (chegadas[sa.chegada]=chegadas[sa.chegada]||[]).push({cid:sa.destino, mov:saiu});
+      }else{                       // chega no mesmo dia: entra depois de sair
+        const cd=cidById(sa.destino);
+        if(cd) somaEst(poolsDe(cd)[0], saiu);
+      }
     });
 
     cidades.forEach(c=>{
@@ -3478,12 +3516,27 @@ function simularGiros(iniStr, fimStr){
     }
   }
   const avisos=[];
+  // Pontos de rota sem cidade: não viram banner, só o símbolo no canto (ver renderOrfaDot).
   const semCidade=cidadesNaoResolvidas();
-  if(semCidade.length) avisos.push('Estes pontos das rotas não estão ligados a nenhuma cidade, então as viagens deles não entram no giro: <b>'+
-    semCidade.join('</b>, <b>')+'</b>. Cadastre-os como cidade ou informe a sigla no campo <b>Apelidos</b> da cidade (Premissas → Cidades).');
   if(!temTabelaCalado()) avisos.push('Importe a tabela <b>CONF_CALADO_VOLUME</b> nas Premissas → Calado Médio: sem ela o app não consegue converter calado em volume por barcaça.');
   if(!Object.keys(caladoSimMap()).length) avisos.push('Sem a tabela <b>CALC_SIMULACAO</b> a coluna Calado fica vazia e as sugestões de calado (D+1) usam o calado padrão.');
-  return {dias, avisos};
+  return {dias, avisos, semCidade, embarque};
+}
+// Pontos de rota que não casam com nenhuma cidade: um símbolo no canto da barra,
+// com a lista no tooltip. O clique abre a explicação completa.
+function renderOrfaDot(semCidade){
+  const dot=document.getElementById('giroOrfaDot');
+  if(!dot) return;
+  const lista=semCidade||[];
+  dot.classList.toggle('on', lista.length>0);
+  if(!lista.length){ dot.title=''; dot.onclick=null; return; }
+  dot.title='Fora do giro ('+lista.length+'): '+lista.join(', ')+
+    '\nEstes pontos das rotas não estão ligados a nenhuma cidade. Clique para saber o que fazer.';
+  dot.onclick=()=>alert('Fora do giro — '+lista.length+' ponto(s) de rota sem cidade:\n\n'+
+    lista.map(x=>'• '+x).join('\n')+
+    '\n\nAs viagens desses pontos não entram no giro de barcaças.\n'+
+    'Para contabilizá-las, cadastre o ponto como cidade ou informe a sigla no campo '+
+    'Apelidos da cidade (Premissas → Cidades).');
 }
 
 /* =========================================================
@@ -3551,6 +3604,7 @@ function renderGiros(){
   initGiroDates();
   const wrap=document.getElementById('giroWrap');
   renderCidFilter();
+  renderOrfaDot(cidadesNaoResolvidas());
   renderGiroNavios();
   const todas=cidadesOrdenadas();
   if(!todas.length){
@@ -3629,11 +3683,18 @@ function renderGiros(){
           const r=rotaById(v.rotaId);
           const mov=movimentoDaViagem(v);
           const cd=cidadeDestinoDaViagem(v);
+          // Carga que de fato embarcou: numa cidade pulmão o comboio só leva o que chegou ali.
+          const emb=sim.embarque[v.id];
+          const volDecl=mov.volG+mov.volF;
+          const volReal=emb?(emb.volG+emb.volF):volDecl;
+          const faltaCarga=(volDecl-volReal)>50;
           const tip=`${r?r.nome:'?'} — ${v.condicao||''}&#10;Saída: ${parseDate(v.dataSaida).toLocaleDateString('pt-BR')} ${v.horaSaida||''}&#10;`+
             `Chegada prevista: ${viagemChegadaStr(v)?parseDate(viagemChegadaStr(v)).toLocaleDateString('pt-BR'):'—'}${cd?' em '+cd.nome:''}&#10;`+
-            `Barcaças: ${barcStr(mov,true)||'—'}&#10;Calado: ${fmt2(v.calado||caladoPadrao())} m&#10;Volume: ${fmt(mov.volG+mov.volF)} t&#10;&#10;Clique para editar (a viagem é a mesma do Mapa de Abastecimentos)`;
+            `Barcaças: ${barcStr(mov,true)||'—'}&#10;Calado: ${fmt2(v.calado||caladoPadrao())} m&#10;Volume: ${fmt(volDecl)} t&#10;`+
+            (faltaCarga?`⚠ A origem só tinha ${fmt(volReal)} t nessas barcaças — é esse volume que chega ao destino.&#10;`:'')+
+            `&#10;Clique para editar (a viagem é a mesma do Mapa de Abastecimentos)`;
           return `<span class="trip-chip vstat-${v.status||'Previsto'}" draggable="true" data-gvid="${v.id}" title="${tip}"
-            style="background:${cor};color:${corContraste(cor)}" onclick="openViagemModal('${v.id}')">${r?r.nome:'?'}</span>`;
+            style="background:${cor};color:${corContraste(cor)}" onclick="openViagemModal('${v.id}')">${r?r.nome:'?'}${faltaCarga?' ⚠':''}</span>`;
         }).join(' ');
         const tot=vgs.reduce((a,v)=>{const m=movimentoDaViagem(v);return {V:a.V+m.V,C:a.C+m.C,F:a.F+m.F,volG:a.volG+m.volG,volF:a.volF+m.volF};}, novoEst());
         bCell=barcStr(tot)||'<span class="muted">—</span>';
@@ -4308,15 +4369,24 @@ function numBR(v){
   const n=parseFloat(s);
   return isNaN(n)?0:n;
 }
-// Cabeçalhos das duas tabelas do mesmo arquivo
-const isHdrCaladoVol = r=>{ if(!Array.isArray(r)) return false; const H=r.map(na);
-  return H.some(h=>h.includes('calado')) && H.some(h=>h.includes('media')||h==='média'); };
-const isHdrCaladoSim = r=>{ if(!Array.isArray(r)) return false; const H=r.map(na);
-  return H.some(h=>h==='data'||h.startsWith('data')) && H.some(h=>h.includes('calado medio')||h.includes('calado pessimista')||h.includes('calado otimista')); };
+// Cabeçalhos das duas tabelas do mesmo arquivo.
+// O CALC_SIMULACAO exige o nome COMPLETO da coluna ("Calado Pessimista", "Calado Médio",
+// "Calado Otimista"): a planilha costuma ter outras colunas com "Pessimista"/"Médio"/"Otimista"
+// (vazão, volume, prazo...) e um nome solto puxaria a coluna errada.
+const CAL_SIM_COLS={pess:'calado pessimista', medio:'calado medio', otim:'calado otimista'};
+const ehColCaladoSim = h => Object.values(CAL_SIM_COLS).some(k=>h.includes(k));
+const isHdrCaladoVol = r=>{ if(!Array.isArray(r)) return false; const H=r.map(naH);
+  if(H.some(ehColCaladoSim)) return false;   // é o cabeçalho do CALC_SIMULACAO, não o do volume
+  return H.some(h=>h.includes('calado')) && H.some(h=>h.includes('media')); };
+const isHdrCaladoSim = r=>{ if(!Array.isArray(r)) return false; const H=r.map(naH);
+  return H.some(h=>h==='data'||h.startsWith('data')) && H.some(ehColCaladoSim); };
 
 function processCaladoVolume(rows, hIdx){
-  const header=(rows[hIdx]||[]).map(na); const find=headerFinder(header);
-  const iCal=find('calado'), iBox=find('box'), iRake=find('rake'), iMed=find('media','médi');
+  // Ignora colunas do CALC_SIMULACAO que estejam na mesma linha de cabeçalho:
+  // "Calado Médio" não pode virar a coluna "Média" da tabela de volume.
+  const header=(rows[hIdx]||[]).map(h=>{ const x=naH(h); return ehColCaladoSim(x)?'':x; });
+  const find=headerFinder(header);
+  const iCal=find('calado'), iBox=find('box'), iRake=find('rake'), iMed=find('media');
   if(iCal<0||iMed<0) return 0;
   const out=[];
   for(let i=hIdx+1;i<rows.length;i++){
@@ -4330,9 +4400,11 @@ function processCaladoVolume(rows, hIdx){
   return out.length;
 }
 function processCaladoSim(rows, hIdx){
-  const header=(rows[hIdx]||[]).map(na); const find=headerFinder(header);
-  const iData=find('data'), iP=find('pessimista'), iM=find('calado medio','medio'), iO=find('otimista');
+  const header=(rows[hIdx]||[]).map(naH); const find=headerFinder(header);
+  // Só casa com o nome completo da coluna — ver CAL_SIM_COLS.
+  const iData=find('data'), iP=find(CAL_SIM_COLS.pess), iM=find(CAL_SIM_COLS.medio), iO=find(CAL_SIM_COLS.otim);
   if(iData<0) return 0;
+  if(iP<0 && iM<0 && iO<0) return 0;
   const map={};
   for(let i=hIdx+1;i<rows.length;i++){
     const r=rows[i]; if(!r||!r.length) continue;
@@ -4373,7 +4445,9 @@ function processCaladoSim(rows, hIdx){
         if(!nVol && !nSim){
           alert('Nenhuma das tabelas foi encontrada no arquivo.\n\n'+
             'Esperado: CONF_CALADO_VOLUME (Calado (m), Box, Rake, Média) e/ou '+
-            'CALC_SIMULACAO (Data, Calado Pessimista, Calado Médio, Calado Otimista).');
+            'CALC_SIMULACAO (Data, Calado Pessimista, Calado Médio, Calado Otimista).\n\n'+
+            'No CALC_SIMULACAO o nome da coluna precisa vir completo — só "Médio", '+
+            '"Pessimista" ou "Otimista" não é lido, para não puxar outra coluna da planilha.');
         }else{
           save(); renderCaladoTables(); renderGiros();
           alert('Importação concluída.\n\n'+
@@ -6450,6 +6524,7 @@ function cbColor(cb,i){
    ========================================================= */
 function p2(n){ return String(n).padStart(2,'0'); }
 function na(s){ return norm(s).normalize('NFD').replace(/[̀-ͯ]/g,''); } // norm + sem acentos
+function naH(s){ return na(s).replace(/\s+/g,' ').trim(); } // cabeçalho: sem acento e com 1 espaço entre palavras
 function toLocalISO(d){ return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`; }
 function dateOfISO(iso){ return iso ? iso.slice(0,10) : ''; }
 function fmtDT(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return '—'; return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }

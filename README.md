@@ -42,7 +42,9 @@ Um único arquivo traz as duas tabelas:
 - `CONF_CALADO_VOLUME` — colunas **Calado (m), Box, Rake, Média**: volume médio de uma barcaça
   por calado (valores intermediários são interpolados).
 - `CALC_SIMULACAO` — colunas **Data, Calado Pessimista, Calado Médio, Calado Otimista**: alimenta
-  a coluna Calado do mapa.
+  a coluna Calado do mapa. O nome da coluna tem de vir **completo**: uma coluna chamada só
+  `Médio`, `Pessimista` ou `Otimista` é ignorada, para a importação não puxar por engano outra
+  coluna da planilha que use a mesma palavra.
 
 O calado previsto em **D+1** sugere o calado das barcaças: em Miritituba, pela saída do próximo
 comboio; no navio de fertilizante, pelo término previsto da operação.
@@ -50,8 +52,27 @@ comboio; no navio de fertilizante, pelo término previsto da operação.
 ### Cidades e rotas
 
 As rotas costumam usar siglas (`MIR x STM`). O campo **Apelidos** da cidade liga a sigla ao bloco
-— informe `MIR` em Miritituba, `STM` em Santarém, e assim por diante. O mapa avisa quando um
-ponto de rota não está ligado a nenhuma cidade.
+— informe `MIR` em Miritituba, `STM` em Santarém, e assim por diante. Quando um ponto de rota não está ligado a
+nenhuma cidade, aparece um **⚠ no canto da barra** do Mapa de Giros: o tooltip lista os pontos
+que ficam fora do giro e o clique explica como resolver.
+
+### Cidades pulmão (transbordo)
+
+Uma cidade pode servir de **pulmão**: comboios menores levam carga até ela e, de lá, um comboio
+maior segue com a carga completa até o destino final. Basta cadastrar a cidade (com o apelido
+usado nas rotas) e criar as duas rotas — `MIR x PUL` e `PUL x VDC`. O estoque do pulmão acumula
+as barcaças que chegam e as entrega ao comboio que sai.
+
+- A carga **não é recriada no transbordo**: o comboio que sai do pulmão leva o que de fato está
+  nas barcaças de lá. Se a viagem for lançada com um calado maior que o da carga que chegou,
+  o volume que chega ao destino é o real e o chip da viagem ganha um **⚠** com o valor.
+- Chegada e saída **no mesmo dia** funcionam; no dia, as saídas são processadas na ordem da hora.
+- Se o comboio maior sair **antes** de a carga chegar, o estoque do pulmão fica **negativo** —
+  é o alerta de furo.
+- O pulmão **não** deve ser marcado como *Origem*: esse perfil liga os terminais, que carregam
+  grão nas barcaças vazias (a cidade passaria a criar carga em vez de só repassá-la).
+- Cadastre as **médias de consumo** dos dois trechos: sem elas a viagem não consome combustível
+  e a chegada vira apenas "saída + 1 dia".
 
 ## Dados
 

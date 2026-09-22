@@ -93,6 +93,13 @@
   .btn.secondary{background:var(--panel2);color:var(--txt);border:1px solid var(--line);font-weight:400;}
   .btn.danger{background:var(--bad);color:#fff;}
   .btn.sm{padding:3px 8px;font-size:11px;}
+  /* Controle segmentado (ex.: cenário de calado no Mapa de Giros) */
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .seg button{background:var(--panel2);color:var(--muted);border:none;border-left:1px solid var(--line);
+    padding:6px 11px;cursor:pointer;font-size:12px;font-weight:600;}
+  .seg button:first-child{border-left:none;}
+  .seg button:hover{color:var(--txt);}
+  .seg button.on{background:var(--accent2);color:#001018;}
   table{width:100%;border-collapse:collapse;font-size:12px;}
   th,td{border:1px solid var(--line);padding:5px 7px;text-align:left;}
   th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;}
@@ -614,6 +621,13 @@
             <div class="dropdown-panel" id="cidFilterPanel"></div>
           </div>
         </div>
+        <div class="field"><label>Cenário de calado</label>
+          <div class="seg" id="giroCenarioSeg" title="Escolhe qual calado previsto do rio (CALC_SIMULACAO) é exibido na coluna Calado e usado nas sugestões de calado das barcaças">
+            <button type="button" data-cen="pessimista">Pessimista</button>
+            <button type="button" data-cen="medio">Médio</button>
+            <button type="button" data-cen="otimista">Otimista</button>
+          </div>
+        </div>
         <button class="btn secondary" id="btnGiroRefresh">Atualizar</button>
         <div class="spacer"></div>
         <button class="btn secondary" id="btnGiroIndisp">🛠 Indisponibilidade</button>
@@ -621,7 +635,7 @@
         <button class="btn" id="btnNovaViagemGiro">+ Nova Viagem</button>
         <span class="warn-dot" id="giroOrfaDot" title="">⚠</span>
       </div>
-      <div class="hint">As <b>viagens são as mesmas</b> do Mapa de Abastecimentos — o que muda aqui muda lá, e vice-versa. Clique numa célula vazia de <b>Viagem</b> para programar uma saída daquela cidade, de <b>Navio</b> para lançar um navio começando naquele dia, ou de <b>Estoque</b> para informar barcaças/volume manualmente. Arraste o chip da viagem ou do navio para mudar a data (com <b>Ctrl</b> ao soltar, copia). Na coluna <b>Status</b> do terminal, um clique alterna Indisponível; <b>Ctrl+clique</b> abre o período de indisponibilidade.</div>
+      <div class="hint">As <b>viagens são as mesmas</b> do Mapa de Abastecimentos — o que muda aqui muda lá, e vice-versa. Clique numa célula vazia de <b>Viagem</b> para programar uma saída daquela cidade, de <b>Navio</b> para lançar um navio começando naquele dia, ou de <b>Estoque</b> para informar barcaças/volume manualmente. Arraste o chip da viagem ou do navio para mudar a data (com <b>Ctrl</b> ao soltar, copia). Na coluna <b>Status</b> do terminal, um clique alterna Indisponível; <b>Ctrl+clique</b> abre o período de indisponibilidade. O botão <b>Cenário de calado</b> troca entre Pessimista, Médio e Otimista — vale para a coluna <b>Calado</b> e para as sugestões de calado das barcaças (é a mesma opção de Premissas → Calado Médio).</div>
       <div class="mapa-wrap" id="giroWrap" style="margin-top:12px;"></div>
       <div class="giro-legend">
         <span>Legenda:</span>
@@ -3126,6 +3140,23 @@ function caladoD1(dStr){
   return caladoPrevisto(dateStr(addDays(parseDate(dStr),1)));
 }
 function caladoPadrao(){ return (state.giroCfg&&state.giroCfg.caladoPadrao)>0 ? state.giroCfg.caladoPadrao : 4.5; }
+function cenarioCalado(){ return (state.giroCfg&&state.giroCfg.cenario)||'medio'; }
+function cenarioCaladoNome(k){ k=k||cenarioCalado(); return k==='pessimista'?'Pessimista':k==='otimista'?'Otimista':'Médio'; }
+// O cenário aparece em dois lugares (Premissas → Calado Médio e a barra do Mapa de Giros):
+// ambos escrevem em state.giroCfg.cenario e se espelham por aqui.
+function setCenarioCalado(k){
+  if(!['pessimista','medio','otimista'].includes(k)) return;
+  state.giroCfg.cenario=k; save();
+  syncCenarioControles();
+  renderGiros();
+}
+function syncCenarioControles(){
+  const k=cenarioCalado();
+  const sel=document.getElementById('giroCaladoCenario');
+  if(sel) sel.value=k;
+  const seg=document.getElementById('giroCenarioSeg');
+  if(seg) seg.querySelectorAll('button[data-cen]').forEach(b=>b.classList.toggle('on', b.dataset.cen===k));
+}
 // Origem: o calado de carregamento das barcaças segue a saída do PRÓXIMO comboio, em D+1.
 function caladoCarregamentoSugerido(cidId, dStr, saidasOrdenadas){
   const lista = saidasOrdenadas || (state.viagens||[])
@@ -3612,6 +3643,7 @@ function naviosDaCidade(cidId){ return (state.navios||[]).filter(n=>n.cidadeId==
 
 function renderGiros(){
   initGiroDates();
+  syncCenarioControles();
   const wrap=document.getElementById('giroWrap');
   renderCidFilter();
   renderOrfaDot(cidadesNaoResolvidas());
@@ -3640,7 +3672,7 @@ function renderGiros(){
   // ---- cabeçalho ----
   let h='<table class="giro"><tr class="giro-h1">'+
     '<th class="col-data" rowspan="2">Data</th>'+
-    '<th class="col-calado cid-sep" rowspan="2" title="Calado previsto do rio (CALC_SIMULACAO)">Calado</th>';
+    `<th class="col-calado cid-sep" rowspan="2" title="Calado previsto do rio (CALC_SIMULACAO) — cenário ${cenarioCaladoNome()}">Calado<br><span class="muted" style="font-weight:400;text-transform:none">${cenarioCaladoNome()}</span></th>`;
   cidades.forEach(c=>{
     const terms=terminaisDaCidade(c.id);
     const usaTerm=c.origem && terms.length;
@@ -3678,7 +3710,10 @@ function renderGiros(){
     const hoje=dStr===hojeStr?' today':'';
     const simRow=caladoSimMap()[dStr];
     const calVal=caladoPrevisto(dStr);
-    const calTip=simRow?`Pessimista: ${fmt2(simRow.pess)} m&#10;Médio: ${fmt2(simRow.medio)} m&#10;Otimista: ${fmt2(simRow.otim)} m`:'Sem calado previsto para esta data (importe CALC_SIMULACAO)';
+    // o cenário exibido fica marcado, para não confundir com os outros dois do dia
+    const cen=cenarioCalado();
+    const marca=k=>k===cen?' ◄':'';
+    const calTip=simRow?`Pessimista: ${fmt2(simRow.pess)} m${marca('pessimista')}&#10;Médio: ${fmt2(simRow.medio)} m${marca('medio')}&#10;Otimista: ${fmt2(simRow.otim)} m${marca('otimista')}`:'Sem calado previsto para esta data (importe CALC_SIMULACAO)';
     h+=`<tr class="${wknd}${hoje}">`+
        `<td class="col-data">${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`+
        `<td class="col-calado cid-sep" title="${calTip}">${calVal?`<span class="calado-chip sim">${fmt2(calVal)}</span>`:'<span class="muted">—</span>'}</td>`;
@@ -4332,7 +4367,11 @@ document.getElementById('giroCaladoPadrao').addEventListener('change', function(
   save(); renderGiros();
 });
 document.getElementById('giroCaladoCenario').addEventListener('change', function(){
-  state.giroCfg.cenario=this.value; save(); renderGiros();
+  setCenarioCalado(this.value);
+});
+document.getElementById('giroCenarioSeg').addEventListener('click', function(ev){
+  const b=ev.target.closest('button[data-cen]'); if(!b) return;
+  setCenarioCalado(b.dataset.cen);
 });
 document.getElementById('btnClearCalado').addEventListener('click', ()=>{
   if(!confirm('Limpar as tabelas de calado (volume por barcaça e calado previsto)?')) return;
@@ -4342,8 +4381,7 @@ document.getElementById('btnClearCalado').addEventListener('click', ()=>{
 function renderCaladoTables(){
   const cfgP=document.getElementById('giroCaladoPadrao');
   if(cfgP) cfgP.value=caladoPadrao();
-  const cfgC=document.getElementById('giroCaladoCenario');
-  if(cfgC) cfgC.value=(state.giroCfg&&state.giroCfg.cenario)||'medio';
+  syncCenarioControles();
   const tv=document.getElementById('tblCaladoVol');
   if(tv){
     const arr=caladoVolTable();

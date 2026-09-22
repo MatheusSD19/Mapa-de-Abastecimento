@@ -198,6 +198,11 @@
   .abast-chip.st-Realizado{background:#101010;color:#fff;}
   .abast-chip.st-Cancelado{background:var(--info);color:#1a103d;}
   .abast-chip.abast-late{box-shadow:0 0 0 2px var(--bad);}
+  /* Transferência entre embarcações: mesma pastilha, contorno tracejado e seta de sentido */
+  .abast-chip.transf{background:var(--panel2);color:var(--txt);border:1px dashed var(--accent);font-weight:600;}
+  .abast-chip.transf.st-Cancelado{opacity:.55;text-decoration:line-through;}
+  .abast-chip.transf .dir{color:var(--accent);margin-right:2px;}
+  .abast-chip+.abast-chip{margin-left:3px;}
   .trip-chip:active{cursor:grabbing;}
   td.drop-target{outline:2px dashed var(--accent);outline-offset:-2px;}
   .bar{height:9px;border-radius:2px;background:var(--panel2);position:relative;min-width:46px;display:inline-block;vertical-align:middle;}
@@ -601,9 +606,10 @@
         </div>
         <button class="btn secondary" id="btnMapaRefresh">Atualizar</button>
         <div class="spacer"></div>
+        <button class="btn secondary" id="btnNovaTransf" title="Passar combustível de uma embarcação para outra: sai do tanque de origem e entra no de destino, na mesma data">⇄ Transferir Combustível</button>
         <button class="btn" id="btnNovaViagem">+ Nova Viagem</button>
       </div>
-      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia, ou na coluna <b>Abast.</b> para programar um abastecimento. Arraste o chip de uma viagem ou de um abastecimento para mover a data — segurando <b>Ctrl</b> ao soltar, o item é <b>copiado</b> sem alterar o original.</div>
+      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia, ou na coluna <b>Abast.</b> para programar um abastecimento. Arraste o chip de uma viagem ou de um abastecimento para mover a data — segurando <b>Ctrl</b> ao soltar, o item é <b>copiado</b> sem alterar o original. Use <b>⇄ Transferir Combustível</b> para passar combustível de uma embarcação para outra: o chip tracejado com <b>↑</b> é a saída e o com <b>↓</b> é a entrada, e arrastar um deles move as duas pontas juntas.</div>
       <div class="mapa-wrap" id="mapaWrap" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -1317,6 +1323,35 @@
   </div>
 </div>
 
+<!-- ===== MODAL TRANSFERÊNCIA DE COMBUSTÍVEL ===== -->
+<div class="modal-bg" id="modalTransf">
+  <div class="modal wide">
+    <h3 id="mtTitle">Transferir Combustível</h3>
+    <div class="row">
+      <div class="field" style="flex:1;"><label>Origem (sai combustível)</label><select id="mtOrigem" style="width:100%"></select></div>
+      <div class="field" style="align-self:flex-end;padding-bottom:7px;font-size:16px;color:var(--accent);">⇄</div>
+      <div class="field" style="flex:1;"><label>Destino (recebe combustível)</label><select id="mtDestino" style="width:100%"></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Data</label><input type="date" id="mtData"></div>
+      <div class="field"><label>Combustível</label><select id="mtComb" style="min-width:140px"></select></div>
+      <div class="field"><label>Quantidade (L)</label><input type="number" id="mtQtd" placeholder="0"></div>
+      <div class="field"><label>Status</label>
+        <select id="mtStatus" style="min-width:130px">
+          <option>Previsto</option><option>Realizado</option><option>Cancelado</option>
+        </select>
+      </div>
+    </div>
+    <div class="hint" id="mtHint"></div>
+    <div class="row"><div class="field" style="flex:1;"><label>Observação</label><input id="mtObs" style="width:100%" placeholder="Opcional — ex.: transferência em comboio, apoio em viagem"></div></div>
+    <div class="modal-actions">
+      <button class="btn danger sm" id="mtDelete" style="display:none;">Excluir</button>
+      <button class="btn secondary" data-close>Cancelar</button>
+      <button class="btn" id="mtSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL FINALIZAR VIAGEM ===== -->
 <div class="modal-bg" id="modalFinViagem">
   <div class="modal xwide">
@@ -1694,6 +1729,24 @@ function dailyConsumption(e, comb, day){
   if(comb===combPorto) consumoDia += (e.consumoPorto||0) * horasPorto;
   return consumoDia;
 }
+/* ---- Transferência de combustível entre embarcações ----
+   Uma transferência é um PAR de lançamentos ligado por transfId: a SAÍDA (qtd negativa) no
+   tanque de origem e a ENTRADA (qtd positiva) no de destino, na mesma data. Modelada assim,
+   ela já entra no estoque diário (dailyRefuel) e na reconciliação física de estoque sem
+   nenhuma mudança no motor — e fica de fora dos indicadores de COMPRA (litros, R$, preço
+   médio, saving, antecedência), porque nada foi comprado: o combustível só mudou de tanque. */
+function isTransf(a){ return !!a && a.tipo==='transferencia'; }
+function ehCompra(a){ return !isTransf(a); }
+function transfLegs(transfId){ return (state.abastecimentos||[]).filter(a=>a.transfId===transfId); }
+// MGO e Diesel são o mesmo tanque leve do ponto de vista da embarcação — é como o resto do
+// app já os trata ("Diesel Terceiro"), então a transferência aceita o par entre os dois.
+function combLeveDe(e){ return e ? e.combustiveis.find(c=>c==='MGO'||c==='Diesel') : null; }
+function combDestino(eDest, comb){
+  if(!eDest) return null;
+  if(eDest.combustiveis.includes(comb)) return comb;
+  if(comb==='MGO'||comb==='Diesel') return combLeveDe(eDest)||null;
+  return null;
+}
 function dailyRefuel(empId, comb, dStr){
   return state.abastecimentos
     .filter(a => a.empId===empId && a.data===dStr && a.comb===comb && a.status!=='Cancelado')
@@ -1930,7 +1983,9 @@ function delEmp(id){
   if(!confirm('Excluir este empurrador? Viagens e abastecimentos vinculados também serão removidos.')) return;
   state.empurradores = state.empurradores.filter(e=>e.id!==id);
   state.viagens = state.viagens.filter(v=>v.empId!==id);
-  state.abastecimentos = state.abastecimentos.filter(a=>a.empId!==id);
+  // transferências são um par: apagar só a perna deste empurrador deixaria a outra órfã
+  const transfOrfas=new Set(state.abastecimentos.filter(a=>a.empId===id && isTransf(a)).map(a=>a.transfId));
+  state.abastecimentos = state.abastecimentos.filter(a=>a.empId!==id && !transfOrfas.has(a.transfId));
   Object.values(state.medias).forEach(byEmp=>{ delete byEmp[id]; });
   save(); renderEmp();
 }
@@ -2595,9 +2650,6 @@ function renderMapa(){
         // abastecimentos do dia (cancelados aparecem no mapa mas não somam no estoque)
         const absAll = state.abastecimentos.filter(a=>a.empId===e.id && a.data===dStr && a.comb===c);
         const abast = absAll.reduce((s,a)=> a.status!=='Cancelado' ? s+(a.qtd||0) : s, 0);
-        const aid = absAll.length ? absAll[0].id : '';
-        const chipStatus = absAll.length ? absAll[0].status : '';
-        const chipQtd = abast || absAll.reduce((s,a)=>s+(a.qtd||0),0);
 
         // ----- saldo do dia, respeitando âncoras e "antes do estoque inicial" -----
         const anchors = anchorsCache[e.id][c];
@@ -2619,10 +2671,20 @@ function renderMapa(){
         const pct = cap>0 ? estoque[e.id][c]/cap*100 : 0;
         const pctCls = pct<15?'bad':pct<30?'warn':'ok';
         const barColor = pct<15?'var(--bad)':pct<30?'var(--warn)':'var(--ok)';
-        const atras = absAll.length && isAbastAtrasado(absAll[0]);
-        const abastChip = absAll.length
-          ? `<span class="abast-chip st-${chipStatus}${atras?' abast-late':''}" draggable="true" data-aid="${aid}" title="${chipStatus}${atras?' — atrasado!':''}">${atras?'⚠ ':''}${fmt(chipQtd)}</span>`
-          : '';
+        // Um chip por lançamento: com transferências é comum haver mais de um no mesmo
+        // dia/combustível, e o clique precisa abrir exatamente o registro clicado.
+        const abastChip = absAll.map(a=>{
+          const atras = isAbastAtrasado(a);
+          if(isTransf(a)){
+            const outro = empById(a.transfEmpId);
+            const saiu = (a.qtd||0) < 0;
+            const tip = `Transferência: ${saiu?'sai para':'recebe de'} ${outro?outro.nome:'—'} — ${a.status}`+
+              (a.obs?`&#10;${String(a.obs).replace(/"/g,'&quot;')}`:'')+'&#10;Clique para editar';
+            // a seta já diz o sentido; repetir o sinal de menos só polui a coluna
+            return `<span class="abast-chip transf st-${a.status}" draggable="true" data-aid="${a.id}" title="${tip}"><span class="dir">${saiu?'↑':'↓'}</span>${fmt(Math.abs(a.qtd||0))}</span>`;
+          }
+          return `<span class="abast-chip st-${a.status}${atras?' abast-late':''}" draggable="true" data-aid="${a.id}" title="${a.status}${atras?' — atrasado!':''}">${atras?'⚠ ':''}${fmt(a.qtd)}</span>`;
+        }).join('');
         // classes da célula de estoque
         const livre = beforeAnchors && !manualDay && !isAnchorDay;
         const cellClasses = ['estoque-cell'];
@@ -2644,7 +2706,7 @@ function renderMapa(){
               ? '<span title="Viagem real importada, mas sem consumo informado na base — usando a ESTIMATIVA da média do trecho/condição. Quando a base for atualizada, o real substitui." style="color:var(--warn);font-size:9px;margin-left:3px;vertical-align:middle;">~</span>'
               : '<span title="Consumo real importado (soberano sobre a estimativa)" style="color:var(--ok);font-size:9px;margin-left:3px;vertical-align:middle;">●</span>');
         h+=`<td class="num">${consumoDia?fmt(consumoDia)+realMark:''}</td>
-            <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" data-aid="${aid}">${abastChip}</td>
+            <td class="num abast-cell" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}">${abastChip}</td>
             <td class="${cellClasses.join(' ')}" data-emp="${e.id}" data-date="${dStr}" data-comb="${c}" title="${tipCell}">
               ${anchorMark}<div class="bar"><span style="width:${barWidth.toFixed(0)}%;background:${barColor}"></span></div>
               ${stockTxt}</td>`;
@@ -2670,12 +2732,10 @@ function renderMapa(){
   });
   // click na coluna Abastecimento: novo abastecimento programado ou editar existente
   wrap.querySelectorAll('.abast-cell').forEach(td=>{
-    td.addEventListener('click', ()=>{
-      if(td.dataset.aid){
-        openAbastModal(td.dataset.aid);
-      }else{
-        openAbastModal(null, {empId:td.dataset.emp, data:td.dataset.date, comb:td.dataset.comb});
-      }
+    td.addEventListener('click', ev=>{
+      const chip=ev.target.closest('.abast-chip');
+      if(chip) abrirLancamento(chip.dataset.aid);
+      else openAbastModal(null, {empId:td.dataset.emp, data:td.dataset.date, comb:td.dataset.comb});
     });
   });
   // drag & drop
@@ -2726,8 +2786,23 @@ function renderMapa(){
       const a=state.abastecimentos.find(x=>x.id===aid);
       if(!a) return;
       if(td.dataset.emp!==a.empId || td.dataset.comb!==a.comb){
-        alert('Mova o abastecimento dentro do mesmo empurrador e combustível.');
+        alert(isTransf(a)
+          ? 'Mova a transferência dentro do mesmo empurrador e combustível.\nPara trocar as embarcações, edite a transferência.'
+          : 'Mova o abastecimento dentro do mesmo empurrador e combustível.');
         return;
+      }
+      // a transferência é um par: as duas pernas andam juntas, senão a saída e a entrada
+      // cairiam em dias diferentes e o combustível sumiria (ou apareceria) no meio do caminho
+      if(isTransf(a)){
+        const legs=transfLegs(a.transfId);
+        if(ev.ctrlKey || ev.metaKey){
+          const tid=uid();
+          legs.forEach(l=>state.abastecimentos.push(Object.assign({}, l,
+            {id:uid(), transfId:tid, data:td.dataset.date, criadoEm:todayStr()})));
+        }else{
+          legs.forEach(l=>l.data=td.dataset.date);
+        }
+        save(); renderMapa(); renderAbast(); return;
       }
       if(ev.ctrlKey || ev.metaKey){
         // CTRL pressionado: copia o abastecimento, sem alterar o original
@@ -4584,7 +4659,163 @@ function getOrCreateJustificativa(descricao){
   return j;
 }
 
+/* =========================================================
+   TRANSFERÊNCIA DE COMBUSTÍVEL ENTRE EMBARCAÇÕES
+   ========================================================= */
+// Um lançamento pode ser um abastecimento ou a perna de uma transferência — cada um tem seu modal.
+function abrirLancamento(aid){
+  const a=state.abastecimentos.find(x=>x.id===aid); if(!a) return;
+  if(isTransf(a)) openTransferModal(a.transfId); else openAbastModal(aid);
+}
+// Saldo projetado no FIM do dia. `ignoreTransfId` tira do cálculo a transferência que está
+// sendo editada, para o aviso comparar com o estoque de antes dela.
+function saldoFimDoDia(empId, comb, dStr, ignoreTransfId){
+  const bak=state.abastecimentos;
+  if(ignoreTransfId) state.abastecimentos=bak.filter(a=>a.transfId!==ignoreTransfId);
+  try{ return startingBalance(empId, comb, addDays(parseDate(dStr),1)); }
+  finally{ state.abastecimentos=bak; }
+}
+let editTransfId=null;
+document.getElementById('btnNovaTransf').addEventListener('click', ()=>openTransferModal(null));
+
+function openTransferModal(transfId, prefill){
+  editTransfId=transfId||null;
+  const legs = transfId ? transfLegs(transfId) : [];
+  const saida = legs.find(l=>(l.qtd||0)<0) || null;
+  const entrada = legs.find(l=>(l.qtd||0)>=0 && l!==saida) || null;
+  if(transfId && (!saida || !entrada)){ alert('Transferência incompleta — não foi possível abrir.'); return; }
+
+  // lista só ativos; mantém os vinculados mesmo se inativos (ao editar)
+  const vinculados=[saida&&saida.empId, entrada&&entrada.empId].filter(Boolean);
+  const empList=state.empurradores.filter(e=>ativo(e)||vinculados.includes(e.id));
+  if(empList.length<2){ alert('É preciso ter ao menos dois empurradores ativos para transferir combustível.'); return; }
+  const mo=document.getElementById('mtOrigem'), md=document.getElementById('mtDestino');
+  const opts=empList.map(e=>`<option value="${e.id}">${e.nome}${ativo(e)?'':' (inativo)'}</option>`).join('');
+  mo.innerHTML=opts; md.innerHTML=opts;
+
+  document.getElementById('mtTitle').textContent = transfId ? 'Editar Transferência' : 'Transferir Combustível';
+  document.getElementById('mtDelete').style.display = transfId ? '' : 'none';
+  if(transfId){
+    mo.value=saida.empId; md.value=entrada.empId;
+    document.getElementById('mtData').value=saida.data;
+    document.getElementById('mtQtd').value=Math.abs(saida.qtd||0);
+    document.getElementById('mtStatus').value=(saida.status==='Solicitado'?'Previsto':saida.status)||'Previsto';
+    document.getElementById('mtObs').value=saida.obs||'';
+  }else{
+    mo.value=(prefill&&prefill.empId)||empList[0].id;
+    md.value=(empList.find(e=>e.id!==mo.value)||empList[0]).id;
+    document.getElementById('mtData').value=(prefill&&prefill.data)||dateStr(new Date());
+    document.getElementById('mtQtd').value='';
+    document.getElementById('mtStatus').value='Previsto';
+    document.getElementById('mtObs').value='';
+  }
+  fillTransfComb(transfId?saida.comb:(prefill&&prefill.comb));
+  refreshTransfHint();
+  document.getElementById('modalTransf').classList.add('show');
+}
+// Só os combustíveis da origem que tenham tanque compatível no destino.
+function fillTransfComb(preferido){
+  const eo=empById(document.getElementById('mtOrigem').value);
+  const ed=empById(document.getElementById('mtDestino').value);
+  const sel=document.getElementById('mtComb');
+  const lista=(eo?eo.combustiveis:[]).filter(c=>!!combDestino(ed,c));
+  sel.innerHTML=lista.map(c=>`<option value="${c}">${COMB_LABEL[c]||c}</option>`).join('');
+  if(preferido && lista.includes(preferido)) sel.value=preferido;
+}
+function refreshTransfHint(){
+  const hint=document.getElementById('mtHint');
+  const eo=empById(document.getElementById('mtOrigem').value);
+  const ed=empById(document.getElementById('mtDestino').value);
+  const comb=document.getElementById('mtComb').value;
+  const data=document.getElementById('mtData').value;
+  const qtd=parseFloat(document.getElementById('mtQtd').value)||0;
+  if(!eo||!ed){ hint.innerHTML='Escolha a embarcação de origem e a de destino.'; return; }
+  if(eo.id===ed.id){ hint.innerHTML='<b style="color:var(--bad)">Origem e destino são a mesma embarcação.</b>'; return; }
+  if(!comb){
+    hint.innerHTML=`<b style="color:var(--bad)">${eo.nome}</b> e <b>${ed.nome}</b> não têm combustível em comum. `+
+      'Confira os tanques em Premissas → Empurradores (MGO e Diesel Terceiro são tratados como o mesmo tanque leve).';
+    return;
+  }
+  const combD=combDestino(ed,comb);
+  const partes=[];
+  partes.push(`Sai <b>${fmt(qtd)} L</b> de <b>${eo.nome}</b> (${COMB_LABEL[comb]||comb}) e entra em <b>${ed.nome}</b> (${COMB_LABEL[combD]||combD}), em ${data?parseDate(data).toLocaleDateString('pt-BR'):'—'}.`);
+  if(data){
+    // aviso de saldo: só faz sentido se a origem já tem estoque informado até essa data
+    const prim=earliestAnchorDate(eo.id, comb);
+    if(!prim || prim>data){
+      partes.push(`<span class="muted">Sem estoque informado para ${eo.nome} até essa data — não dá para conferir o saldo da origem.</span>`);
+    }else{
+      const saldo=saldoFimDoDia(eo.id, comb, data, editTransfId);
+      partes.push(qtd>saldo
+        ? `<b style="color:var(--warn)">⚠ ${eo.nome} tem ${fmt(saldo)} L projetados nesse dia — a transferência deixa o tanque negativo.</b>`
+        : `${eo.nome} tem <b>${fmt(saldo)} L</b> projetados nesse dia.`);
+    }
+    const cap=(ed.tanques&&ed.tanques[combD]&&ed.tanques[combD].capacidade)||0;
+    const primD=earliestAnchorDate(ed.id, combD);
+    if(cap>0 && primD && primD<=data){
+      const saldoD=saldoFimDoDia(ed.id, combD, data, editTransfId);
+      if(saldoD+qtd>cap) partes.push(`<b style="color:var(--warn)">⚠ ${ed.nome} ficaria com ${fmt(saldoD+qtd)} L, acima da capacidade de ${fmt(cap)} L.</b>`);
+    }
+  }
+  partes.push('<span class="muted">A transferência entra no estoque das duas embarcações, mas fica fora dos indicadores de compra (litros, R$, preço médio e saving) — nada foi comprado.</span>');
+  hint.innerHTML=partes.join('<br>');
+}
+['mtOrigem','mtDestino'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{
+    fillTransfComb(document.getElementById('mtComb').value);
+    refreshTransfHint();
+  });
+});
+['mtComb','mtData','mtQtd','mtStatus'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', refreshTransfHint);
+  document.getElementById(id).addEventListener('change', refreshTransfHint);
+});
+
+document.getElementById('mtSave').addEventListener('click', ()=>{
+  const oid=document.getElementById('mtOrigem').value;
+  const did=document.getElementById('mtDestino').value;
+  const comb=document.getElementById('mtComb').value;
+  const data=document.getElementById('mtData').value;
+  const qtd=parseFloat(document.getElementById('mtQtd').value)||0;
+  const status=document.getElementById('mtStatus').value;
+  const obs=document.getElementById('mtObs').value.trim();
+  const eo=empById(oid), ed=empById(did);
+  if(!eo||!ed||!data||!(qtd>0)){ alert('Preencha origem, destino, data e uma quantidade maior que zero.'); return; }
+  if(oid===did){ alert('Escolha embarcações diferentes para origem e destino.'); return; }
+  const combD=combDestino(ed, comb);
+  if(!comb||!combD){ alert('As duas embarcações precisam ter um combustível em comum. Confira os tanques em Premissas → Empurradores.'); return; }
+  // saldo insuficiente é aviso, não bloqueio: o operador pode saber de um estoque ainda não lançado
+  const prim=earliestAnchorDate(eo.id, comb);
+  if(prim && prim<=data){
+    const saldo=saldoFimDoDia(eo.id, comb, data, editTransfId);
+    if(qtd>saldo && !confirm(`${eo.nome} tem ${fmt(saldo)} L projetados em ${parseDate(data).toLocaleDateString('pt-BR')}.\nTransferir ${fmt(qtd)} L deixa o tanque negativo.\n\nRegistrar mesmo assim?`)) return;
+  }
+  const comum={tipo:'transferencia', data, status, obs, cidade:'', preco:0, fornecedorId:null,
+    nf:'', saving:false, precoEvitado:0, justificativaId:null};
+  if(editTransfId){
+    const legs=transfLegs(editTransfId);
+    const saida=legs.find(l=>(l.qtd||0)<0), entrada=legs.find(l=>l!==saida);
+    Object.assign(saida, comum, {empId:oid, comb, qtd:-qtd, transfEmpId:did});
+    Object.assign(entrada, comum, {empId:did, comb:combD, qtd:qtd, transfEmpId:oid});
+  }else{
+    const tid=uid();
+    state.abastecimentos.push(Object.assign({id:uid(), transfId:tid, criadoEm:todayStr()}, comum,
+      {empId:oid, comb, qtd:-qtd, transfEmpId:did}));
+    state.abastecimentos.push(Object.assign({id:uid(), transfId:tid, criadoEm:todayStr()}, comum,
+      {empId:did, comb:combD, qtd:qtd, transfEmpId:oid}));
+  }
+  save(); closeModals(); renderMapa(); renderAbast();
+});
+document.getElementById('mtDelete').addEventListener('click', ()=>{
+  if(!confirm('Excluir esta transferência? A saída e a entrada são removidas das duas embarcações.')) return;
+  state.abastecimentos=state.abastecimentos.filter(a=>a.transfId!==editTransfId);
+  save(); closeModals(); renderMapa(); renderAbast();
+});
+
 function openAbastModal(id, prefill){
+  // transferências têm modal próprio (editam as duas pernas de uma vez)
+  const aRef = id ? state.abastecimentos.find(x=>x.id===id) : null;
+  if(isTransf(aRef)){ openTransferModal(aRef.transfId); return; }
   editAbastId=id;
   const aEdit = id ? state.abastecimentos.find(x=>x.id===id) : null;
   const empList = state.empurradores.filter(e=>ativo(e) || (aEdit && aEdit.empId===e.id));
@@ -4788,17 +5019,31 @@ function renderAbast(){
 
   // KPIs (refletindo o filtro)
   const kpis=document.getElementById('abastKpis');
+  // Uma transferência tem duas pernas na lista, mas é UM evento — os contadores a contam uma vez.
+  const vistos=new Set();
+  const eventos=list.filter(a=>{
+    if(!isTransf(a)) return true;
+    if(vistos.has(a.transfId)) return false;
+    vistos.add(a.transfId); return true;
+  });
+  const compras=list.filter(ehCompra);
   const counts={};
-  STATUS.forEach(s=>counts[s]=list.filter(a=>a.status===s).length);
-  const totalL=list.filter(a=>a.status!=='Cancelado').reduce((s,a)=>s+(a.qtd||0),0);
-  const totalRealL=list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+(a.qtd||0),0);
-  const totalRealValor=list.filter(a=>a.status==='Realizado').reduce((s,a)=>s+((a.qtd||0)*(a.preco||0)),0);
-  const atrasados=list.filter(isAbastAtrasado).length;
+  STATUS.forEach(s=>counts[s]=eventos.filter(a=>a.status===s).length);
+  const totalL=compras.filter(a=>a.status!=='Cancelado').reduce((s,a)=>s+(a.qtd||0),0);
+  const totalRealL=compras.filter(a=>a.status==='Realizado').reduce((s,a)=>s+(a.qtd||0),0);
+  const totalRealValor=compras.filter(a=>a.status==='Realizado').reduce((s,a)=>s+((a.qtd||0)*(a.preco||0)),0);
+  const atrasados=eventos.filter(isAbastAtrasado).length;
+  // O filtro pode trazer só uma das pernas (ex.: filtrando por um empurrador), então
+  // recebidos e cedidos são contados separados — é o que aquele recorte de fato mostra.
+  const transfIn=list.filter(a=>isTransf(a)&&a.status!=='Cancelado'&&(a.qtd||0)>0).reduce((s,a)=>s+a.qtd,0);
+  const transfOut=list.filter(a=>isTransf(a)&&a.status!=='Cancelado'&&(a.qtd||0)<0).reduce((s,a)=>s-a.qtd,0);
   kpis.innerHTML=
     STATUS.map(s=>`<div class="kpi kpi-${s}" title="${STATUS_HINT[s]||''}"><div class="v stat-${s}">${counts[s]}</div><div class="l">${s}</div></div>`).join('')+
     `<div class="kpi"><div class="v">${fmt(totalL)}</div><div class="l">Litros (filtro)</div></div>`+
     `<div class="kpi"><div class="v">${fmt(totalRealL)}</div><div class="l">Litros Realizados</div></div>`+
     `<div class="kpi"><div class="v">${fmtMoney(totalRealValor)}</div><div class="l">R$ Realizado</div></div>`+
+    (transfIn ? `<div class="kpi" title="Combustível recebido por transferência de outra embarcação — não é compra"><div class="v">${fmt(transfIn)}</div><div class="l">⇄ Recebidos (L)</div></div>` : '')+
+    (transfOut ? `<div class="kpi" title="Combustível cedido por transferência para outra embarcação — não é compra"><div class="v">${fmt(transfOut)}</div><div class="l">⇄ Cedidos (L)</div></div>` : '')+
     (atrasados ? `<div class="kpi"><div class="v" style="color:var(--bad)">${atrasados}</div><div class="l">⚠ Atrasados</div></div>` : '');
 
   const t=document.getElementById('tblAbast');
@@ -4810,29 +5055,42 @@ function renderAbast(){
     const d=a.data?parseDate(a.data).toLocaleDateString('pt-BR'):'—';
     const atras=isAbastAtrasado(a);
     const forn = a.fornecedorId ? state.fornecedores.find(f=>f.id===a.fornecedorId) : null;
+    const transf=isTransf(a);
+    const outro=transf?empById(a.transfEmpId):null;
+    const sentido=transf
+      ? `<span class="tag" style="background:var(--panel2);color:var(--accent);border:1px dashed var(--accent);"
+           title="Transferência de combustível — a contraparte aparece como a outra perna do lançamento">⇄ ${(a.qtd||0)<0?'para':'de'} ${outro?outro.nome:'—'}</span>`
+      : '';
+    const statusOpts = transf ? ['Previsto','Realizado','Cancelado'] : STATUS;
     h+=`<tr class="${atras?'row-alert':''}">
       <td>${atras?'<span class="alerta" title="Status pendente com data passada — encerre a programação">⚠</span>':''}</td>
       <td>${d}</td>
-      <td>${e?e.nome:'—'}</td>
+      <td>${e?e.nome:'—'} ${sentido}</td>
       <td>${a.cidade||'—'}</td>
       <td><span class="tag ${a.comb}">${COMB_LABEL[a.comb]||a.comb}</span></td>
       <td class="num">${fmt(a.qtd)}</td>
       <td class="status-cell">
         <select class="status-sel st-${a.status||'Previsto'}" title="${STATUS_HINT[a.status]||''}" onchange="changeAbastStatus('${a.id}',this.value)">
-          ${STATUS.map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
+          ${statusOpts.map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
         </select>
       </td>
       <td class="num">${a.preco?fmt2(a.preco):'—'}</td>
       <td>${forn?forn.nome:'—'}</td>
       <td>${a.nf||'—'}${a.saving?` <span class="tag" style="background:var(--ok);color:#001018;" title="Saving registrado">Saving</span>`:''}</td>
       <td>${a.obs||''}</td>
-      <td><button class="btn sm secondary" onclick="openAbastModal('${a.id}')">Editar</button></td>
+      <td><button class="btn sm secondary" onclick="abrirLancamento('${a.id}')">Editar</button></td>
     </tr>`;
   });
   t.innerHTML=h;
 }
 function changeAbastStatus(id,val){
   const a=state.abastecimentos.find(x=>x.id===id);
+  // a transferência é um par: as duas pernas têm de ficar no mesmo status, senão o
+  // combustível sai de um tanque sem entrar no outro
+  if(isTransf(a)){
+    transfLegs(a.transfId).forEach(l=>l.status=val);
+    save(); renderAbast(); renderMapa(); return;
+  }
   // Se transitando para Realizado e ainda não tem fornecedor/preço, abre modal
   if(val==='Realizado' && (!a.fornecedorId || !a.preco)){
     openAbastModal(id);
@@ -5859,8 +6117,9 @@ function renderPrecos(){
   const ini=document.getElementById('prFiltroIni').value;
   const fim=document.getElementById('prFiltroFim').value;
 
-  // Abastecimentos Realizados no período → litros, R$
+  // Abastecimentos Realizados no período → litros, R$ (transferências não são compra)
   const absReal = state.abastecimentos.filter(a=>{
+    if(!ehCompra(a)) return false;
     if(a.status!=='Realizado') return false;
     if(ini && a.data<ini) return false;
     if(fim && a.data>fim) return false;
@@ -5918,8 +6177,8 @@ function renderSaving(ini, fim){
     return true;
   };
   const savOf=a=>((a.precoEvitado||0)-(a.preco||0))*(a.qtd||0);
-  const regs=state.abastecimentos.filter(a=>a.status==='Realizado' && a.saving && noPeriodo(a));
-  const absReal=state.abastecimentos.filter(a=>a.status==='Realizado' && noPeriodo(a));
+  const regs=state.abastecimentos.filter(a=>ehCompra(a) && a.status==='Realizado' && a.saving && noPeriodo(a));
+  const absReal=state.abastecimentos.filter(a=>ehCompra(a) && a.status==='Realizado' && noPeriodo(a));
 
   const totalSaving=regs.reduce((s,a)=>s+savOf(a),0);
   const totalLitros=regs.reduce((s,a)=>s+(a.qtd||0),0);
@@ -7472,6 +7731,7 @@ function machineHoursByEmp(ini, fim){
 function avgPricePeriod(ini, fim, pool){
   let q=0,c=0;
   state.abastecimentos.forEach(a=>{
+    if(!ehCompra(a)) return; // transferência não tem preço: entraria como R$ 0 e puxaria a média
     if(a.status!=='Realizado') return;
     if(!pool.includes(a.comb)) return;
     if(ini && a.data<ini) return; if(fim && a.data>fim) return;
@@ -7884,6 +8144,7 @@ function renderDashboard(){
   // Respeita o período (por data do abastecimento) e o filtro de empurrador. Abastecimentos têm empId, mas não rotaId,
   // então o filtro de rota não se aplica aqui. Registros antigos sem 'criadoEm' e cancelados ficam de fora.
   const absProg=(state.abastecimentos||[]).filter(a=>
+    ehCompra(a) && // antecedência é do processo de COMPRA; transferência não é programada assim
     a.status!=='Cancelado' && a.criadoEm && a.data &&
     (!ini||a.data>=ini) && (!fim||a.data<=fim) &&
     (empAll || (a.empId && empSet.has(a.empId)))

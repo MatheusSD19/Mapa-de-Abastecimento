@@ -10,12 +10,31 @@ combustível dos empurradores e giro das barcaças entre as cidades.
 | **Dashboard** | KPIs de consumo, estoque e eficiência. |
 | **Premissas** | Empurradores, rotas, **cidades**, **terminais** e **calado médio**. |
 | **Médias de Consumo** | Tempo e consumo (L/h) por trecho · empurrador · condição. |
-| **Mapa de Abastecimentos** | Grade diária por empurrador: viagem, consumo, abastecimento e estoque de cada combustível. |
+| **Mapa de Abastecimentos** | Grade diária por empurrador: viagem, consumo, abastecimento, **transferência entre embarcações** e estoque de cada combustível. |
 | **Mapa de Giros** | Grade diária por **cidade**: viagem, barcaças, volume, navios, terminais e estoque de barcaças. |
 | **Abastecimentos / Viagens / Apontamentos / Preços / Importações** | Acompanhamento, finalização e cargas de dados reais. |
 
 Os dois mapas trabalham sobre **a mesma lista de viagens**: mover, criar, editar ou excluir
 uma viagem em um deles muda o outro imediatamente.
+
+## Transferência de combustível entre embarcações
+
+No Mapa de Abastecimentos, o botão **⇄ Transferir Combustível** passa combustível de uma
+embarcação para outra. A transferência é gravada como um **par** de lançamentos ligados:
+a **saída** (quantidade negativa) no tanque de origem e a **entrada** (positiva) no de
+destino, na mesma data.
+
+- Os dois chips aparecem na coluna **Abast.**, tracejados: **↑** é a saída, **↓** a entrada.
+  Arrastar um deles move as duas pontas juntas; mudar o status muda o das duas; excluir
+  apaga as duas.
+- Ela **entra** no estoque projetado das duas embarcações e na reconciliação física.
+- Ela **não entra** nos indicadores de compra — litros, R$, preço médio, saving e
+  antecedência de programação —, porque nada foi comprado: o combustível só mudou de tanque.
+  Na lista de Abastecimentos ela aparece nos KPIs próprios **⇄ Recebidos** e **⇄ Cedidos**.
+- **MGO** e **Diesel Terceiro** são tratados como o mesmo tanque leve, então a transferência
+  aceita o par entre os dois; o app resolve sozinho qual tanque recebe no destino.
+- O modal avisa (sem bloquear) quando a origem fica negativa ou o destino passa da
+  capacidade — o operador pode saber de um estoque ainda não lançado.
 
 ## Mapa de Giros
 

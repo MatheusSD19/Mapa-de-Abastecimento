@@ -19,7 +19,10 @@ uma viagem em um deles muda o outro imediatamente.
 
 ## Mapa de Giros
 
-Cada cidade vira um bloco de colunas. Ao lado da data fica o **Calado** previsto do rio.
+Cada cidade vira um bloco de colunas. Ao lado da data fica o **Calado** previsto do rio, no
+cenário escolhido no botão **Cenário de calado** (Pessimista / Médio / Otimista) da barra — o
+nome do cenário ativo aparece no cabeçalho da coluna e o tooltip de cada dia mostra os três
+valores, com **◄** no que está sendo exibido.
 
 - **Viagem · Barcaças · Volume** — a viagem é plotada na cidade de **destino**, no dia previsto
   de **chegada**, e o chip mostra o **nome do barco** (empurrador); o tooltip traz o trecho,
@@ -52,6 +55,9 @@ Um único arquivo traz as duas tabelas:
 
 O calado previsto em **D+1** sugere o calado das barcaças: em Miritituba, pela saída do próximo
 comboio; no navio de fertilizante, pelo término previsto da operação.
+
+O **cenário** (Pessimista / Médio / Otimista) é o mesmo nos dois lugares — o select daqui e o
+botão da barra do Mapa de Giros se espelham, e a escolha fica salva.
 
 ### Cidades e rotas
 

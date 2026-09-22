@@ -2789,7 +2789,9 @@ function normHora(s){
   if(m){ let h=+m[1]; if(h<=23) return String(h).padStart(2,'0')+':00'; }
   return null;
 }
-function openViagemModal(vid, empId, dateStr_, cidId){
+// cidModo: 'origem' (padrão) sugere um trecho que SAI da cidade; 'destino' sugere um trecho
+// que CHEGA nela — é como o Mapa de Giros abre a célula de Viagem, que é do destino.
+function openViagemModal(vid, empId, dateStr_, cidId, cidModo){
   editViagemId = vid;
   const mEmp=document.getElementById('mvEmp'), mRota=document.getElementById('mvRota');
   const vEdit = vid ? state.viagens.find(x=>x.id===vid) : null;
@@ -2825,11 +2827,12 @@ function openViagemModal(vid, empId, dateStr_, cidId){
     document.getElementById('mvTitle').textContent='Nova Viagem';
     if(empId) mEmp.value=empId;
     mRota.value='';
-    // Vindo do Mapa de Giros: já sugere um trecho que sai da cidade clicada
+    // Vindo do Mapa de Giros: já sugere um trecho ligado à cidade clicada
     if(cidId){
-      const cOri=cidById(cidId);
-      const rOri=cOri && rotList.find(r=>{ const c2=cidByNome(r.origem); return c2 && c2.id===cOri.id; });
-      if(rOri) mRota.value=rOri.nome;
+      const cRef=cidById(cidId);
+      const porDestino=cidModo==='destino';
+      const rRef=cRef && rotList.find(r=>{ const c2=cidByNome(porDestino?r.destino:r.origem); return c2 && c2.id===cRef.id; });
+      if(rRef) mRota.value=rRef.nome;
     }
     document.getElementById('mvCond').value='Carregada';
     document.getElementById('mvComandante').value='';
@@ -3591,13 +3594,20 @@ document.getElementById('btnNovaViagemGiro').addEventListener('click', ()=>openV
 document.getElementById('btnNovoNavio').addEventListener('click', ()=>openNavioModal(null,null,null));
 document.getElementById('btnGiroIndisp').addEventListener('click', ()=>openTermIndispModal());
 
-function viagensDaCidadeNoDia(cidId, dStr){
-  return (state.viagens||[]).filter(v=>{
-    if(v.dataSaida!==dStr) return false;
-    const co=cidadeOrigemDaViagem(v);
-    return !!co && co.id===cidId;
+// O Mapa de Giros plota cada viagem na cidade de DESTINO, no dia previsto de chegada:
+// é ali que as barcaças (e a carga) entram no giro daquela cidade.
+// A chegada sai de uma média por trecho/barco, então o índice é montado uma vez por render.
+function indexChegadas(){
+  const idx={};
+  (state.viagens||[]).forEach(v=>{
+    if(!v.dataSaida) return;
+    const cd=cidadeDestinoDaViagem(v); if(!cd) return;
+    const ch=viagemChegadaStr(v); if(!ch) return;
+    (idx[cd.id+'|'+ch]=idx[cd.id+'|'+ch]||[]).push(v);
   });
+  return idx;
 }
+function viagensChegandoNaCidadeNoDia(idx, cidId, dStr){ return idx[cidId+'|'+dStr]||[]; }
 function naviosDaCidade(cidId){ return (state.navios||[]).filter(n=>n.cidadeId===cidId); }
 
 function renderGiros(){
@@ -3620,6 +3630,7 @@ function renderGiros(){
   if(fimStr<iniStr){ wrap.innerHTML='<div class="empty" style="padding:14px;">Data final anterior à inicial.</div>'; return; }
 
   const sim=simularGiros(iniStr, fimStr);
+  const chegadasIdx=indexChegadas();
   let avisoHtml='';
   if(sim.avisos.length){
     avisoHtml='<div class="orfa-banner" style="margin:0 0 10px 0;"><div class="txt">'+
@@ -3643,7 +3654,9 @@ function renderGiros(){
   cidades.forEach(c=>{
     const terms=terminaisDaCidade(c.id);
     const usaTerm=c.origem && terms.length;
-    h+='<th>Viagem</th><th>Barcaças</th><th class="num">Volume</th>';
+    h+='<th title="Viagens que chegam a esta cidade na data (barco/empurrador)">Viagem</th>'+
+       '<th title="Barcaças que chegam com essas viagens">Barcaças</th>'+
+       '<th class="num" title="Volume que chega com essas viagens">Volume</th>';
     if(c.operaNavio) h+='<th>Navio</th><th title="Barcaças acumuladas produzidas pelo navio">Barcaças</th>';
     const fimEst = !c.operaNavio && !usaTerm;
     h+=`<th class="${fimEst?'cid-sep':(c.operaNavio?'':'sub-sep')}" title="Estoque próprio de barcaças e volume na cidade">Estoque</th>`;
@@ -3676,27 +3689,32 @@ function renderGiros(){
       const cor=getCidCor(c);
 
       // ---- Viagem / Barcaças / Volume ----
-      const vgs=viagensDaCidadeNoDia(c.id, dStr);
+      const vgs=viagensChegandoNaCidadeNoDia(chegadasIdx, c.id, dStr);
       let vCell='', bCell='', volCell='';
       if(vgs.length){
         vCell=vgs.map(v=>{
           const r=rotaById(v.rotaId);
           const mov=movimentoDaViagem(v);
-          const cd=cidadeDestinoDaViagem(v);
+          const co=cidadeOrigemDaViagem(v);
+          const emp=empById(v.empId);
+          const barco=emp?emp.nome:'(sem empurrador)';
           // Carga que de fato embarcou: numa cidade pulmão o comboio só leva o que chegou ali.
           const emb=sim.embarque[v.id];
           const volDecl=mov.volG+mov.volF;
           const volReal=emb?(emb.volG+emb.volF):volDecl;
           const faltaCarga=(volDecl-volReal)>50;
-          const tip=`${r?r.nome:'?'} — ${v.condicao||''}&#10;Saída: ${parseDate(v.dataSaida).toLocaleDateString('pt-BR')} ${v.horaSaida||''}&#10;`+
-            `Chegada prevista: ${viagemChegadaStr(v)?parseDate(viagemChegadaStr(v)).toLocaleDateString('pt-BR'):'—'}${cd?' em '+cd.nome:''}&#10;`+
+          const tip=`${barco} — ${r?r.nome:'?'}${v.condicao?' ('+v.condicao+')':''}&#10;`+
+            `Saída: ${parseDate(v.dataSaida).toLocaleDateString('pt-BR')} ${v.horaSaida||''}${co?' de '+co.nome:''}&#10;`+
+            `Chegada prevista: ${parseDate(dStr).toLocaleDateString('pt-BR')} em ${c.nome}&#10;`+
             `Barcaças: ${barcStr(mov,true)||'—'}&#10;Calado: ${fmt2(v.calado||caladoPadrao())} m&#10;Volume: ${fmt(volDecl)} t&#10;`+
             (faltaCarga?`⚠ A origem só tinha ${fmt(volReal)} t nessas barcaças — é esse volume que chega ao destino.&#10;`:'')+
             `&#10;Clique para editar (a viagem é a mesma do Mapa de Abastecimentos)`;
           return `<span class="trip-chip vstat-${v.status||'Previsto'}" draggable="true" data-gvid="${v.id}" title="${tip}"
-            style="background:${cor};color:${corContraste(cor)}" onclick="openViagemModal('${v.id}')">${r?r.nome:'?'}${faltaCarga?' ⚠':''}</span>`;
+            style="background:${cor};color:${corContraste(cor)}" onclick="openViagemModal('${v.id}')">${barco}${faltaCarga?' ⚠':''}</span>`;
         }).join(' ');
-        const tot=vgs.reduce((a,v)=>{const m=movimentoDaViagem(v);return {V:a.V+m.V,C:a.C+m.C,F:a.F+m.F,volG:a.volG+m.volG,volF:a.volF+m.volF};}, novoEst());
+        // totaliza o que de fato chega: o embarque real quando a simulação o conhece
+        const tot=vgs.reduce((a,v)=>{const m=sim.embarque[v.id]||movimentoDaViagem(v);
+          return {V:a.V+m.V,C:a.C+m.C,F:a.F+m.F,volG:a.volG+m.volG,volF:a.volF+m.volF};}, novoEst());
         bCell=barcStr(tot)||'<span class="muted">—</span>';
         const volT=tot.volG+tot.volF;
         // comboio só de barcaças vazias não tem volume; volume zerado com carga = falta a tabela de calado
@@ -3799,7 +3817,8 @@ function wireGiroInteracoes(wrap){
   wrap.querySelectorAll('.giro-viagem-cell').forEach(td=>{
     td.addEventListener('click', ev=>{
       if(ev.target.closest('.trip-chip')) return;
-      openViagemModal(null, null, td.dataset.date, td.dataset.cid);
+      // a célula é do DESTINO no dia da chegada: a data de saída sugerida recua o trânsito padrão
+      openViagemModal(null, null, dateStr(addDays(parseDate(td.dataset.date),-1)), td.dataset.cid, 'destino');
     });
     td.addEventListener('dragover', ev=>{ ev.preventDefault(); td.classList.add('drop-target'); });
     td.addEventListener('dragleave', ()=>td.classList.remove('drop-target'));
@@ -3807,14 +3826,18 @@ function wireGiroInteracoes(wrap){
       ev.preventDefault(); td.classList.remove('drop-target');
       const vid=ev.dataTransfer.getData('text/gvid'); if(!vid) return;
       const v=state.viagens.find(x=>x.id===vid); if(!v) return;
-      const co=cidadeOrigemDaViagem(v);
-      if(!co || co.id!==td.dataset.cid){ alert('Mova a viagem dentro da mesma cidade de origem.\nPara trocar de cidade, edite o trecho da viagem.'); return; }
+      const cd=cidadeDestinoDaViagem(v);
+      if(!cd || cd.id!==td.dataset.cid){ alert('Mova a viagem dentro da mesma cidade de destino.\nPara trocar de cidade, edite o trecho da viagem.'); return; }
+      // a coluna é a chegada: desloca a SAÍDA no mesmo tanto, mantendo o tempo de trânsito
+      const chegAtual=viagemChegadaStr(v);
+      const delta=chegAtual ? Math.round((parseDate(td.dataset.date)-parseDate(chegAtual))/86400000) : 0;
+      const novaSaida=dateStr(addDays(parseDate(v.dataSaida), delta));
       if(ev.ctrlKey||ev.metaKey){
         state.viagens.push({id:uid(), status:'Previsto', empId:v.empId, rotaId:v.rotaId, condicao:v.condicao,
-          dataSaida:td.dataset.date, horaSaida:v.horaSaida, volumeCarregada:v.volumeCarregada||0,
+          dataSaida:novaSaida, horaSaida:v.horaSaida, volumeCarregada:v.volumeCarregada||0,
           barcacas:Object.assign({V:0,C:0,F:0}, v.barcacas), calado:v.calado||caladoPadrao()});
       }else{
-        v.dataSaida=td.dataset.date;
+        v.dataSaida=novaSaida;
       }
       refreshViagemStatuses(); save(); renderGiros();
     });

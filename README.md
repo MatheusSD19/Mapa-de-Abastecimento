@@ -21,8 +21,10 @@ uma viagem em um deles muda o outro imediatamente.
 
 Cada cidade vira um bloco de colunas. Ao lado da data fica o **Calado** previsto do rio.
 
-- **Viagem · Barcaças · Volume** — a viagem que sai daquela cidade, a quebra do comboio
-  (`20C`, `20V`, `15F` ou, no comboio misto, `10V + 15F`) e o volume calculado pelo calado.
+- **Viagem · Barcaças · Volume** — a viagem é plotada na cidade de **destino**, no dia previsto
+  de **chegada**, e o chip mostra o **nome do barco** (empurrador); o tooltip traz o trecho,
+  a condição, saída, chegada, barcaças, calado e volume. Ao lado vêm a quebra do comboio
+  (`20C`, `20V`, `15F` ou, no comboio misto, `10V + 15F`) e o volume que chega.
 - **Navio · Barcaças** (cidades que operam navio) — o navio e as barcaças que ele acumula por dia.
   Navio de grão consome barcaça carregada e **devolve vazia**; navio de fertilizante consome
   vazia e **devolve carregada com Fertz**.
@@ -31,9 +33,11 @@ Cada cidade vira um bloco de colunas. Ao lado da data fica o **Calado** previsto
 - **Terminal: Estoque · Status** (cidade de origem) — cada terminal carrega grão nas vazias e
   descarrega as de Fertz (que viram vazias e carregam ali mesmo). Status: Disponível / Operando / Indisponível.
 
-Interações: clique numa célula vazia de **Viagem** ou **Navio** para lançar; clique em **Estoque**
-para informar barcaças e volume; clique no **Status** para alternar Indisponível (Ctrl+clique abre
-o período). Arraste os chips para mudar a data — com **Ctrl** ao soltar, copia.
+Interações: clique numa célula vazia de **Viagem** ou **Navio** para lançar (na célula de Viagem
+o trecho sugerido é um que **chega** naquela cidade); clique em **Estoque** para informar barcaças
+e volume; clique no **Status** para alternar Indisponível (Ctrl+clique abre o período). Arraste os
+chips para mudar a data — no Mapa de Giros a viagem é deslocada para **chegar** no dia em que for
+solta, mantendo o tempo de trânsito; com **Ctrl** ao soltar, copia.
 
 ### Calado (Premissas → Calado Médio)
 

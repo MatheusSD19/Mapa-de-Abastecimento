@@ -7,8 +7,8 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg:#102f3d; --panel:#16465a; --panel2:#1d5368; --line:#417184;
-    --txt:#f7fafb; --muted:#c2d4db; --accent:#ffffff; --accent2:#4b9e44;
+    --bg:#071e29; --panel:#0d3444; --panel2:#114356; --line:#2c6276;
+    --txt:#f4f9fa; --muted:#b8ced6; --accent:#ffffff; --accent2:#4b9e44;
     --ok:#8ed084; --warn:#f7c46c; --bad:#ff9890; --info:#83cce6;
   }
   body.light{
@@ -449,11 +449,7 @@
   .sidebar .side-title{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.12em;margin:0 8px 10px;}
   nav{gap:3px;}
   nav button{position:relative;display:flex;align-items:center;gap:10px;background:transparent;border-color:transparent;border-radius:3px;color:var(--txt);padding:9px 10px;font-weight:600;}
-  nav button::before{content:'';width:13px;height:13px;border:1.5px solid currentColor;border-radius:2px;opacity:.85;flex:0 0 auto;}
-  nav button[data-view="dashboard"]::before{border-radius:50%;}
-  nav button[data-view="mapa"]::before,nav button[data-view="giros"]::before{border-radius:50% 50% 2px 2px;transform:rotate(45deg);}
-  nav button[data-view="viagens"]::before{border-radius:8px 2px 8px 2px;}
-  nav button[data-view="importacoes"]::before{border-radius:0;border-top:none;}
+  .nav-icon{width:17px;height:17px;flex:0 0 17px;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;fill:none;opacity:.9;}
   nav button:hover{background:var(--panel2);border-color:transparent;}
   nav button.active{background:var(--accent2);border-color:var(--accent2);color:#fff;box-shadow:none;}
   .theme-toggle{border-radius:3px;background:transparent;border-color:var(--line);color:var(--txt);}
@@ -508,19 +504,19 @@
 <aside class="sidebar">
   <div class="side-title">Módulos</div>
   <nav>
-    <button data-view="dashboard">Dashboard</button>
-    <button data-view="premissas" class="active">Premissas</button>
-    <button data-view="medias">Médias de Consumo</button>
-    <button data-view="mapa">Mapa de Abastecimentos</button>
-    <button data-view="giros">Mapa de Giros</button>
-    <button data-view="abastecimentos">Abastecimentos</button>
-    <button data-view="viagens">Viagens</button>
-    <button data-view="apontamentos">Apontamentos</button>
-    <button data-view="precos">Preços e Desempenho</button>
-    <button data-view="importacoes">Importações</button>
+    <button data-view="dashboard"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>Dashboard</button>
+    <button data-view="premissas" class="active"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 21v-7l8-11 8 11v7"></path><path d="M9 21v-5h6v5M3 21h18"></path></svg>Premissas</button>
+    <button data-view="medias"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17"></path><path d="m7 15 4-4 3 2 5-6"></path></svg>Médias de Consumo</button>
+    <button data-view="mapa"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6.5 9 3l6 3.5L21 3v14.5L15 21l-6-3.5L3 21z"></path><path d="M9 3v14.5M15 6.5V21"></path></svg>Mapa de Abastecimentos</button>
+    <button data-view="giros"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7h-8a4 4 0 0 0-4 4v6"></path><path d="m17 4 3 3-3 3M4 17h8a4 4 0 0 0 4-4V7"></path><path d="m7 20-3-3 3-3"></path></svg>Mapa de Giros</button>
+    <button data-view="abastecimentos"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V5h9l3 3v13z"></path><path d="M15 5v4h4M9 13h6M9 17h6"></path></svg>Abastecimentos</button>
+    <button data-view="viagens"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 17h18l-2-6H5z"></path><path d="M7 17v2M17 17v2M4 21h16"></path><path d="M7 11V8h10v3"></path></svg>Viagens</button>
+    <button data-view="apontamentos"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"></path><path d="M8 9h8M8 13h8M8 17h5"></path></svg>Apontamentos</button>
+    <button data-view="precos"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="m7 15 4-5 3 3 5-7"></path><path d="M16 6h3v3"></path></svg>Preços e Desempenho</button>
+    <button data-view="importacoes"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M4 17v3h16v-3"></path></svg>Importações</button>
   </nav>
   <div class="side-bottom">
-    <button class="theme-toggle" id="btnTheme" title="Alternar tema">🌙</button>
+    <button class="theme-toggle" id="btnTheme" title="Alternar tema" aria-label="Alternar tema"></button>
   </div>
 </aside>
 <main>
@@ -8908,7 +8904,9 @@ function applyTheme(t){
   document.body.classList.toggle('light', light);
   document.getElementById('ldcLogo').src = light ? 'assets/branding/logo_ldc_blue.png' : 'assets/branding/logo_ldc_white.png';
   const btn=document.getElementById('btnTheme');
-  btn.textContent = light ? '☀️' : '🌙';
+  btn.innerHTML = light
+    ? '<svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>'
+    : '<svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></svg>';
   btn.title = light ? 'Tema claro — clique para o escuro' : 'Tema escuro — clique para o claro';
 }
 document.getElementById('btnTheme').addEventListener('click', ()=>{

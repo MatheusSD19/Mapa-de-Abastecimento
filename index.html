@@ -7,14 +7,14 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --line:#334155;
-    --txt:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --accent2:#0ea5e9;
-    --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --info:#a78bfa;
+    --bg:#102f3d; --panel:#16465a; --panel2:#1d5368; --line:#417184;
+    --txt:#f7fafb; --muted:#c2d4db; --accent:#ffffff; --accent2:#4b9e44;
+    --ok:#8ed084; --warn:#f7c46c; --bad:#ff9890; --info:#83cce6;
   }
   body.light{
-    --bg:#f1f5f9; --panel:#ffffff; --panel2:#eef2f7; --line:#cbd5e1;
-    --txt:#1e293b; --muted:#64748b; --accent:#0369a1; --accent2:#0284c7;
-    --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --info:#7c3aed;
+    --bg:#f4f7f8; --panel:#ffffff; --panel2:#edf3f5; --line:#cfdee3;
+    --txt:#20262b; --muted:#5d6770; --accent:#195c76; --accent2:#195c76;
+    --ok:#367b31; --warn:#965d00; --bad:#b42318; --info:#007caa;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:13px;}
@@ -429,37 +429,95 @@
   .imp-status .box .v{font-size:18px;font-weight:700;color:var(--accent);}
   .imp-status .box .l{font-size:11px;color:var(--muted);}
   .imp-status .box .s{font-size:10px;color:var(--muted);margin-top:3px;}
+  /* ===== Identidade LDC ===== */
+  body{font-family:Arial,sans-serif;line-height:1.45;}
+  header.app-header{min-height:100px;padding:13px 24px;background:var(--panel);border-bottom:3px solid var(--accent2);gap:14px;box-shadow:0 2px 12px rgba(19,61,78,.12);}
+  .brand-lockup{display:flex;align-items:center;gap:16px;min-width:330px;}
+  .brand-lockup img{display:block;width:150px;height:auto;object-fit:contain;}
+  .brand-divider{width:1px;height:38px;background:var(--line);}
+  .app-identity{display:flex;flex-direction:column;gap:1px;}
+  .app-identity .eyebrow{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
+  header h1{font-family:Georgia,serif;font-size:21px;font-weight:400;line-height:1.15;color:var(--accent);white-space:nowrap;}
+  .hamburger{background:transparent;color:var(--accent);border-color:transparent;width:36px;height:36px;border-radius:3px;order:-1;}
+  .hamburger:hover{background:var(--panel2);border-color:var(--line);}
+  .header-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
+  .tool-btn,.dropdown-btn{border-radius:3px;font-weight:600;}
+  .tool-btn{background:var(--panel2);border-color:var(--line);color:var(--txt);}
+  .tool-btn:hover{background:var(--accent);border-color:var(--accent);color:var(--panel);}
+  .fs-status{border-radius:3px;background:transparent;}
+  .sidebar{width:232px;padding:18px 12px;background:var(--panel);border-right-color:var(--line);top:100px;height:calc(100vh - 100px);}
+  .sidebar .side-title{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.12em;margin:0 8px 10px;}
+  nav{gap:3px;}
+  nav button{position:relative;display:flex;align-items:center;gap:10px;background:transparent;border-color:transparent;border-radius:3px;color:var(--txt);padding:9px 10px;font-weight:600;}
+  nav button::before{content:'';width:13px;height:13px;border:1.5px solid currentColor;border-radius:2px;opacity:.85;flex:0 0 auto;}
+  nav button[data-view="dashboard"]::before{border-radius:50%;}
+  nav button[data-view="mapa"]::before,nav button[data-view="giros"]::before{border-radius:50% 50% 2px 2px;transform:rotate(45deg);}
+  nav button[data-view="viagens"]::before{border-radius:8px 2px 8px 2px;}
+  nav button[data-view="importacoes"]::before{border-radius:0;border-top:none;}
+  nav button:hover{background:var(--panel2);border-color:transparent;}
+  nav button.active{background:var(--accent2);border-color:var(--accent2);color:#fff;box-shadow:none;}
+  .theme-toggle{border-radius:3px;background:transparent;border-color:var(--line);color:var(--txt);}
+  main{padding:24px;background:var(--bg);}
+  .card{border-radius:4px;padding:18px;margin-bottom:18px;box-shadow:0 1px 3px rgba(19,61,78,.07);}
+  .card h2{font-family:Georgia,serif;font-size:18px;font-weight:400;color:var(--accent);padding-bottom:10px;border-bottom:1px solid var(--line);}
+  .card h2 .sub{font-family:Arial,sans-serif;}
+  input,select{border-radius:3px;background:var(--panel);}
+  input:focus,select:focus,.dropdown-btn:focus,.btn:focus,.tool-btn:focus,.hamburger:focus,nav button:focus,.theme-toggle:focus{outline:3px solid var(--info);outline-offset:2px;border-color:var(--info);}
+  .btn{background:var(--accent2);color:#fff;border-radius:3px;}
+  .btn:hover{background:#12465a;color:#fff;}
+  .btn.secondary{background:var(--panel);border-color:var(--accent);color:var(--accent);}
+  .btn.secondary:hover{background:var(--panel2);}
+  th{background:var(--accent);color:#fff;border-color:var(--accent);font-size:10px;letter-spacing:.04em;}
+  tr:hover td{background:rgba(25,92,118,.06);}
+  .kpi{border-radius:4px;border-top:3px solid var(--accent);box-shadow:0 1px 3px rgba(19,61,78,.06);}
+  .kpi .v,.imp-status .box .v{font-family:Georgia,serif;}
+  .chart-wrap,.chart-card,.med-emp,.cid-card,.vw-card,.modal{border-radius:4px;}
+  .modal h3{font-family:Georgia,serif;color:var(--accent);font-weight:400;}
+  .mapa-wrap{border-radius:4px;}
+  table.mapa .emp-head,table.giro .cid-head{background:var(--accent);color:#fff;}
+  .chart-tooltip{background:rgba(25,92,118,.97);border-color:rgba(255,255,255,.25);}
+  .chart-tooltip .ttl{color:#fff;}
+  body.light .chart-tooltip .neu,body.light .chart-tooltip .sub{color:#d9edf3;}
+  @media (max-width:1100px){header.app-header{padding:10px 14px;min-height:100px;}.brand-lockup{min-width:0;gap:10px;}.brand-lockup img{width:150px;}.header-actions{justify-content:flex-start;}.sidebar{top:100px;height:calc(100vh - 100px);}}
+  @media (max-width:720px){header.app-header{align-items:flex-start;}.brand-divider{display:none;}.app-identity .eyebrow{display:none;}header h1{font-size:17px;}.brand-lockup{gap:8px;}.brand-lockup img{width:150px;}.header-actions{width:100%;padding-left:44px;}main{padding:14px;}}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important;}}
 </style>
 </head>
 <body>
-<header>
+<header class="app-header">
   <button class="hamburger" id="btnSidebar" title="Recolher / expandir menu">☰</button>
-  <h1>⛴ Mapa de Abastecimento</h1>
+  <div class="brand-lockup">
+    <img id="ldcLogo" src="assets/branding/logo_ldc_blue.png" alt="Louis Dreyfus Company">
+    <span class="brand-divider" aria-hidden="true"></span>
+    <div class="app-identity"><span class="eyebrow">Operação HN</span><h1>Mapa de Abastecimento</h1></div>
+  </div>
   <div class="spacer"></div>
-  <button id="fsStatus" class="fs-status" title="Estado da base"><span class="dot"></span><span id="fsStatusTxt">Base: não vinculada</span></button>
-  <button class="tool-btn" id="btnPickFolder">Selecionar pasta</button>
-  <button class="tool-btn" id="btnSaveBase">Salvar base</button>
-  <button class="tool-btn" id="btnReloadBase" title="Descarta a sessão atual e recarrega o arquivo da pasta">Recarregar da pasta</button>
-  <button class="tool-btn" id="btnExport">Exportar dados</button>
-  <button class="tool-btn" id="btnImportData">Importar dados</button>
-  <input type="file" id="fileImportData" accept="application/json" style="display:none">
-  <button class="tool-btn" id="btnSeed">Dados exemplo</button>
+  <div class="header-actions">
+    <button id="fsStatus" class="fs-status" title="Estado da base"><span class="dot"></span><span id="fsStatusTxt">Base: não vinculada</span></button>
+    <button class="tool-btn" id="btnPickFolder">Selecionar pasta</button>
+    <button class="tool-btn" id="btnSaveBase">Salvar base</button>
+    <button class="tool-btn" id="btnReloadBase" title="Descarta a sessão atual e recarrega o arquivo da pasta">Recarregar da pasta</button>
+    <button class="tool-btn" id="btnExport">Exportar dados</button>
+    <button class="tool-btn" id="btnImportData">Importar dados</button>
+    <input type="file" id="fileImportData" accept="application/json" style="display:none">
+    <button class="tool-btn" id="btnSeed">Dados exemplo</button>
+  </div>
 </header>
 <div id="fsBanner"><span id="fsBannerTxt"></span><span class="spacer"></span><button id="fsBannerBtn"></button></div>
 <div class="layout">
 <aside class="sidebar">
   <div class="side-title">Módulos</div>
   <nav>
-    <button data-view="dashboard">📊 Dashboard</button>
+    <button data-view="dashboard">Dashboard</button>
     <button data-view="premissas" class="active">Premissas</button>
     <button data-view="medias">Médias de Consumo</button>
     <button data-view="mapa">Mapa de Abastecimentos</button>
-    <button data-view="giros">🔄 Mapa de Giros</button>
+    <button data-view="giros">Mapa de Giros</button>
     <button data-view="abastecimentos">Abastecimentos</button>
     <button data-view="viagens">Viagens</button>
-    <button data-view="apontamentos">📝 Apontamentos</button>
+    <button data-view="apontamentos">Apontamentos</button>
     <button data-view="precos">Preços e Desempenho</button>
-    <button data-view="importacoes">📥 Importações</button>
+    <button data-view="importacoes">Importações</button>
   </nav>
   <div class="side-bottom">
     <button class="theme-toggle" id="btnTheme" title="Alternar tema">🌙</button>
@@ -473,7 +531,7 @@
       <div class="row">
         <div class="field"><label>Nome</label><input id="empNome" placeholder="Ex.: Empurrador 01"></div>
         <div class="field"><label>Potência (HP)</label><input type="number" id="empPot" placeholder="0"></div>
-        <div class="field"><label>Cor no Mapa</label><input type="color" id="empCor" value="#0ea5e9" style="width:54px;height:32px;padding:2px;"></div>
+        <div class="field"><label>Cor no Mapa</label><input type="color" id="empCor" value="#195c76" style="width:54px;height:32px;padding:2px;"></div>
         <div class="field">
           <label>Combustíveis utilizados</label>
           <div class="chk-group" id="empCombs">
@@ -510,7 +568,7 @@
       <h2>Cidades <span class="sub">— blocos do Mapa de Giros</span></h2>
       <div class="row">
         <div class="field"><label>Nome da cidade</label><input id="cidNome" placeholder="Ex.: Miritituba"></div>
-        <div class="field"><label>Cor no Mapa</label><input type="color" id="cidCor" value="#0ea5e9" style="width:54px;height:32px;padding:2px;"></div>
+        <div class="field"><label>Cor no Mapa</label><input type="color" id="cidCor" value="#195c76" style="width:54px;height:32px;padding:2px;"></div>
         <div class="field" style="flex:1 1 220px;"><label>Apelidos / siglas nas rotas</label><input id="cidApelidos" placeholder="Ex.: MIR, Itaituba, ITB" style="width:100%"></div>
         <div class="field">
           <label>Perfil</label>
@@ -1760,7 +1818,7 @@ function rotaById(id){ return state.rotas.find(r=>r.id===id); }
 function ativo(x){ return !x || x.ativo !== false; }
 function empsAtivos(){ return state.empurradores.filter(ativo); }
 function rotasAtivas(){ return state.rotas.filter(ativo); }
-const EMP_PALETTE=['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#ef4444','#14b8a6','#ec4899','#84cc16','#f97316','#6366f1'];
+const EMP_PALETTE=['#195c76','#4b9e44','#007caa','#6d7b83','#b26a00','#9b3d33','#3b778f','#5d6770','#267065','#8a6728'];
 function getEmpCor(e){
   if(e && e.cor) return e.cor;
   const i=state.empurradores.indexOf(e);
@@ -1877,7 +1935,7 @@ function clearEmpForm(){
   document.getElementById('empNome').value='';
   document.getElementById('empPot').value='';
   document.getElementById('empPorto').value='';
-  document.getElementById('empCor').value='#0ea5e9';
+  document.getElementById('empCor').value='#195c76';
   document.querySelectorAll('#empCombs input').forEach(c=>c.checked=false);
   renderEmpTanqueRow();
   editEmpId=null;
@@ -3061,7 +3119,7 @@ document.getElementById('mvFinalizar').addEventListener('click', ()=>{
    ========================================================= */
 
 /* ---- Cidades ---- */
-const CID_PALETTE=['#0ea5e9','#22c55e','#a78bfa','#f59e0b','#ec4899','#14b8a6','#ef4444','#84cc16'];
+const CID_PALETTE=['#195c76','#4b9e44','#007caa','#6d7b83','#b26a00','#3b778f','#9b3d33','#5d6770'];
 function cidById(id){ return (state.cidades||[]).find(c=>c.id===id); }
 function cidadesOrdenadas(){ return (state.cidades||[]).filter(ativo).slice().sort((a,b)=>(a.ordem||0)-(b.ordem||0)); }
 // As rotas costumam usar siglas ("MIR x STM"). Além do nome, a cidade casa por apelido.
@@ -8848,6 +8906,7 @@ const THEME_KEY='mapaAbastecimento_theme';
 function applyTheme(t){
   const light = t==='light';
   document.body.classList.toggle('light', light);
+  document.getElementById('ldcLogo').src = light ? 'assets/branding/logo_ldc_blue.png' : 'assets/branding/logo_ldc_white.png';
   const btn=document.getElementById('btnTheme');
   btn.textContent = light ? '☀️' : '🌙';
   btn.title = light ? 'Tema claro — clique para o escuro' : 'Tema escuro — clique para o claro';
@@ -8857,7 +8916,7 @@ document.getElementById('btnTheme').addEventListener('click', ()=>{
   localStorage.setItem(THEME_KEY, next);
   applyTheme(next);
 });
-applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+applyTheme(localStorage.getItem(THEME_KEY) || 'light');
 
 /* =========================================================
    SIDEBAR RECOLHÍVEL

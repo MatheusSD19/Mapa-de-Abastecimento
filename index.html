@@ -10,11 +10,17 @@
     --bg:#071e29; --panel:#0d3444; --panel2:#114356; --line:#2c6276;
     --txt:#f4f9fa; --muted:#b8ced6; --accent:#ffffff; --accent2:#4b9e44;
     --ok:#8ed084; --warn:#f7c46c; --bad:#ff9890; --info:#83cce6;
+    --navio-head:#0b3545; --navio-group:#0a2d3b; --navio-stm:#0d3a36;
+    --navio-vdc:#1b3144; --navio-stn:#103a4a; --navio-weekend:#0a2c39; --navio-hover:#174d60;
+    --navio-edge:rgba(0,0,0,.42);
   }
   body.light{
     --bg:#f4f7f8; --panel:#ffffff; --panel2:#edf3f5; --line:#cfdee3;
     --txt:#20262b; --muted:#5d6770; --accent:#195c76; --accent2:#195c76;
     --ok:#367b31; --warn:#965d00; --bad:#b42318; --info:#007caa;
+    --navio-head:#d3e2e6; --navio-group:#c7d9df; --navio-stm:#d8e7e0;
+    --navio-vdc:#dce1eb; --navio-stn:#d4e6eb; --navio-weekend:#cfdee2; --navio-hover:#bedce5;
+    --navio-edge:rgba(49,78,89,.25);
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:13px;}
@@ -168,9 +174,26 @@
   table.mapa tr.mapa-h1 th{position:sticky;top:0;z-index:12;}
   table.mapa tr.mapa-h2 th{position:sticky;top:24px;z-index:11;}
   table.mapa td:first-child{position:sticky;left:0;z-index:5;background:var(--panel);font-weight:600;}
+  table.mapa .navio-group{position:sticky;left:76px;z-index:22;background:var(--navio-group);color:var(--txt);width:390px;min-width:390px;text-align:center;letter-spacing:.06em;text-transform:uppercase;font-size:10px;border-bottom:1px solid var(--line);}
+  table.mapa .navio-col{position:sticky;z-index:21;background:var(--navio-head);color:var(--txt);width:130px;min-width:130px;max-width:130px;text-align:center;}
+  table.mapa tr.mapa-h1 th.navio-col{top:0;z-index:24;letter-spacing:.04em;}
+  table.mapa tr.mapa-h2 th.navio-col{background:var(--navio-head);}
+  table.mapa td.navio-abast-cell{position:sticky;z-index:5;background:var(--navio-group);width:130px;min-width:130px;max-width:130px;cursor:pointer;white-space:normal;text-align:center;}
+  table.mapa .navio-stm-col{left:76px;}
+  table.mapa .navio-vdc-col{left:206px;}
+  table.mapa .navio-stn-col{left:336px;border-right:2px solid var(--info)!important;box-shadow:inset -3px 0 0 var(--info),12px 0 16px -7px var(--navio-edge);}
+  table.mapa td.navio-stm-col{background:var(--navio-stm);}
+  table.mapa td.navio-vdc-col{background:var(--navio-vdc);}
+  table.mapa td.navio-stn-col{background:var(--navio-stn);}
   table.mapa tr.weekend td:first-child{background:var(--panel2);}
+  table.mapa tr.weekend td.navio-abast-cell{background:var(--navio-weekend);}
   table.mapa tr.mapa-h1 th:first-child{position:sticky;left:0;z-index:22;background:var(--panel2);}
   table.mapa tr.mapa-h2 th:first-child{position:sticky;left:0;z-index:21;background:var(--panel2);}
+  table.mapa td:first-child,table.mapa tr.mapa-h1 th:first-child,table.mapa tr.mapa-h2 th:first-child{width:76px;min-width:76px;}
+  td.navio-abast-cell:hover{background:var(--navio-hover)!important;}
+  .navio-abast-chip{display:block;width:max-content;max-width:100%;overflow:hidden;text-overflow:ellipsis;border-radius:4px;padding:1px 5px;margin:1px auto;font-weight:700;cursor:grab;white-space:nowrap;}
+  .navio-abast-chip:active{cursor:grabbing;}
+  .navio-abast-chip:hover{filter:brightness(1.15);}
   table.mapa .emp-head{background:var(--accent2);color:#001018;text-align:center;font-size:12px;font-weight:700;}
   td.cell-clickable{cursor:pointer;}
   td.cell-clickable:hover{background:rgba(56,189,248,0.12);}
@@ -184,6 +207,9 @@
   .trip-chip.turnaround::before{content:'⇄';margin-right:3px;font-size:10px;opacity:.85;}
   table.mapa tr.today td{background:rgba(56,189,248,0.13);box-shadow:inset 0 0 0 9999px rgba(56,189,248,0.07);}
   table.mapa tr.today td:first-child{background:rgba(56,189,248,0.22);}
+  table.mapa tr.today td.navio-stm-col{background:var(--navio-stm);box-shadow:inset 0 0 0 9999px rgba(56,189,248,.08);}
+  table.mapa tr.today td.navio-vdc-col{background:var(--navio-vdc);box-shadow:inset 0 0 0 9999px rgba(56,189,248,.08);}
+  table.mapa tr.today td.navio-stn-col{background:var(--navio-stn);box-shadow:inset -3px 0 0 var(--info),inset 0 0 0 9999px rgba(56,189,248,.08),12px 0 16px -7px var(--navio-edge);}
   table.mapa .emp-sep{border-right:3px solid var(--line);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;position:relative;}
   .trip-chip.trip-real{cursor:help;box-shadow:0 0 0 1.5px var(--ok) inset;}
@@ -655,10 +681,11 @@
           </div>
         </div>
         <button class="btn secondary" id="btnMapaRefresh">Atualizar</button>
+        <button class="btn secondary" id="btnToggleNavios">Ocultar navios</button>
         <div class="spacer"></div>
         <button class="btn" id="btnNovaViagem">+ Nova Viagem</button>
       </div>
-      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia, ou na coluna <b>Abast.</b> para programar um abastecimento. Arraste o chip de uma viagem ou de um abastecimento para mover a data — segurando <b>Ctrl</b> ao soltar, o item é <b>copiado</b> sem alterar o original.</div>
+      <div class="hint">Clique numa célula vazia da coluna <b>Viagem</b> para cadastrar uma viagem nesse dia, ou na coluna <b>Abast.</b> para programar um abastecimento. As colunas de <b>Navios</b> podem ser exibidas ou ocultadas pelo botão acima; arraste um navio para mover sua data ou cidade e use <b>Ctrl</b> ao soltar para copiá-lo. Arraste o chip de uma viagem ou de um abastecimento para mover a data — segurando <b>Ctrl</b> ao soltar, o item é <b>copiado</b> sem alterar o original.</div>
       <div class="mapa-wrap" id="mapaWrap" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -1275,6 +1302,31 @@
   </div>
 </div>
 
+<!-- ===== MODAL NAVIO — MAPA DE ABASTECIMENTOS ===== -->
+<div class="modal-bg" id="modalNavioAbast">
+  <div class="modal">
+    <h3 id="mnaTitle">Novo Navio</h3>
+    <div class="row">
+      <div class="field" style="flex:1;"><label>Nome do navio</label><input id="mnaNome" style="width:100%" placeholder="Ex.: MV Santos"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1;"><label>Cidade</label><select id="mnaCidade" style="width:100%"><option value="Santarém">Santarém (STM)</option><option value="Vila do Conde">Vila do Conde (VDC)</option><option value="Santana">Santana (STN)</option></select></div>
+      <div class="field" style="flex:1;"><label>Porto</label><input id="mnaPorto" style="width:100%" placeholder="Ex.: Porto de Santarém"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Produto</label><select id="mnaProduto" style="width:130px"><option value="Soja">Soja</option><option value="Milho">Milho</option><option value="Fertilizante">Fertilizante</option></select></div>
+      <div class="field"><label>Volume (t)</label><input type="number" min="0" step="any" id="mnaVolume" placeholder="0" style="width:130px"></div>
+      <div class="field"><label>Prancha média (t/dia)</label><input type="number" min="0" step="any" id="mnaPrancha" placeholder="0" style="width:150px"></div>
+    </div>
+    <div id="mnaCalc" class="hint"></div>
+    <div class="modal-actions">
+      <button class="btn danger sm" id="mnaDelete" style="display:none;">Excluir</button>
+      <button class="btn secondary" data-close>Cancelar</button>
+      <button class="btn" id="mnaSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL ESTOQUE DE BARCAÇAS (cidade / terminal / terceiro) ===== -->
 <div class="modal-bg" id="modalGiroEst">
   <div class="modal wide">
@@ -1474,6 +1526,8 @@ let state = {
   abastecimentosReais: [], // abastecimentos REAIS: {id,empId,empNome,inicio,fim,produto,data}
   apontamentos: [],  // apontamentos REAIS das viagens: {id,idViagem,empId,empNome,inicio,fim,tempo(h),indicador,item,descricao,oee,calcula(bool),data,mesRef('YYYY-MM'),ano}
   mapaEmpFilter: null, // array de ids exibidos no Mapa de Abastecimentos; null = todos
+  mapaNaviosVisiveis: true,
+  naviosAbastecimento: [], // {id,nome,cidade,porto,produto,volume,prancha,dataInicio} — programação do Mapa de Abastecimentos
   /* ---- Mapa de Giros (por cidade) ---- */
   cidades: [],       // {id,nome,cor,origem(bool),operaNavio(bool),ordem,ativo}
   terminais: [],     // {id,cidadeId,nome,principal(bool),pranchaCar(t/h),horasCar,pranchaDes(t/h),horasDes,ativo}
@@ -1497,6 +1551,13 @@ function ensureState(){
   if(!state.estoqueLeituras) state.estoqueLeituras=[];
   if(!state.abastecimentosReais) state.abastecimentosReais=[];
   if(!state.apontamentos) state.apontamentos=[];
+  if(!state.naviosAbastecimento) state.naviosAbastecimento=[];
+  if(typeof state.mapaNaviosVisiveis!=='boolean') state.mapaNaviosVisiveis=true;
+  state.naviosAbastecimento.forEach(n=>{
+    if(!n.produto) n.produto='Soja';
+    const cod=navioAbastCidadeCod(n.cidade);
+    if(cod) n.cidade=navioAbastCidadeNome(cod);
+  });
   if(!state.cidades) state.cidades=[];
   if(!state.terminais) state.terminais=[];
   if(!state.termIndisp) state.termIndisp=[];
@@ -2441,7 +2502,32 @@ function initMapaDates(){
   }
 }
 document.getElementById('btnMapaRefresh').addEventListener('click', renderMapa);
+document.getElementById('btnToggleNavios').addEventListener('click', ()=>{
+  state.mapaNaviosVisiveis=!state.mapaNaviosVisiveis;
+  save(); renderMapa();
+});
 document.getElementById('btnNovaViagem').addEventListener('click', ()=>openViagemModal(null,null,null));
+
+const NAVIOS_ABAST_CIDADES=[
+  {cod:'STM', nome:'Santarém'},
+  {cod:'VDC', nome:'Vila do Conde'},
+  {cod:'STN', nome:'Santana'}
+];
+function navioAbastCidadeCod(cidade){
+  const c=na(cidade);
+  if(c==='stm'||c.includes('santarem')) return 'STM';
+  if(c==='vdc'||c.includes('vila do conde')) return 'VDC';
+  if(c==='stn'||c.includes('santana')) return 'STN';
+  return '';
+}
+function navioAbastCidadeNome(cod){
+  const c=NAVIOS_ABAST_CIDADES.find(x=>x.cod===cod);
+  return c?c.nome:'';
+}
+function atualizarBotaoNavios(){
+  const b=document.getElementById('btnToggleNavios');
+  b.textContent=state.mapaNaviosVisiveis?'Ocultar navios':'Exibir navios';
+}
 
 /* ---- Filtro de empurradores exibidos no mapa (persistido na base) ---- */
 // state.mapaEmpFilter: array de ids selecionados; null/undefined = todos selecionados
@@ -2500,6 +2586,36 @@ document.addEventListener('click', e=>{
 function viagensDoDia(empId, dStr){
   return state.viagens.filter(v=>v.empId===empId && v.dataSaida===dStr);
 }
+function naviosAbastecimentoDoDia(dStr, cidadeCod){
+  return (state.naviosAbastecimento||[]).filter(n=>{
+    if(!n.dataInicio) return false;
+    if(cidadeCod && navioAbastCidadeCod(n.cidade)!==cidadeCod) return false;
+    const dias=n.prancha>0 ? Math.ceil((n.volume||0)/n.prancha) : 0;
+    const fim=dias>0 ? dateStr(addDays(parseDate(n.dataInicio),dias-1)) : n.dataInicio;
+    return dStr>=n.dataInicio && dStr<=fim;
+  });
+}
+function corNavioAbastecimento(n){
+  const c=cidByNome(n.cidade);
+  if(c) return getCidCor(c);
+  const cidade=String(n.cidade||'').toLowerCase();
+  let hash=0;
+  for(let i=0;i<cidade.length;i++) hash=((hash<<5)-hash)+cidade.charCodeAt(i);
+  return CID_PALETTE[Math.abs(hash)%CID_PALETTE.length];
+}
+function corComAlpha(hex, alpha){
+  const v=String(hex||'').replace('#','');
+  if(v.length!==6) return `rgba(148,163,184,${alpha})`;
+  return `rgba(${parseInt(v.slice(0,2),16)},${parseInt(v.slice(2,4),16)},${parseInt(v.slice(4,6),16)},${alpha})`;
+}
+function naviosAbastHtml(dStr, cidadeCod){
+  return naviosAbastecimentoDoDia(dStr,cidadeCod).map(n=>{
+    const dias=n.prancha>0 ? Math.ceil((n.volume||0)/n.prancha) : 0;
+    const tip=`${n.nome} — ${n.produto||'Soja'}&#10;Cidade: ${n.cidade||'—'}&#10;Porto: ${n.porto||'—'}&#10;Volume: ${fmt(n.volume||0)} t&#10;Prancha: ${fmt(n.prancha||0)} t/dia${dias?`&#10;Operação prevista: ${dias} dia(s)`:''}`;
+    const cor=corNavioAbastecimento(n);
+    return `<span class="navio-abast-chip" draggable="true" data-naid="${n.id}" title="${tip}" style="background:${corComAlpha(cor,.24)};border:1px solid ${corComAlpha(cor,.52)};color:var(--txt)">${n.nome}</span>`;
+  }).join('');
+}
 // Para um empurrador, encontra a viagem "ativa" num dia (navegando)
 function viagemAtivaNoDia(empId, dayStart){
   return state.viagens.filter(v=>v.empId===empId).find(v=>{
@@ -2527,6 +2643,7 @@ function realViagemAtivaNoDia(empId, day){
 
 function renderMapa(){
   initMapaDates();
+  atualizarBotaoNavios();
   const wrap=document.getElementById('mapaWrap');
   if(!state.empurradores.length){ wrap.innerHTML='<div class="empty" style="padding:14px;">Cadastre empurradores nas Premissas.</div>'; return; }
   renderEmpFilter();
@@ -2554,8 +2671,10 @@ function renderMapa(){
   });
 
   // cabeçalho
+  const showNavios=state.mapaNaviosVisiveis;
   let h='<table class="mapa"><tr class="mapa-h1">';
   h+='<th>Data</th>';
+  if(showNavios) NAVIOS_ABAST_CIDADES.forEach(c=>{ h+=`<th class="navio-col navio-${c.cod.toLowerCase()}-col" rowspan="2">Navios - ${c.cod}</th>`; });
   emps.forEach(e=>{
     const span = 4 + e.combustiveis.length*3;
     const cor=getEmpCor(e);
@@ -2577,6 +2696,9 @@ function renderMapa(){
     const wknd = (day.getDay()===0||day.getDay()===6)?' weekend':'';
     const hoje = dStr===hojeStr?' today':'';
     h+=`<tr class="${wknd}${hoje}"><td>${day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>`;
+    if(showNavios) NAVIOS_ABAST_CIDADES.forEach(c=>{
+      h+=`<td class="navio-abast-cell navio-${c.cod.toLowerCase()}-col" data-date="${dStr}" data-city="${c.cod}">${naviosAbastHtml(dStr,c.cod)}</td>`;
+    });
     emps.forEach(e=>{
       const empCor=getEmpCor(e);
       const rSaida = realViagensDoDia(e.id, dStr);
@@ -2717,6 +2839,32 @@ function renderMapa(){
       openViagemModal(null, td.dataset.emp, td.dataset.date);
     });
   });
+  // coluna Navio: célula vazia cria lançamento na data; clique no nome edita o lançamento
+  wrap.querySelectorAll('.navio-abast-cell').forEach(td=>{
+    td.addEventListener('click', ev=>{
+      const chip=ev.target.closest('.navio-abast-chip');
+      openNavioAbastModal(chip ? chip.dataset.naid : null, td.dataset.date, td.dataset.city);
+    });
+    td.addEventListener('dragover', ev=>{ ev.preventDefault(); td.classList.add('drop-target'); });
+    td.addEventListener('dragleave', ()=>td.classList.remove('drop-target'));
+    td.addEventListener('drop', ev=>{
+      ev.preventDefault(); td.classList.remove('drop-target');
+      const nid=ev.dataTransfer.getData('text/naid');
+      if(!nid) return;
+      const n=state.naviosAbastecimento.find(x=>x.id===nid);
+      if(!n) return;
+      if(ev.ctrlKey||ev.metaKey){
+        state.naviosAbastecimento.push(Object.assign({},n,{id:uid(),cidade:navioAbastCidadeNome(td.dataset.city),dataInicio:td.dataset.date}));
+      }else{
+        n.dataInicio=td.dataset.date;
+        n.cidade=navioAbastCidadeNome(td.dataset.city);
+      }
+      save(); renderMapa();
+    });
+  });
+  wrap.querySelectorAll('.navio-abast-chip[draggable]').forEach(chip=>{
+    chip.addEventListener('dragstart', ev=>{ ev.dataTransfer.setData('text/naid', chip.dataset.naid); });
+  });
   // click em célula de estoque/tanque: informar estoque manual
   wrap.querySelectorAll('.estoque-cell').forEach(td=>{
     td.addEventListener('click', ()=>{
@@ -2839,6 +2987,57 @@ function onStockCellClick(empId, comb, dStr){
   setManualEstoque(empId, comb, dStr, val);
   save(); renderMapa();
 }
+
+/* ---- Navios do Mapa de Abastecimentos ---- */
+let editNavioAbastId=null;
+let navioAbastDataInicio='';
+function openNavioAbastModal(nid, dStr, cidadeCod){
+  const n=nid ? state.naviosAbastecimento.find(x=>x.id===nid) : null;
+  editNavioAbastId=nid||null;
+  navioAbastDataInicio=n ? n.dataInicio : (dStr||todayStr());
+  document.getElementById('mnaTitle').textContent=n?'Editar Navio':'Novo Navio';
+  document.getElementById('mnaNome').value=n?n.nome:'';
+  document.getElementById('mnaCidade').value=n?n.cidade:navioAbastCidadeNome(cidadeCod||'STM');
+  document.getElementById('mnaPorto').value=n?n.porto:'';
+  document.getElementById('mnaProduto').value=n?(n.produto||'Soja'):'Soja';
+  document.getElementById('mnaVolume').value=n?(n.volume||''):'';
+  document.getElementById('mnaPrancha').value=n?(n.prancha||''):'';
+  document.getElementById('mnaDelete').style.display=n?'':'none';
+  updateMnaCalc();
+  document.getElementById('modalNavioAbast').classList.add('show');
+}
+function navioAbastDoModal(){
+  return {
+    nome:document.getElementById('mnaNome').value.trim(),
+    cidade:document.getElementById('mnaCidade').value.trim(),
+    porto:document.getElementById('mnaPorto').value.trim(),
+    produto:document.getElementById('mnaProduto').value,
+    volume:parseFloat(document.getElementById('mnaVolume').value)||0,
+    prancha:parseFloat(document.getElementById('mnaPrancha').value)||0,
+    dataInicio:navioAbastDataInicio
+  };
+}
+function updateMnaCalc(){
+  const n=navioAbastDoModal(), el=document.getElementById('mnaCalc');
+  if(!(n.volume>0) || !(n.prancha>0)){ el.innerHTML='Informe o volume e a prancha para calcular o tempo de operação.'; return; }
+  const dias=Math.ceil(n.volume/n.prancha);
+  const fim=n.dataInicio ? addDays(parseDate(n.dataInicio), dias-1) : null;
+  el.innerHTML=`<b>Operação prevista:</b> ${fmt1(n.volume/n.prancha)} dias (${dias} dia(s) no calendário)${fim?` · término em <b>${fim.toLocaleDateString('pt-BR')}</b>`:''}.`;
+}
+['mnaVolume','mnaPrancha'].forEach(id=>document.getElementById(id).addEventListener('input', updateMnaCalc));
+document.getElementById('mnaSave').addEventListener('click', ()=>{
+  const n=navioAbastDoModal();
+  if(!n.nome || !n.cidade || !n.porto){ alert('Informe o nome do navio, a cidade e o porto.'); return; }
+  if(!(n.volume>0) || !(n.prancha>0)){ alert('Informe o volume e a prancha média por dia.'); return; }
+  if(editNavioAbastId) Object.assign(state.naviosAbastecimento.find(x=>x.id===editNavioAbastId),n);
+  else state.naviosAbastecimento.push(Object.assign({id:uid()},n));
+  save(); closeModals(); renderMapa();
+});
+document.getElementById('mnaDelete').addEventListener('click', ()=>{
+  if(!editNavioAbastId || !confirm('Excluir este navio?')) return;
+  state.naviosAbastecimento=state.naviosAbastecimento.filter(n=>n.id!==editNavioAbastId);
+  save(); closeModals(); renderMapa();
+});
 
 /* ---- Modal Viagem ---- */
 let editViagemId=null;

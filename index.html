@@ -181,7 +181,7 @@
   table.mapa td.navio-abast-cell{position:sticky;z-index:5;background:var(--navio-group);width:130px;min-width:130px;max-width:130px;cursor:pointer;white-space:normal;text-align:center;}
   table.mapa .navio-stm-col{left:76px;}
   table.mapa .navio-vdc-col{left:206px;}
-  table.mapa .navio-stn-col{left:336px;border-right:2px solid var(--info)!important;box-shadow:inset -3px 0 0 var(--info),12px 0 16px -7px var(--navio-edge);}
+  table.mapa .navio-stn-col{left:336px;border-right:3px solid var(--accent2)!important;box-shadow:inset -3px 0 0 var(--accent2),12px 0 16px -7px var(--navio-edge);}
   table.mapa td.navio-stm-col{background:var(--navio-stm);}
   table.mapa td.navio-vdc-col{background:var(--navio-vdc);}
   table.mapa td.navio-stn-col{background:var(--navio-stn);}
@@ -209,7 +209,7 @@
   table.mapa tr.today td:first-child{background:rgba(56,189,248,0.22);}
   table.mapa tr.today td.navio-stm-col{background:var(--navio-stm);box-shadow:inset 0 0 0 9999px rgba(56,189,248,.08);}
   table.mapa tr.today td.navio-vdc-col{background:var(--navio-vdc);box-shadow:inset 0 0 0 9999px rgba(56,189,248,.08);}
-  table.mapa tr.today td.navio-stn-col{background:var(--navio-stn);box-shadow:inset -3px 0 0 var(--info),inset 0 0 0 9999px rgba(56,189,248,.08),12px 0 16px -7px var(--navio-edge);}
+  table.mapa tr.today td.navio-stn-col{background:var(--navio-stn);box-shadow:inset -3px 0 0 var(--accent2),inset 0 0 0 9999px rgba(56,189,248,.08),12px 0 16px -7px var(--navio-edge);}
   table.mapa .emp-sep{border-right:3px solid var(--line);}
   .trip-chip{background:var(--info);color:#1a103d;border-radius:4px;padding:1px 5px;cursor:grab;font-weight:600;display:inline-block;position:relative;}
   .trip-chip.trip-real{cursor:help;box-shadow:0 0 0 1.5px var(--ok) inset;}
@@ -739,6 +739,7 @@
   <!-- ================= ABASTECIMENTOS ================= -->
   <section class="view" id="view-abastecimentos">
     <div class="kpi-row" id="abastKpis"></div>
+    <div class="kpi-row" id="abastCombKpis" style="margin-top:10px;"></div>
     <div class="card">
       <h2>Abastecimentos Programados</h2>
       <div class="row">
@@ -753,7 +754,17 @@
         <div class="field"><label>Embarcação</label>
           <select id="abastFiltroEmp"><option value="">Todas</option></select>
         </div>
-        <button class="btn secondary" id="btnAbastFilterReset">Mês atual</button>
+        <div class="field"><label>Período pronto</label>
+          <select id="abastPeriodo">
+            <option value="mes-atual" selected>Mês atual</option>
+            <option value="mes-anterior">Mês anterior</option>
+            <option value="ultimos-3-meses">Últimos 3 meses</option>
+            <option value="ano-atual">Ano atual (YTD)</option>
+            <option value="ultimos-12-meses">Últimos 12 meses</option>
+            <option value="todo-periodo">Todo o período</option>
+            <option value="personalizado">Personalizado</option>
+          </select>
+        </div>
         <div class="spacer"></div>
         <button class="btn" id="btnNovoAbast">+ Novo Abastecimento</button>
       </div>
@@ -4780,14 +4791,34 @@ function processCaladoSim(rows, hIdx){
    ABASTECIMENTOS
    ========================================================= */
 document.getElementById('btnNovoAbast').addEventListener('click', ()=>openAbastModal(null));
-['abastFiltro','abastFiltroIni','abastFiltroFim','abastFiltroEmp'].forEach(id=>{
+['abastFiltro','abastFiltroEmp'].forEach(id=>{
   document.getElementById(id).addEventListener('change', renderAbast);
 });
-document.getElementById('btnAbastFilterReset').addEventListener('click', ()=>{
-  document.getElementById('abastFiltro').value='';
-  document.getElementById('abastFiltroEmp').value='';
-  document.getElementById('abastFiltroIni').value=dateStr(firstDayOfMonth());
-  document.getElementById('abastFiltroFim').value=dateStr(lastDayOfMonth());
+['abastFiltroIni','abastFiltroFim'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{
+    document.getElementById('abastPeriodo').value='personalizado';
+    renderAbast();
+  });
+});
+document.getElementById('abastPeriodo').addEventListener('change', ()=>{
+  const periodo=document.getElementById('abastPeriodo').value;
+  const ini=document.getElementById('abastFiltroIni');
+  const fim=document.getElementById('abastFiltroFim');
+  const hoje=new Date();
+  if(periodo==='mes-atual'){
+    ini.value=dateStr(firstDayOfMonth(hoje)); fim.value=dateStr(lastDayOfMonth(hoje));
+  }else if(periodo==='mes-anterior'){
+    const d=addMonths(hoje,-1);
+    ini.value=dateStr(firstDayOfMonth(d)); fim.value=dateStr(lastDayOfMonth(d));
+  }else if(periodo==='ultimos-3-meses'){
+    ini.value=dateStr(firstDayOfMonth(addMonths(hoje,-2))); fim.value=dateStr(lastDayOfMonth(hoje));
+  }else if(periodo==='ano-atual'){
+    ini.value=dateStr(new Date(hoje.getFullYear(),0,1)); fim.value=dateStr(hoje);
+  }else if(periodo==='ultimos-12-meses'){
+    ini.value=dateStr(firstDayOfMonth(addMonths(hoje,-11))); fim.value=dateStr(hoje);
+  }else if(periodo==='todo-periodo'){
+    ini.value=''; fim.value='';
+  }
   renderAbast();
 });
 
@@ -5017,8 +5048,11 @@ function isAbastAtrasado(a){
 function initAbastFilters(){
   const iniEl=document.getElementById('abastFiltroIni');
   const fimEl=document.getElementById('abastFiltroFim');
-  if(!iniEl.value) iniEl.value=dateStr(firstDayOfMonth());
-  if(!fimEl.value) fimEl.value=dateStr(lastDayOfMonth());
+  const periodo=document.getElementById('abastPeriodo').value;
+  if(periodo!=='todo-periodo'){
+    if(!iniEl.value) iniEl.value=dateStr(firstDayOfMonth());
+    if(!fimEl.value) fimEl.value=dateStr(lastDayOfMonth());
+  }
   const sel=document.getElementById('abastFiltroEmp');
   const cur=sel.value;
   sel.innerHTML='<option value="">Todas</option>'+
@@ -5054,6 +5088,31 @@ function renderAbast(){
     `<div class="kpi"><div class="v">${fmt(totalRealL)}</div><div class="l">Litros Realizados</div></div>`+
     `<div class="kpi"><div class="v">${fmtMoney(totalRealValor)}</div><div class="l">R$ Realizado</div></div>`+
     (atrasados ? `<div class="kpi"><div class="v" style="color:var(--bad)">${atrasados}</div><div class="l">⚠ Atrasados</div></div>` : '');
+
+  // Resumo financeiro por combustível — respeita todos os filtros ativos e desconsidera cancelados.
+  const metricas=list.filter(a=>a.status!=='Cancelado');
+  const resumoComb=comb=>{
+    const regs=comb==='TOTAL' ? metricas : metricas.filter(a=>a.comb===comb);
+    const litros=regs.reduce((s,a)=>s+(a.qtd||0),0);
+    const comPreco=regs.filter(a=>(a.qtd||0)>0 && (a.preco||0)>0);
+    const litrosComPreco=comPreco.reduce((s,a)=>s+(a.qtd||0),0);
+    const precoMedio=litrosComPreco>0
+      ? comPreco.reduce((s,a)=>s+(a.qtd||0)*(a.preco||0),0)/litrosComPreco
+      : 0;
+    return {litros,precoMedio,temPreco:litrosComPreco>0};
+  };
+  const mgo=resumoComb('MGO'), hfo=resumoComb('HFO'), total=resumoComb('TOTAL');
+  const savingTotal=list
+    .filter(a=>a.status==='Realizado' && a.saving)
+    .reduce((s,a)=>s+((a.precoEvitado||0)-(a.preco||0))*(a.qtd||0),0);
+  document.getElementById('abastCombKpis').innerHTML=
+    `<div class="kpi"><div class="v" style="color:${savingTotal<0?'var(--bad)':'var(--ok)'}">${fmtMoney(savingTotal)}</div><div class="l">Saving total</div></div>`+
+    `<div class="kpi"><div class="v">${fmt(mgo.litros)}</div><div class="l">Litros MGO</div></div>`+
+    `<div class="kpi"><div class="v">${mgo.temPreco?'R$ '+fmt2(mgo.precoMedio):'—'}</div><div class="l">Preço médio MGO (R$/L)</div></div>`+
+    `<div class="kpi"><div class="v">${fmt(hfo.litros)}</div><div class="l">Litros HFO</div></div>`+
+    `<div class="kpi"><div class="v">${hfo.temPreco?'R$ '+fmt2(hfo.precoMedio):'—'}</div><div class="l">Preço médio HFO (R$/L)</div></div>`+
+    `<div class="kpi"><div class="v">${fmt(total.litros)}</div><div class="l">Litros total</div></div>`+
+    `<div class="kpi"><div class="v">${total.temPreco?'R$ '+fmt2(total.precoMedio):'—'}</div><div class="l">Preço médio total (R$/L)</div></div>`;
 
   const t=document.getElementById('tblAbast');
   if(!list.length){ t.innerHTML='<tr><td class="empty">Nenhum abastecimento no filtro.</td></tr>'; return; }
